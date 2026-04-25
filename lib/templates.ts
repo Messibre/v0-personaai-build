@@ -54,10 +54,16 @@ function baseStyles(accent: string): string {
     .nav-brand { font-size: 18px; font-weight: 800; color: #fff; }
     .nav-brand span { color: ${accent}; }
     .nav-links { display: flex; gap: 28px; }
-    .nav-links a { font-size: 13px; color: #999; font-weight: 500; letter-spacing: 0.3px; }
-    .nav-links a:hover { color: ${accent}; }
+    .nav-links a { font-size: 13px; color: #999; font-weight: 500; letter-spacing: 0.3px; transition: color 0.3s; }
+    .nav-links a:hover, .nav-links a.active { color: ${accent}; }
     .nav-cta { padding: 8px 20px; border-radius: 8px; background: ${accent}; color: #000; font-size: 13px; font-weight: 600; }
     .nav-cta:hover { opacity: 0.9; transform: translateY(-1px); }
+    .nav-toggle { display: none; background: none; border: none; cursor: pointer; padding: 4px; }
+    .nav-toggle span { display: block; width: 22px; height: 2px; background: #fff; margin: 5px 0; transition: all .3s; }
+    .mobile-menu { display: none; position: fixed; top: 64px; left: 0; right: 0; background: rgba(10,10,15,0.95); backdrop-filter: blur(20px); padding: 24px; border-bottom: 1px solid rgba(255,255,255,0.06); z-index: 99; }
+    .mobile-menu.open { display: flex; flex-direction: column; gap: 16px; }
+    .mobile-menu a { font-size: 16px; color: #ccc; font-weight: 500; padding: 8px 0; }
+    .mobile-menu a:hover { color: ${accent}; }
 
     /* Project cards */
     .projects-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; }
@@ -91,6 +97,7 @@ function baseStyles(accent: string): string {
     @media (max-width: 768px) {
       .nav-links { display: none; }
       .nav-cta { display: none; }
+      .nav-toggle { display: block; }
       .hero-split { flex-direction: column !important; }
       .hero-photo-side { position: relative !important; width: 100% !important; height: 300px !important; }
       .projects-grid { grid-template-columns: 1fr; }
@@ -153,20 +160,45 @@ function gsapScript(): string {
         scrollTrigger: { trigger: heroPhoto, start: 'top bottom', end: 'bottom top', scrub: 1 }
       });
     }
+
+    // Active nav link on scroll
+    const navLinks = document.querySelectorAll('.nav-links a[data-section]');
+    document.querySelectorAll('section[id]').forEach(sec => {
+      ScrollTrigger.create({
+        trigger: sec,
+        start: 'top center',
+        end: 'bottom center',
+        onEnter: () => setActiveNav(sec.id),
+        onEnterBack: () => setActiveNav(sec.id),
+      });
+    });
+    function setActiveNav(id) {
+      navLinks.forEach(a => {
+        a.classList.toggle('active', a.getAttribute('data-section') === id);
+      });
+    }
   <\/script>`
 }
 
 function buildNav(name: string, sections: string[], accent: string): string {
+  const navItems = ["home", ...sections.filter(s => s !== "home")]
   return `
   <nav class="nav">
     <div class="nav-inner">
-      <a href="#" class="nav-brand">${e(name.split(" ")[0])}<span>.</span></a>
+      <a href="#home" class="nav-brand">${e(name.split(" ")[0])}<span>.</span></a>
       <div class="nav-links">
-        ${sections.map(s => `<a href="#${s}">${s.charAt(0).toUpperCase() + s.slice(1)}</a>`).join("")}
+        ${navItems.map(s => `<a href="#${s}" data-section="${s}">${s.charAt(0).toUpperCase() + s.slice(1)}</a>`).join("")}
       </div>
       <a href="#contact" class="nav-cta">Contact Me</a>
+      <button class="nav-toggle" onclick="document.getElementById('mobileMenu').classList.toggle('open')" aria-label="Menu">
+        <span></span><span></span><span></span>
+      </button>
     </div>
-  </nav>`
+  </nav>
+  <div id="mobileMenu" class="mobile-menu">
+    ${navItems.map(s => `<a href="#${s}" onclick="document.getElementById('mobileMenu').classList.remove('open')">${s.charAt(0).toUpperCase() + s.slice(1)}</a>`).join("")}
+    <a href="#contact" onclick="document.getElementById('mobileMenu').classList.remove('open')" style="color:${accent};font-weight:700">Contact Me</a>
+  </div>`
 }
 
 function buildProjects(repos: GitHubRepo[], accent: string): string {
@@ -275,7 +307,7 @@ function buildBoldPortrait(data: TemplateData): string {
   `
   const body = `
   ${buildNav(name, config.sections, c.accent)}
-  <div class="hero">
+  <section id="home" class="hero">
     <img src="${img}" alt="${e(name)}" class="hero-img hero-photo-parallax" crossorigin="anonymous">
     <div class="hero-overlay"></div>
     <div class="hero-content">
@@ -287,7 +319,7 @@ function buildBoldPortrait(data: TemplateData): string {
         <div><div class="stat-num">${langs.length}</div><div class="stat-label">Languages</div></div>
       </div>
     </div>
-  </div>
+  </section>
   <main>
   ${config.sections.includes("about") ? buildAbout(profile, aiBio, c.accent) : ""}
   ${config.sections.includes("skills") ? `<section id="skills" class="section"><div class="container"><p class="section-label reveal">Expertise</p><h2 class="section-title reveal">Skills & Technologies</h2><div style="display:flex;flex-wrap:wrap;gap:0">${buildSkills(langs, topics)}</div></div></section>` : ""}
@@ -319,12 +351,12 @@ function buildTypographic(data: TemplateData): string {
   `
   const body = `
   ${buildNav(name, config.sections, c.accent)}
-  <div class="hero">
+  <section id="home" class="hero">
     <div class="hero-title hero-anim">${e(role)}</div>
     <img src="${img}" alt="${e(name)}" class="hero-photo hero-anim hero-photo-parallax" crossorigin="anonymous">
     <div class="hero-name hero-anim">${e(name)}</div>
     <div class="hero-role hero-anim">${e(profile.location || "Worldwide")}</div>
-  </div>
+  </section>
   <main>
   ${config.sections.includes("about") ? buildAbout(profile, aiBio, c.accent) : ""}
   ${config.sections.includes("skills") ? `<section id="skills" class="section"><div class="container"><p class="section-label reveal">Skills</p><h2 class="section-title reveal">What I work with</h2><div style="display:flex;flex-wrap:wrap;gap:0">${buildSkills(langs, topics)}</div></div></section>` : ""}
@@ -363,7 +395,7 @@ function buildSplitEditorial(data: TemplateData): string {
   `
   const body = `
   ${buildNav(name, config.sections, c.accent)}
-  <div class="hero hero-split">
+  <section id="home" class="hero hero-split">
     <div class="hero-dark">
       <span class="num hero-anim">01</span>
       <img src="${img}" alt="${e(name)}" class="hero-anim hero-photo-parallax" crossorigin="anonymous">
@@ -373,7 +405,7 @@ function buildSplitEditorial(data: TemplateData): string {
       <p class="hero-anim">${e(profile.bio || "Creating impactful digital experiences with code and design.")}</p>
       <a href="#projects" class="cta hero-anim">View Projects &darr;</a>
     </div>
-  </div>
+  </section>
   <main>
   ${config.sections.includes("about") ? buildAbout(profile, aiBio, c.accent) : ""}
   ${config.sections.includes("skills") ? `<section id="skills" class="section"><div class="container"><p class="section-label reveal">Expertise</p><h2 class="section-title reveal">Technologies</h2><div style="display:flex;flex-wrap:wrap;gap:0">${buildSkills(langs, topics)}</div></div></section>` : ""}
@@ -417,7 +449,7 @@ function buildPastelCreative(data: TemplateData): string {
   `
   const body = `
   ${buildNav(name, config.sections, c.accent)}
-  <div class="hero">
+  <section id="home" class="hero">
     <div class="hero-inner">
       <div class="hero-text">
         <span class="tag hero-anim">Available for hire</span>
@@ -432,7 +464,7 @@ function buildPastelCreative(data: TemplateData): string {
         <img src="${img}" alt="${e(name)}" class="hero-photo-parallax" crossorigin="anonymous">
       </div>
     </div>
-  </div>
+  </section>
   <main>
   ${config.sections.includes("about") ? buildAbout(profile, aiBio, c.accent) : ""}
   ${config.sections.includes("skills") ? `<section id="skills" class="section"><div class="container"><p class="section-label reveal">Skills</p><h2 class="section-title reveal">My Toolkit</h2><div style="display:flex;flex-wrap:wrap;gap:0">${buildSkills(langs, topics)}</div></div></section>` : ""}
@@ -471,7 +503,7 @@ function buildDesignerCoder(data: TemplateData): string {
   `
   const body = `
   ${buildNav(name, config.sections, c.accent)}
-  <div class="hero hero-split">
+  <section id="home" class="hero hero-split">
     <div class="hero-left">
       <h2 class="hero-anim">designer</h2>
       <p class="hero-anim">Creative mind with an eye for detail, UX, and visual storytelling.</p>
@@ -481,7 +513,7 @@ function buildDesignerCoder(data: TemplateData): string {
       <p class="hero-anim">Building robust, clean, and performant applications.</p>
     </div>
     <img src="${img}" alt="${e(name)}" class="hero-center-photo hero-anim hero-photo-parallax" crossorigin="anonymous">
-  </div>
+  </section>
   <main>
   ${config.sections.includes("about") ? buildAbout(profile, aiBio, c.accent) : ""}
   ${config.sections.includes("skills") ? `<section id="skills" class="section"><div class="container"><p class="section-label reveal">Stack</p><h2 class="section-title reveal">Tech Stack</h2><div style="display:flex;flex-wrap:wrap;gap:0">${buildSkills(langs, topics)}</div></div></section>` : ""}
@@ -518,12 +550,12 @@ function buildMinimalClean(data: TemplateData): string {
   `
   const body = `
   ${buildNav(name, config.sections, c.accent)}
-  <div class="hero">
+  <section id="home" class="hero">
     <img src="${img}" alt="${e(name)}" class="hero-photo hero-anim hero-photo-parallax" crossorigin="anonymous">
     <h1 class="hero-anim">${e(name)}</h1>
     <p class="hero-anim">${e(profile.bio || "Developer & Creator")}</p>
     <a href="#projects" class="cta hero-anim">View Work</a>
-  </div>
+  </section>
   <main>
   ${config.sections.includes("about") ? buildAbout(profile, aiBio, c.accent) : ""}
   ${config.sections.includes("skills") ? `<section id="skills" class="section"><div class="container"><p class="section-label reveal">Skills</p><h2 class="section-title reveal">Technologies</h2><div style="display:flex;flex-wrap:wrap;gap:0">${buildSkills(langs, topics)}</div></div></section>` : ""}
