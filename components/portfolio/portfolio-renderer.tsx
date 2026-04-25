@@ -25,7 +25,7 @@ export function PortfolioRenderer({ html }: PortfolioRendererProps) {
   return (
     <div className="flex flex-col gap-3">
       {/* Viewport Toggle */}
-      <div className="flex items-center justify-center gap-1 p-1 rounded-lg bg-muted/10 w-fit mx-auto">
+      <div className="flex items-center justify-center gap-0.5 p-1 rounded-full bg-[var(--persona-surface)] border border-[var(--persona-border)] w-fit mx-auto">
         {VIEWPORTS.map((vp) => {
           const Icon = vp.icon
           const isActive = viewport === vp.id
@@ -36,10 +36,10 @@ export function PortfolioRenderer({ html }: PortfolioRendererProps) {
               size="sm"
               onClick={() => setViewport(vp.id)}
               className={cn(
-                "gap-1.5 text-xs",
+                "gap-1.5 text-xs rounded-full transition-all duration-300",
                 isActive
-                  ? "bg-[var(--persona-accent)]/10 text-[var(--persona-accent)]"
-                  : "text-muted-foreground"
+                  ? "bg-[var(--persona-accent)] text-[var(--persona-bg)] shadow-sm hover:bg-[var(--persona-accent)]/90"
+                  : "text-muted-foreground hover:text-foreground"
               )}
             >
               <Icon className="size-3.5" />
@@ -50,18 +50,18 @@ export function PortfolioRenderer({ html }: PortfolioRendererProps) {
       </div>
 
       {/* Iframe Container */}
-      <div className="flex justify-center rounded-xl border border-muted/20 bg-muted/5 p-4 overflow-hidden">
+      <div className="flex justify-center rounded-xl border border-[var(--persona-border)] bg-[var(--persona-surface)] p-4 overflow-hidden">
         <div
-          className="transition-all duration-300 ease-out"
+          className="transition-all duration-500 ease-out"
           style={{ width: currentViewport.width, maxWidth: "100%" }}
         >
-          <div className="rounded-lg overflow-hidden border border-muted/20 shadow-lg bg-white">
+          <div className="rounded-lg overflow-hidden border border-[var(--persona-border)] shadow-xl">
             {/* Browser chrome */}
-            <div className="flex items-center gap-2 px-4 py-2.5 bg-muted/10 border-b border-muted/20">
+            <div className="flex items-center gap-2 px-4 py-2.5 bg-[var(--persona-surface-hover)] border-b border-[var(--persona-border)]">
               <div className="flex gap-1.5">
-                <div className="size-2.5 rounded-full bg-destructive/50" />
-                <div className="size-2.5 rounded-full bg-amber-500/50" />
-                <div className="size-2.5 rounded-full bg-green-500/50" />
+                <div className="size-2.5 rounded-full bg-red-400/60" />
+                <div className="size-2.5 rounded-full bg-amber-400/60" />
+                <div className="size-2.5 rounded-full bg-green-400/60" />
               </div>
               <div className="flex-1 mx-4">
                 <div className="h-5 rounded-md bg-muted/20 flex items-center justify-center">
@@ -75,7 +75,7 @@ export function PortfolioRenderer({ html }: PortfolioRendererProps) {
             <iframe
               srcDoc={html}
               title="Portfolio preview"
-              className="w-full border-0"
+              className="w-full border-0 bg-white"
               style={{ height: "600px" }}
               sandbox="allow-scripts"
             />

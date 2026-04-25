@@ -79,7 +79,7 @@ export function StepResume({ state, dispatch, onNext, onBack }: StepResumeProps)
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h2 className="text-2xl font-bold text-foreground mb-2">Upload Your Resume</h2>
+        <h2 className="text-2xl font-bold text-foreground mb-2 text-balance">Upload Your Resume</h2>
         <p className="text-muted-foreground leading-relaxed">
           Upload a PDF resume to enrich your portfolio with experience, education, and skills.
           This step is optional.
@@ -99,8 +99,8 @@ export function StepResume({ state, dispatch, onNext, onBack }: StepResumeProps)
           className={cn(
             "flex flex-col items-center justify-center gap-4 p-10 rounded-xl border-2 border-dashed cursor-pointer transition-all duration-300",
             isDragging
-              ? "border-[var(--persona-accent)] bg-[var(--persona-accent)]/10"
-              : "border-muted/30 bg-muted/5 hover:border-[var(--persona-accent)]/50 hover:bg-[var(--persona-accent)]/5",
+              ? "border-[var(--persona-accent)] bg-[var(--persona-accent)]/10 scale-[1.02]"
+              : "border-[var(--persona-border)] bg-[var(--persona-surface)] hover:border-[var(--persona-accent)]/50 hover:bg-[var(--persona-surface-hover)]",
             resume.loading && "pointer-events-none opacity-60"
           )}
           role="button"
@@ -116,7 +116,10 @@ export function StepResume({ state, dispatch, onNext, onBack }: StepResumeProps)
             </>
           ) : (
             <>
-              <div className="flex items-center justify-center size-14 rounded-full bg-[var(--persona-accent)]/10">
+              <div className={cn(
+                "flex items-center justify-center size-14 rounded-full bg-[var(--persona-accent)]/10 transition-transform duration-300",
+                isDragging && "animate-float"
+              )}>
                 <Upload className="size-6 text-[var(--persona-accent)]" />
               </div>
               <div className="text-center">
@@ -140,7 +143,7 @@ export function StepResume({ state, dispatch, onNext, onBack }: StepResumeProps)
 
       {/* Error */}
       {resume.error && (
-        <div className="flex items-center gap-2 text-sm text-destructive bg-destructive/10 rounded-lg px-4 py-3">
+        <div className="flex items-center gap-2 text-sm text-destructive bg-destructive/10 rounded-lg px-4 py-3 animate-fade-in-scale">
           <AlertCircle className="size-4 shrink-0" />
           <span>{resume.error}</span>
         </div>
@@ -148,7 +151,7 @@ export function StepResume({ state, dispatch, onNext, onBack }: StepResumeProps)
 
       {/* Success - Parsed Text Preview */}
       {resume.text && (
-        <Card className="border-[var(--persona-accent)]/20 bg-[var(--persona-accent)]/5">
+        <Card className="border-[var(--persona-accent)]/20 bg-[var(--persona-accent)]/5 animate-fade-in-scale">
           <CardContent className="flex flex-col gap-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -160,7 +163,7 @@ export function StepResume({ state, dispatch, onNext, onBack }: StepResumeProps)
                     <h3 className="text-sm font-semibold text-foreground">
                       {resume.file?.name || "Resume"}
                     </h3>
-                    <CheckCircle className="size-4 text-green-500" />
+                    <CheckCircle className="size-4 text-green-500 animate-check-pop" />
                   </div>
                   <p className="text-xs text-muted-foreground">
                     {resume.text.length.toLocaleString()} characters extracted
@@ -171,13 +174,13 @@ export function StepResume({ state, dispatch, onNext, onBack }: StepResumeProps)
                 variant="ghost"
                 size="icon-sm"
                 onClick={() => dispatch({ type: "CLEAR_RESUME" })}
-                className="text-muted-foreground hover:text-foreground"
+                className="text-muted-foreground hover:text-foreground transition-colors"
               >
                 <X className="size-4" />
                 <span className="sr-only">Remove resume</span>
               </Button>
             </div>
-            <div className="max-h-40 overflow-y-auto rounded-lg bg-background/50 border border-muted/20 p-3">
+            <div className="max-h-40 overflow-y-auto rounded-lg bg-background/60 border border-[var(--persona-border)] p-3">
               <p className="text-xs text-muted-foreground whitespace-pre-wrap font-mono leading-relaxed">
                 {resume.text.substring(0, 800)}
                 {resume.text.length > 800 && "..."}
@@ -189,19 +192,19 @@ export function StepResume({ state, dispatch, onNext, onBack }: StepResumeProps)
 
       {/* Navigation */}
       <div className="flex items-center justify-between pt-2">
-        <Button variant="ghost" onClick={onBack} className="gap-2 text-muted-foreground">
+        <Button variant="ghost" onClick={onBack} className="gap-2 text-muted-foreground hover:text-foreground transition-colors">
           <ArrowLeft className="size-4" />
           Back
         </Button>
         <div className="flex items-center gap-3">
           {!resume.text && (
-            <Button variant="ghost" onClick={onNext} className="text-muted-foreground">
+            <Button variant="ghost" onClick={onNext} className="text-muted-foreground hover:text-foreground transition-colors">
               Skip
             </Button>
           )}
           <Button
             onClick={onNext}
-            className="bg-[var(--persona-accent)] text-[var(--persona-bg)] hover:bg-[var(--persona-accent)]/90 gap-2"
+            className="bg-[var(--persona-accent)] text-[var(--persona-bg)] hover:bg-[var(--persona-accent)]/90 gap-2 shadow-lg shadow-[var(--persona-accent)]/20 transition-all duration-300 hover:shadow-xl hover:shadow-[var(--persona-accent)]/30 hover:scale-[1.02] active:scale-[0.98]"
             size="lg"
           >
             Continue

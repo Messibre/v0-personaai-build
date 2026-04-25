@@ -55,7 +55,7 @@ export function StepNotion({ state, dispatch, onNext, onBack }: StepNotionProps)
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h2 className="text-2xl font-bold text-foreground mb-2">Import from Notion</h2>
+        <h2 className="text-2xl font-bold text-foreground mb-2 text-balance">Import from Notion</h2>
         <p className="text-muted-foreground leading-relaxed">
           Optionally link a public Notion page to add extra content like project writeups,
           blog posts, or a personal bio. This is entirely optional.
@@ -72,14 +72,14 @@ export function StepNotion({ state, dispatch, onNext, onBack }: StepNotionProps)
               value={notion.url}
               onChange={(e) => dispatch({ type: "SET_NOTION_URL", url: e.target.value })}
               onKeyDown={handleKeyDown}
-              className="pl-10 bg-muted/20 border-muted/40 focus-visible:border-[var(--persona-accent)] focus-visible:ring-[var(--persona-accent)]/20"
+              className="pl-10 bg-[var(--persona-surface)] border-[var(--persona-border)] focus-visible:border-[var(--persona-accent)] focus-visible:ring-[var(--persona-accent)]/20 transition-all duration-300"
               disabled={notion.loading}
             />
           </div>
           <Button
             onClick={fetchNotion}
             disabled={!notion.url.trim() || notion.loading}
-            className="bg-[var(--persona-accent)] text-[var(--persona-bg)] hover:bg-[var(--persona-accent)]/90"
+            className="bg-[var(--persona-accent)] text-[var(--persona-bg)] hover:bg-[var(--persona-accent)]/90 shadow-lg shadow-[var(--persona-accent)]/20 transition-all duration-300 hover:shadow-xl hover:shadow-[var(--persona-accent)]/30 hover:scale-[1.02] active:scale-[0.98]"
           >
             {notion.loading ? <Spinner /> : "Fetch"}
           </Button>
@@ -88,7 +88,7 @@ export function StepNotion({ state, dispatch, onNext, onBack }: StepNotionProps)
 
       {/* Loading */}
       {notion.loading && (
-        <div className="flex items-center gap-3 text-sm text-muted-foreground py-4">
+        <div className="flex items-center gap-3 text-sm text-muted-foreground py-4 animate-fade-in-up">
           <Spinner className="size-5 text-[var(--persona-accent)]" />
           <span>Attempting to fetch Notion content...</span>
         </div>
@@ -96,7 +96,7 @@ export function StepNotion({ state, dispatch, onNext, onBack }: StepNotionProps)
 
       {/* Error (non-blocking) */}
       {notion.error && (
-        <div className="flex items-start gap-2 text-sm text-amber-500 bg-amber-500/10 rounded-lg px-4 py-3">
+        <div className="flex items-start gap-2 text-sm text-amber-500 bg-amber-500/10 rounded-lg px-4 py-3 animate-fade-in-scale">
           <AlertCircle className="size-4 shrink-0 mt-0.5" />
           <div>
             <p>{notion.error}</p>
@@ -109,7 +109,7 @@ export function StepNotion({ state, dispatch, onNext, onBack }: StepNotionProps)
 
       {/* Success */}
       {notion.content && (
-        <Card className="border-[var(--persona-accent)]/20 bg-[var(--persona-accent)]/5">
+        <Card className="border-[var(--persona-accent)]/20 bg-[var(--persona-accent)]/5 animate-fade-in-scale">
           <CardContent className="flex flex-col gap-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -119,7 +119,7 @@ export function StepNotion({ state, dispatch, onNext, onBack }: StepNotionProps)
                 <div>
                   <div className="flex items-center gap-2">
                     <h3 className="text-sm font-semibold text-foreground">Notion Content</h3>
-                    <CheckCircle className="size-4 text-green-500" />
+                    <CheckCircle className="size-4 text-green-500 animate-check-pop" />
                   </div>
                   <p className="text-xs text-muted-foreground">
                     {notion.content.length.toLocaleString()} characters imported
@@ -130,13 +130,13 @@ export function StepNotion({ state, dispatch, onNext, onBack }: StepNotionProps)
                 variant="ghost"
                 size="icon-sm"
                 onClick={() => dispatch({ type: "CLEAR_NOTION" })}
-                className="text-muted-foreground hover:text-foreground"
+                className="text-muted-foreground hover:text-foreground transition-colors"
               >
                 <X className="size-4" />
                 <span className="sr-only">Clear Notion content</span>
               </Button>
             </div>
-            <div className="max-h-32 overflow-y-auto rounded-lg bg-background/50 border border-muted/20 p-3">
+            <div className="max-h-32 overflow-y-auto rounded-lg bg-background/60 border border-[var(--persona-border)] p-3">
               <p className="text-xs text-muted-foreground whitespace-pre-wrap font-mono leading-relaxed">
                 {notion.content.substring(0, 500)}
                 {notion.content.length > 500 && "..."}
@@ -148,7 +148,7 @@ export function StepNotion({ state, dispatch, onNext, onBack }: StepNotionProps)
 
       {/* Info note */}
       {!notion.content && !notion.loading && !notion.error && (
-        <div className="rounded-lg border border-muted/20 bg-muted/5 p-4">
+        <div className="rounded-lg border border-[var(--persona-border)] bg-[var(--persona-surface)] p-4">
           <p className="text-xs text-muted-foreground leading-relaxed">
             The page must be published/shared publicly on Notion. Private pages cannot be accessed.
             This feature works on a best-effort basis.
@@ -158,19 +158,19 @@ export function StepNotion({ state, dispatch, onNext, onBack }: StepNotionProps)
 
       {/* Navigation */}
       <div className="flex items-center justify-between pt-2">
-        <Button variant="ghost" onClick={onBack} className="gap-2 text-muted-foreground">
+        <Button variant="ghost" onClick={onBack} className="gap-2 text-muted-foreground hover:text-foreground transition-colors">
           <ArrowLeft className="size-4" />
           Back
         </Button>
         <div className="flex items-center gap-3">
           {!notion.content && (
-            <Button variant="ghost" onClick={onNext} className="text-muted-foreground">
+            <Button variant="ghost" onClick={onNext} className="text-muted-foreground hover:text-foreground transition-colors">
               Skip
             </Button>
           )}
           <Button
             onClick={onNext}
-            className="bg-[var(--persona-accent)] text-[var(--persona-bg)] hover:bg-[var(--persona-accent)]/90 gap-2"
+            className="bg-[var(--persona-accent)] text-[var(--persona-bg)] hover:bg-[var(--persona-accent)]/90 gap-2 shadow-lg shadow-[var(--persona-accent)]/20 transition-all duration-300 hover:shadow-xl hover:shadow-[var(--persona-accent)]/30 hover:scale-[1.02] active:scale-[0.98]"
             size="lg"
           >
             Continue

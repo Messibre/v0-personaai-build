@@ -54,7 +54,7 @@ export function StepGithub({ state, dispatch, onNext }: StepGithubProps) {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h2 className="text-2xl font-bold text-foreground mb-2">Connect Your GitHub</h2>
+        <h2 className="text-2xl font-bold text-foreground mb-2 text-balance">Connect Your GitHub</h2>
         <p className="text-muted-foreground leading-relaxed">
           Enter your GitHub username to import your profile, projects, and contributions.
         </p>
@@ -69,14 +69,14 @@ export function StepGithub({ state, dispatch, onNext }: StepGithubProps) {
             value={github.username}
             onChange={(e) => dispatch({ type: "SET_GITHUB_USERNAME", username: e.target.value })}
             onKeyDown={handleKeyDown}
-            className="pl-10 bg-muted/20 border-muted/40 focus-visible:border-[var(--persona-accent)] focus-visible:ring-[var(--persona-accent)]/20"
+            className="pl-10 bg-[var(--persona-surface)] border-[var(--persona-border)] focus-visible:border-[var(--persona-accent)] focus-visible:ring-[var(--persona-accent)]/20 transition-all duration-300"
             disabled={github.loading}
           />
         </div>
         <Button
           onClick={fetchGithub}
           disabled={!github.username.trim() || github.loading}
-          className="bg-[var(--persona-accent)] text-[var(--persona-bg)] hover:bg-[var(--persona-accent)]/90"
+          className="bg-[var(--persona-accent)] text-[var(--persona-bg)] hover:bg-[var(--persona-accent)]/90 shadow-lg shadow-[var(--persona-accent)]/20 transition-all duration-300 hover:shadow-xl hover:shadow-[var(--persona-accent)]/30 hover:scale-[1.02] active:scale-[0.98]"
         >
           {github.loading ? <Spinner /> : "Fetch"}
         </Button>
@@ -84,7 +84,7 @@ export function StepGithub({ state, dispatch, onNext }: StepGithubProps) {
 
       {/* Error */}
       {github.error && (
-        <div className="flex items-center gap-2 text-sm text-destructive bg-destructive/10 rounded-lg px-4 py-3">
+        <div className="flex items-center gap-2 text-sm text-destructive bg-destructive/10 rounded-lg px-4 py-3 animate-fade-in-scale">
           <AlertCircle className="size-4 shrink-0" />
           <span>{github.error}</span>
         </div>
@@ -92,7 +92,7 @@ export function StepGithub({ state, dispatch, onNext }: StepGithubProps) {
 
       {/* Loading Skeleton */}
       {github.loading && (
-        <Card className="border-muted/30 bg-muted/5">
+        <Card className="border-[var(--persona-border)] bg-[var(--persona-surface)] animate-shimmer">
           <CardContent className="flex flex-col gap-4">
             <div className="flex items-center gap-4">
               <Skeleton className="size-16 rounded-full" />
@@ -111,14 +111,14 @@ export function StepGithub({ state, dispatch, onNext }: StepGithubProps) {
 
       {/* Profile Card */}
       {github.profile && !github.loading && (
-        <Card className="border-[var(--persona-accent)]/20 bg-[var(--persona-accent)]/5">
+        <Card className="border-[var(--persona-accent)]/20 bg-[var(--persona-accent)]/5 animate-fade-in-scale">
           <CardContent className="flex flex-col gap-5">
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-4">
                 <img
                   src={github.profile.avatar_url}
                   alt={`${github.profile.username}'s avatar`}
-                  className="size-16 rounded-full border-2 border-[var(--persona-accent)]/30"
+                  className="size-16 rounded-full border-2 border-[var(--persona-accent)]/30 shadow-md transition-transform duration-300 hover:scale-110"
                   crossOrigin="anonymous"
                 />
                 <div>
@@ -137,7 +137,7 @@ export function StepGithub({ state, dispatch, onNext }: StepGithubProps) {
                 variant="ghost"
                 size="icon-sm"
                 onClick={() => dispatch({ type: "CLEAR_GITHUB" })}
-                className="text-muted-foreground hover:text-foreground"
+                className="text-muted-foreground hover:text-foreground transition-colors"
               >
                 <X className="size-4" />
                 <span className="sr-only">Clear GitHub data</span>
@@ -160,11 +160,11 @@ export function StepGithub({ state, dispatch, onNext }: StepGithubProps) {
             {github.repos.length > 0 && (
               <div>
                 <h4 className="text-sm font-medium text-muted-foreground mb-3">Top Projects</h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 stagger-children">
                   {github.repos.slice(0, 6).map((repo) => (
                     <div
                       key={repo.name}
-                      className="flex flex-col gap-1 p-3 rounded-lg bg-background/50 border border-muted/20"
+                      className="flex flex-col gap-1 p-3 rounded-lg bg-background/60 border border-[var(--persona-border)] hover:border-[var(--persona-accent)]/30 transition-all duration-300 hover:shadow-sm"
                     >
                       <div className="flex items-center gap-2">
                         <span className="font-medium text-sm text-foreground truncate">
@@ -201,7 +201,7 @@ export function StepGithub({ state, dispatch, onNext }: StepGithubProps) {
         <Button
           onClick={onNext}
           disabled={!github.profile}
-          className="bg-[var(--persona-accent)] text-[var(--persona-bg)] hover:bg-[var(--persona-accent)]/90 gap-2"
+          className="bg-[var(--persona-accent)] text-[var(--persona-bg)] hover:bg-[var(--persona-accent)]/90 gap-2 shadow-lg shadow-[var(--persona-accent)]/20 transition-all duration-300 hover:shadow-xl hover:shadow-[var(--persona-accent)]/30 hover:scale-[1.02] active:scale-[0.98]"
           size="lg"
         >
           Continue
