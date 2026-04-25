@@ -9,25 +9,13 @@ const _geistMono = Geist_Mono({ subsets: ["latin"] });
 const _playfair = Playfair_Display({ subsets: ["latin"], style: ["normal", "italic"] });
 
 export const metadata: Metadata = {
-  title: 'PersonaAI - AI Portfolio Generator',
-  description: 'Generate a stunning portfolio website from your GitHub, resume, and Notion in seconds with AI.',
-  generator: 'v0.app',
+  title: "PersonaAI - Create Your Portfolio in Seconds",
+  description: "Generate a stunning portfolio website from your GitHub profile in seconds using AI",
   icons: {
     icon: [
-      {
-        url: '/icon-light-32x32.png',
-        media: '(prefers-color-scheme: light)',
-      },
-      {
-        url: '/icon-dark-32x32.png',
-        media: '(prefers-color-scheme: dark)',
-      },
-      {
-        url: '/icon.svg',
-        type: 'image/svg+xml',
-      },
+      { url: "/icon.svg", type: "image/svg+xml" },
     ],
-    apple: '/apple-icon.png',
+    apple: "/icon.svg",
   },
 }
 

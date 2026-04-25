@@ -1,5 +1,4 @@
-import { NextResponse } from "next/server"
-import { callGemini } from "@/lib/gemini"
+import { streamText } from "ai"
 import type { GitHubProfile, GitHubRepo, PortfolioConfig, ColorScheme } from "@/lib/types"
 import { COLOR_SCHEMES } from "@/lib/types"
 
@@ -282,54 +281,25 @@ export async function POST(request: Request) {
     const data: GenerateRequest = await request.json()
 
     if (!data.github?.profile) {
-      return NextResponse.json(
+      return Response.json(
         { error: "GitHub profile data is required" },
         { status: 400 }
       )
     }
 
     const prompt = buildPrompt(data)
-    const rawResponse = await callGemini(prompt)
+    
+    // Use Vercel AI SDK with streaming
+    const result = streamText({
+      model: "google/gemini-2.5-flash",
+      prompt,
+      maxOutputTokens: 16000,
+    })
 
-    // Strip markdown code fences if present
-    let html = rawResponse.trim()
-    if (html.startsWith("```html")) {
-      html = html.slice(7)
-    } else if (html.startsWith("```")) {
-      html = html.slice(3)
-    }
-    if (html.endsWith("```")) {
-      html = html.slice(0, -3)
-    }
-    html = html.trim()
-
-    // Validate it looks like HTML
-    if (!html.includes("<!DOCTYPE html>") && !html.includes("<html")) {
-      if (html.includes("<head") || html.includes("<body")) {
-        html = `<!DOCTYPE html>\n<html lang="en">\n${html}\n</html>`
-      } else {
-        return NextResponse.json(
-          { error: "AI did not generate valid HTML. Please try again." },
-          { status: 500 }
-        )
-      }
-    }
-
-    // Ensure viewport meta tag exists
-    if (!html.includes("viewport")) {
-      html = html.replace(
-        "<head>",
-        '<head>\n<meta name="viewport" content="width=device-width, initial-scale=1.0">'
-      )
-    }
-
-    const title = data.github.profile.name
-      ? `${data.github.profile.name} - Portfolio`
-      : `${data.github.profile.username} - Portfolio`
-
-    return NextResponse.json({ html, title })
+    // Return a streaming response
+    return result.toTextStreamResponse()
   } catch (err) {
     const message = err instanceof Error ? err.message : "Failed to generate portfolio"
-    return NextResponse.json({ error: message }, { status: 500 })
+    return Response.json({ error: message }, { status: 500 })
   }
 }
