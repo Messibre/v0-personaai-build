@@ -34,12 +34,12 @@ export interface NotionData {
 }
 
 export type TemplateStyle =
-  | "minimal"
-  | "developer"
-  | "creative"
-  | "glassmorphism"
-  | "retro"
-  | "elegant"
+  | "bold-portrait"
+  | "typographic"
+  | "split-editorial"
+  | "pastel-creative"
+  | "designer-coder"
+  | "minimal-clean"
 
 export type ColorScheme =
   | "ocean"
@@ -62,44 +62,49 @@ export const COLOR_SCHEMES: Record<ColorScheme, { label: string; primary: string
   rose: { label: "Rose", primary: "#f43f5e", secondary: "#e11d48", accent: "#fb7185" },
 }
 
-export const TEMPLATE_OPTIONS = [
+export const TEMPLATE_OPTIONS: {
+  id: TemplateStyle
+  label: string
+  description: string
+  inspiration: string
+}[] = [
   {
-    id: "minimal" as const,
-    label: "Minimal",
-    description: "Clean lines, generous whitespace, elegant sans-serif typography",
-    preview: "light",
+    id: "bold-portrait",
+    label: "Bold Portrait",
+    description: "Full-screen photo hero with massive typography overlay and stats counters",
+    inspiration: "hello-hero",
   },
   {
-    id: "developer" as const,
-    label: "Developer",
-    description: "Terminal-inspired dark theme with monospace type and neon accents",
-    preview: "dark",
+    id: "typographic",
+    label: "Typographic",
+    description: "Oversized text behind your portrait, minimal white-space driven layout",
+    inspiration: "bazil",
   },
   {
-    id: "creative" as const,
-    label: "Creative",
-    description: "Bold asymmetric layouts, large typography, expressive color blocks",
-    preview: "colorful",
+    id: "split-editorial",
+    label: "Split Editorial",
+    description: "Dark/light split layout with dramatic B&W portrait, editorial magazine feel",
+    inspiration: "branding",
   },
   {
-    id: "glassmorphism" as const,
-    label: "Glass",
-    description: "Frosted glass cards over subtle gradient backgrounds with blur",
-    preview: "glass",
+    id: "pastel-creative",
+    label: "Pastel Creative",
+    description: "Soft color blocks, playful contemporary card-based project showcase",
+    inspiration: "leslie",
   },
   {
-    id: "retro" as const,
-    label: "Retro",
-    description: "Pixel-inspired details, chunky borders, warm nostalgic palette",
-    preview: "retro",
+    id: "designer-coder",
+    label: "Designer & Coder",
+    description: "Half design, half code split concept with colorful portrait center-stage",
+    inspiration: "split-designer",
   },
   {
-    id: "elegant" as const,
-    label: "Elegant",
-    description: "Serif headings, muted tones, editorial magazine-style layout",
-    preview: "elegant",
+    id: "minimal-clean",
+    label: "Minimal Clean",
+    description: "Ultra-clean whitespace, refined typography, subtle grid and elegant details",
+    inspiration: "minimal",
   },
-] as const
+]
 
 export const PORTFOLIO_SECTIONS = [
   { id: "about", label: "About Me" },

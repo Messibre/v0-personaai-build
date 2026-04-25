@@ -44,7 +44,7 @@ const initialState: WizardState = {
     dataUrl: null,
   },
   config: {
-    template: "developer",
+    template: "bold-portrait",
     colorScheme: "ocean",
     sections: ["about", "skills", "projects", "experience", "contact"],
   },
