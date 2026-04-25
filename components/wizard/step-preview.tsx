@@ -73,8 +73,19 @@ export function StepPreview({ state, dispatch, onBack }: StepPreviewProps) {
       })
 
       if (!res.ok) {
-        const data = await res.json()
-        dispatch({ type: "SET_PORTFOLIO_ERROR", error: data.error || "Failed to generate" })
+        let errorMsg = `Server error (${res.status})`
+        try {
+          const data = await res.json()
+          errorMsg = data.error || errorMsg
+        } catch {
+          try {
+            errorMsg = await res.text() || errorMsg
+          } catch {
+            // Use default error message
+          }
+        }
+        console.log("[v0] Generate API error:", errorMsg)
+        dispatch({ type: "SET_PORTFOLIO_ERROR", error: errorMsg })
         setIsStreaming(false)
         return
       }
@@ -99,27 +110,24 @@ export function StepPreview({ state, dispatch, onBack }: StepPreviewProps) {
         setStreamingContent(fullContent)
       }
 
-      // Clean up the HTML
+      // Clean up the HTML - strip any markdown fences
       let html = fullContent.trim()
-      if (html.startsWith("```html")) {
-        html = html.slice(7)
-      } else if (html.startsWith("```")) {
-        html = html.slice(3)
-      }
-      if (html.endsWith("```")) {
-        html = html.slice(0, -3)
-      }
+      // Remove markdown code fences (```html ... ``` or ``` ... ```)
+      html = html.replace(/^```(?:html)?\s*\n?/i, "")
+      html = html.replace(/\n?```\s*$/i, "")
       html = html.trim()
 
-      // Validate it looks like HTML
-      if (!html.includes("<!DOCTYPE html>") && !html.includes("<html")) {
-        if (html.includes("<head") || html.includes("<body")) {
+      // Try to make it a valid HTML document
+      if (!html.toLowerCase().includes("<!doctype") && !html.toLowerCase().includes("<html")) {
+        if (html.includes("<head") || html.includes("<body") || html.includes("<div") || html.includes("<section")) {
           html = `<!DOCTYPE html>\n<html lang="en">\n${html}\n</html>`
-        } else {
-          dispatch({ type: "SET_PORTFOLIO_ERROR", error: "AI did not generate valid HTML. Please try again." })
+        } else if (html.length < 100) {
+          // Too short, probably an error message from the AI
+          dispatch({ type: "SET_PORTFOLIO_ERROR", error: "AI returned an incomplete response. Please try again." })
           setIsStreaming(false)
           return
         }
+        // Otherwise, still try to render it - it might have partial HTML
       }
 
       // Ensure viewport meta tag exists

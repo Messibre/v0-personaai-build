@@ -1,6 +1,12 @@
-import { streamText } from "ai"
 import type { GitHubProfile, GitHubRepo, PortfolioConfig, ColorScheme } from "@/lib/types"
 import { COLOR_SCHEMES } from "@/lib/types"
+
+const GEMINI_KEYS = [
+  process.env.GEMINI_API_KEY_1,
+  process.env.GEMINI_API_KEY_2,
+].filter(Boolean) as string[]
+
+const GEMINI_MODEL = "gemini-2.5-flash"
 
 interface GenerateRequest {
   github: {
@@ -287,17 +293,109 @@ export async function POST(request: Request) {
       )
     }
 
-    const prompt = buildPrompt(data)
-    
-    // Use Vercel AI SDK with streaming
-    const result = streamText({
-      model: "google/gemini-2.5-flash",
-      prompt,
-      maxOutputTokens: 16000,
-    })
+    if (GEMINI_KEYS.length === 0) {
+      return Response.json(
+        { error: "No Gemini API keys configured. Set GEMINI_API_KEY_1 and/or GEMINI_API_KEY_2." },
+        { status: 500 }
+      )
+    }
 
-    // Return a streaming response
-    return result.toTextStreamResponse()
+    const prompt = buildPrompt(data)
+    console.log("[v0] Generate called. Template:", data.config.template, "Keys available:", GEMINI_KEYS.length)
+
+    // Try each key with streaming
+    let lastError: string = "All Gemini API keys failed"
+
+    for (const key of GEMINI_KEYS) {
+      try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:streamGenerateContent?alt=sse&key=${key}`
+
+        const geminiRes = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: {
+              temperature: 0.7,
+              maxOutputTokens: 16384,
+            },
+          }),
+        })
+
+        console.log("[v0] Gemini response status:", geminiRes.status)
+
+        if (geminiRes.status === 429 || geminiRes.status >= 500) {
+          lastError = `Gemini API returned ${geminiRes.status}`
+          console.log("[v0] Gemini rate limited or server error, trying next key...")
+          continue
+        }
+
+        if (!geminiRes.ok) {
+          const errorBody = await geminiRes.text()
+          lastError = `Gemini API error ${geminiRes.status}: ${errorBody}`
+          console.log("[v0] Gemini error:", lastError)
+          continue
+        }
+
+        // Stream the SSE response, extracting text chunks
+        const reader = geminiRes.body?.getReader()
+        if (!reader) {
+          lastError = "No response body from Gemini"
+          continue
+        }
+
+        const encoder = new TextEncoder()
+        const decoder = new TextDecoder()
+
+        const stream = new ReadableStream({
+          async start(controller) {
+            let buffer = ""
+            try {
+              while (true) {
+                const { done, value } = await reader.read()
+                if (done) break
+
+                buffer += decoder.decode(value, { stream: true })
+                const lines = buffer.split("\n")
+                buffer = lines.pop() || ""
+
+                for (const line of lines) {
+                  const trimmed = line.trim()
+                  if (trimmed.startsWith("data:")) {
+                    const jsonStr = trimmed.slice(5).trim()
+                    if (!jsonStr || jsonStr === "[DONE]") continue
+                    try {
+                      const parsed = JSON.parse(jsonStr)
+                      const text = parsed?.candidates?.[0]?.content?.parts?.[0]?.text
+                      if (text) {
+                        controller.enqueue(encoder.encode(text))
+                      }
+                    } catch {
+                      // Skip unparseable chunks
+                    }
+                  }
+                }
+              }
+              controller.close()
+            } catch (err) {
+              controller.error(err)
+            }
+          },
+        })
+
+        return new Response(stream, {
+          headers: {
+            "Content-Type": "text/plain; charset=utf-8",
+            "Transfer-Encoding": "chunked",
+          },
+        })
+      } catch (err) {
+        lastError = err instanceof Error ? err.message : String(err)
+        continue
+      }
+    }
+
+    return Response.json({ error: lastError }, { status: 500 })
   } catch (err) {
     const message = err instanceof Error ? err.message : "Failed to generate portfolio"
     return Response.json({ error: message }, { status: 500 })
