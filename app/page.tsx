@@ -254,6 +254,93 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Who it's for */}
+      <section className="px-4 py-16 sm:py-24 border-t border-border/50">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-12 sm:mb-16">
+            <p className="text-xs sm:text-sm font-medium uppercase tracking-widest text-[var(--persona-accent)] mb-3">
+              Built for everyone
+            </p>
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground mb-4 text-balance">
+              Whether you code, create, or lead — we&apos;ve got you covered
+            </h2>
+            <p className="text-muted-foreground text-sm sm:text-base max-w-2xl mx-auto text-balance">
+              PersonaAI adapts to your story. Import from the tools you already use and let AI craft your perfect portfolio.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[
+              {
+                icon: (
+                  <svg viewBox="0 0 24 24" className="size-6" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" />
+                  </svg>
+                ),
+                title: "Developers & Engineers",
+                description: "Pull your repos, languages, and contributions straight from GitHub. Your code speaks for itself.",
+              },
+              {
+                icon: (
+                  <svg viewBox="0 0 24 24" className="size-6" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                  </svg>
+                ),
+                title: "Designers & Creatives",
+                description: "Choose from stunning visual templates that put your aesthetic front and center. Upload your own images to personalize.",
+              },
+              {
+                icon: (
+                  <svg viewBox="0 0 24 24" className="size-6" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="2" y="7" width="20" height="14" rx="2" ry="2" /><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+                  </svg>
+                ),
+                title: "Freelancers & Consultants",
+                description: "Showcase your expertise, past work, and contact info in one polished page. Win more clients.",
+              },
+              {
+                icon: (
+                  <svg viewBox="0 0 24 24" className="size-6" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M22 10v6M2 10l10-5 10 5-10 5z" /><path d="M6 12v5c3 3 10 3 12 0v-5" />
+                  </svg>
+                ),
+                title: "Students & Graduates",
+                description: "No portfolio yet? No problem. Import your Notion notes or just type your bio and let AI do the heavy lifting.",
+              },
+              {
+                icon: (
+                  <svg viewBox="0 0 24 24" className="size-6" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M20 7h-9" /><path d="M14 17H5" /><circle cx="17" cy="17" r="3" /><circle cx="7" cy="7" r="3" />
+                  </svg>
+                ),
+                title: "Product Managers & Founders",
+                description: "Tell your professional story with a polished personal site. Perfect for thought leadership and networking.",
+              },
+              {
+                icon: (
+                  <svg viewBox="0 0 24 24" className="size-6" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10" /><polygon points="10 8 16 12 10 16 10 8" />
+                  </svg>
+                ),
+                title: "Content Creators & Writers",
+                description: "Import content from Notion, add your photo, and have a beautiful portfolio ready to share in seconds.",
+              },
+            ].map((persona) => (
+              <div
+                key={persona.title}
+                className="group relative p-6 rounded-2xl border border-border bg-card hover:border-[var(--persona-accent)]/40 hover:shadow-lg hover:shadow-[var(--persona-accent)]/5 transition-all duration-300"
+              >
+                <div className="flex items-center justify-center size-11 rounded-xl bg-[var(--persona-accent)]/10 text-[var(--persona-accent)] mb-4 group-hover:bg-[var(--persona-accent)]/20 transition-colors">
+                  {persona.icon}
+                </div>
+                <h3 className="text-base font-semibold text-foreground mb-2">{persona.title}</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">{persona.description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Examples Gallery */}
       <section id="examples" className="px-4 pb-16 sm:pb-24 scroll-mt-8">
         <div className="max-w-6xl mx-auto">
