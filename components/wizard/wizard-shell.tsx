@@ -1,19 +1,17 @@
 "use client"
 
-import { useReducer, useCallback } from "react"
+import { useReducer, useCallback, useRef, useEffect } from "react"
 import type { WizardState, WizardAction } from "@/lib/types"
-import { StepGithub } from "./step-github"
+import { StepStart } from "./step-start"
 import { StepResume } from "./step-resume"
-import { StepNotion } from "./step-notion"
 import { StepCustomize } from "./step-customize"
 import { StepPreview } from "./step-preview"
 import { cn } from "@/lib/utils"
-import { Github, FileText, StickyNote, Palette, Eye, Check } from "lucide-react"
+import { Sparkles, FileText, Palette, Eye, Check } from "lucide-react"
 
 const STEPS = [
-  { label: "GitHub", icon: Github },
+  { label: "Get Started", icon: Sparkles },
   { label: "Resume", icon: FileText },
-  { label: "Notion", icon: StickyNote },
   { label: "Customize", icon: Palette },
   { label: "Preview", icon: Eye },
 ]
@@ -117,24 +115,29 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
 
 export function WizardShell() {
   const [state, dispatch] = useReducer(wizardReducer, initialState)
+  const wizardTopRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (wizardTopRef.current) {
+      wizardTopRef.current.scrollIntoView({ behavior: "smooth", block: "start" })
+    }
+  }, [state.step])
 
   const canGoNext = useCallback(() => {
     switch (state.step) {
-      case 0:
-        return state.github.profile !== null
-      case 1:
+      case 0: // Get Started - need at least a profile (github, notion, or manual)
+        return state.github.profile !== null || state.notion.content !== null
+      case 1: // Resume - always optional
         return true
-      case 2:
-        return true
-      case 3:
+      case 2: // Customize
         return state.config.sections.length > 0
       default:
         return false
     }
-  }, [state.step, state.github.profile, state.config.sections.length])
+  }, [state.step, state.github.profile, state.notion.content, state.config.sections.length])
 
   const goNext = useCallback(() => {
-    if (state.step < 4 && canGoNext()) {
+    if (state.step < 3 && canGoNext()) {
       dispatch({ type: "SET_STEP", step: state.step + 1 })
     }
   }, [state.step, canGoNext])
@@ -154,15 +157,15 @@ export function WizardShell() {
     [state.step]
   )
 
-  const progressPercent = ((state.step) / 4) * 100
+  const progressPercent = (state.step / 3) * 100
 
   return (
     <div className="w-full max-w-4xl mx-auto">
+      <div ref={wizardTopRef} className="scroll-mt-24" />
+
       {/* Step Indicators */}
       <div className="mb-10">
-        {/* Steps row */}
         <div className="flex items-center justify-between mb-5 relative">
-          {/* Connecting line */}
           <div className="absolute top-5 left-[5%] right-[5%] h-px bg-[var(--persona-border)]" aria-hidden="true" />
           <div
             className="absolute top-5 left-[5%] h-px bg-[var(--persona-accent)] transition-all duration-700 ease-out"
@@ -218,22 +221,19 @@ export function WizardShell() {
         </div>
       </div>
 
-      {/* Step Content with animation */}
+      {/* Step Content */}
       <div className="min-h-[420px]" key={state.step}>
         <div className="animate-fade-in-up">
           {state.step === 0 && (
-            <StepGithub state={state} dispatch={dispatch} onNext={goNext} />
+            <StepStart state={state} dispatch={dispatch} onNext={goNext} />
           )}
           {state.step === 1 && (
             <StepResume state={state} dispatch={dispatch} onNext={goNext} onBack={goBack} />
           )}
           {state.step === 2 && (
-            <StepNotion state={state} dispatch={dispatch} onNext={goNext} onBack={goBack} />
-          )}
-          {state.step === 3 && (
             <StepCustomize state={state} dispatch={dispatch} onNext={goNext} onBack={goBack} />
           )}
-          {state.step === 4 && (
+          {state.step === 3 && (
             <StepPreview state={state} dispatch={dispatch} onBack={goBack} />
           )}
         </div>

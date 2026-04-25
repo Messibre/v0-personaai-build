@@ -87,7 +87,7 @@ function LogoMarquee() {
     if (!marquee) return
 
     let position = 0
-    const speed = 0.5
+    const speed = 0.15
 
     const animate = () => {
       position -= speed
@@ -134,6 +134,14 @@ export default function Home() {
     <main className="min-h-screen bg-background">
       {/* Hero Section */}
       <header className="relative overflow-hidden">
+        {/* Background grid */}
+        <div
+          className="absolute inset-0 pointer-events-none opacity-[0.04] dark:opacity-[0.06]"
+          style={{
+            backgroundImage: "linear-gradient(var(--foreground) 1px, transparent 1px), linear-gradient(90deg, var(--foreground) 1px, transparent 1px)",
+            backgroundSize: "60px 60px",
+          }}
+        />
         {/* Background gradient */}
         <div 
           className="absolute inset-0 pointer-events-none"
@@ -325,8 +333,17 @@ export default function Home() {
       </header>
 
       {/* Wizard Section */}
-      <section id="wizard" className="px-4 py-12 sm:py-16 lg:py-20 scroll-mt-8">
-        <WizardShell />
+      <section id="wizard" className="relative px-4 py-12 sm:py-16 lg:py-20 scroll-mt-8">
+        <div
+          className="absolute inset-0 pointer-events-none opacity-[0.03] dark:opacity-[0.05]"
+          style={{
+            backgroundImage: "linear-gradient(var(--foreground) 1px, transparent 1px), linear-gradient(90deg, var(--foreground) 1px, transparent 1px)",
+            backgroundSize: "60px 60px",
+          }}
+        />
+        <div className="relative z-10">
+          <WizardShell />
+        </div>
       </section>
 
       {/* Examples Gallery */}

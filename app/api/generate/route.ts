@@ -8,7 +8,7 @@ const GEMINI_KEYS = [
 
 interface GenerateRequest {
   github: {
-    profile: GitHubProfile
+    profile: GitHubProfile | null
     repos: GitHubRepo[]
   }
   resumeText: string | null
@@ -17,8 +17,7 @@ interface GenerateRequest {
   photoDataUrl: string | null
 }
 
-// Try to get a short AI-generated bio (non-blocking, fast)
-async function getAiBio(profile: GitHubProfile, repos: GitHubRepo[], resumeText: string | null): Promise<string | null> {
+async function getAiBio(profile: GitHubProfile, repos: GitHubRepo[], resumeText: string | null, notionContent: string | null): Promise<string | null> {
   if (GEMINI_KEYS.length === 0) return null
 
   const langs = [...new Set(repos.map((r) => r.language).filter(Boolean))].slice(0, 6)
@@ -26,9 +25,11 @@ async function getAiBio(profile: GitHubProfile, repos: GitHubRepo[], resumeText:
 
 Name: ${profile.name || profile.username}
 Bio: ${profile.bio || "N/A"}
+${profile.company ? `Role: ${profile.company}` : ""}
 Languages: ${langs.join(", ") || "Various"}
 Repos: ${profile.public_repos}
 ${resumeText ? `Resume excerpt: ${resumeText.substring(0, 500)}` : ""}
+${notionContent ? `Additional context: ${notionContent.substring(0, 500)}` : ""}
 
 Output ONLY the bio text, no quotes, no labels.`
 
@@ -42,11 +43,10 @@ Output ONLY the bio text, no quotes, no labels.`
           contents: [{ parts: [{ text: prompt }] }],
           generationConfig: { temperature: 0.7, maxOutputTokens: 200 },
         }),
-        signal: AbortSignal.timeout(8000), // 8 second timeout
+        signal: AbortSignal.timeout(8000),
       })
 
       if (!res.ok) continue
-
       const data = await res.json()
       const text = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim()
       if (text && text.length > 20) return text
@@ -61,17 +61,16 @@ export async function POST(request: Request) {
   try {
     const data: GenerateRequest = await request.json()
 
+    // Need at least a profile (from github, notion+manual, or manual)
     if (!data.github?.profile) {
-      return Response.json({ error: "GitHub profile data is required" }, { status: 400 })
+      return Response.json({ error: "Profile data is required. Please go back and enter your info." }, { status: 400 })
     }
 
-    // Generate AI bio in the background (best-effort, fast timeout)
-    const aiBio = await getAiBio(data.github.profile, data.github.repos, data.resumeText)
+    const aiBio = await getAiBio(data.github.profile, data.github.repos || [], data.resumeText, data.notionContent)
 
-    // Build HTML instantly from pre-built templates
     const html = buildPortfolioHtml({
       profile: data.github.profile,
-      repos: data.github.repos,
+      repos: data.github.repos || [],
       resumeText: data.resumeText,
       notionContent: data.notionContent,
       config: data.config,

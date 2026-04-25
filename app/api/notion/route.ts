@@ -1,10 +1,6 @@
 import { NextResponse } from "next/server"
 
 function extractPageId(url: string): string | null {
-  // Notion URLs can be like:
-  // https://www.notion.so/Page-Title-abc123def456
-  // https://notion.so/workspace/Page-Title-abc123def456
-  // https://www.notion.so/abc123def456abc123def456abc123de
   try {
     const parsed = new URL(url)
     if (!parsed.hostname.includes("notion.so") && !parsed.hostname.includes("notion.site")) {
@@ -12,20 +8,20 @@ function extractPageId(url: string): string | null {
     }
     const pathParts = parsed.pathname.split("/").filter(Boolean)
     const lastPart = pathParts[pathParts.length - 1] || ""
-    // Extract the 32-char hex ID from the end of the path
     const match = lastPart.match(/([a-f0-9]{32})$/i) || lastPart.match(/([a-f0-9-]{36})$/i)
-    if (match) {
-      return match[1].replace(/-/g, "")
-    }
-    // Try the last segment with dashes
+    if (match) return match[1].replace(/-/g, "")
     const dashMatch = lastPart.match(/-([a-f0-9]{32})$/i)
-    if (dashMatch) {
-      return dashMatch[1]
-    }
+    if (dashMatch) return dashMatch[1]
     return null
   } catch {
     return null
   }
+}
+
+function formatPageId(raw: string): string {
+  const clean = raw.replace(/-/g, "")
+  if (clean.length !== 32) return clean
+  return `${clean.slice(0, 8)}-${clean.slice(8, 12)}-${clean.slice(12, 16)}-${clean.slice(16, 20)}-${clean.slice(20)}`
 }
 
 export async function POST(request: Request) {
@@ -34,61 +30,158 @@ export async function POST(request: Request) {
     const { url } = body
 
     if (!url || typeof url !== "string") {
-      return NextResponse.json(
-        { content: null, error: "URL is required" },
-        { status: 400 }
-      )
+      return NextResponse.json({ content: null, error: "URL is required" }, { status: 400 })
     }
 
     const pageId = extractPageId(url)
     if (!pageId) {
       return NextResponse.json(
-        { content: null, error: "Could not parse Notion page ID from URL. Please ensure it's a valid Notion page URL." },
+        { content: null, error: "Could not parse a Notion page ID from this URL. Make sure you copied the full link." },
         { status: 400 }
       )
     }
 
-    // Use notion-client (unofficial) to fetch the page
-    const { NotionAPI } = await import("notion-client")
-    const notion = new NotionAPI()
-    const recordMap = await notion.getPage(pageId)
+    const formattedId = formatPageId(pageId)
 
-    // Extract text from block values
-    const blocks = Object.values(recordMap.block || {})
-    const textParts: string[] = []
+    // Approach 1: Try the unofficial Notion API (notion.so/api/v3)
+    let textParts: string[] = []
 
-    for (const block of blocks) {
-      const value = block?.value
-      if (!value) continue
+    try {
+      const apiRes = await fetch("https://www.notion.so/api/v3/loadPageChunk", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+          "User-Agent": "Mozilla/5.0 (compatible; PersonaAI/1.0)",
+        },
+        body: JSON.stringify({
+          pageId: formattedId,
+          limit: 100,
+          cursor: { stack: [] },
+          chunkNumber: 0,
+          verticalColumns: false,
+        }),
+        signal: AbortSignal.timeout(10000),
+      })
 
-      // Extract from title/text arrays (Notion internal format)
-      const properties = value.properties
-      if (properties?.title) {
-        const titleText = properties.title
-          .map((segment: unknown[]) => (typeof segment[0] === "string" ? segment[0] : ""))
-          .join("")
-        if (titleText.trim()) textParts.push(titleText.trim())
+      if (apiRes.ok) {
+        const data = await apiRes.json()
+        const blocks = data?.recordMap?.block || {}
+
+        for (const [, block] of Object.entries(blocks)) {
+          const value = (block as { value?: { properties?: { title?: unknown[][] } } })?.value
+          if (!value) continue
+          const props = value.properties
+          if (props?.title && Array.isArray(props.title)) {
+            const text = props.title
+              .map((seg: unknown[]) => (typeof seg[0] === "string" ? seg[0] : ""))
+              .join("")
+              .trim()
+            if (text) textParts.push(text)
+          }
+        }
+      }
+    } catch {
+      // API approach failed, try scraping
+    }
+
+    // Approach 2: If API approach returned nothing, try fetching the public HTML page
+    if (textParts.length === 0) {
+      try {
+        const htmlRes = await fetch(url, {
+          headers: {
+            "User-Agent": "Mozilla/5.0 (compatible; PersonaAI/1.0)",
+            "Accept": "text/html",
+          },
+          signal: AbortSignal.timeout(10000),
+        })
+
+        if (htmlRes.ok) {
+          const html = await htmlRes.text()
+
+          // Extract text from meta tags (most reliable for public pages)
+          const descMatch = html.match(/<meta\s+(?:name|property)=["'](?:description|og:description|twitter:description)["']\s+content=["']([^"']+)["']/i)
+          const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i)
+
+          // Extract text content from the page body
+          // Remove script and style tags, then strip HTML
+          let bodyText = html
+            .replace(/<script[\s\S]*?<\/script>/gi, "")
+            .replace(/<style[\s\S]*?<\/style>/gi, "")
+            .replace(/<[^>]+>/g, " ")
+            .replace(/&nbsp;/g, " ")
+            .replace(/&amp;/g, "&")
+            .replace(/&lt;/g, "<")
+            .replace(/&gt;/g, ">")
+            .replace(/&#x27;/g, "'")
+            .replace(/&quot;/g, '"')
+            .replace(/\s+/g, " ")
+            .trim()
+
+          if (titleMatch) textParts.push(titleMatch[1].trim())
+          if (descMatch) textParts.push(descMatch[1].trim())
+
+          // Get meaningful text chunks (skip very short fragments)
+          const sentences = bodyText.split(/[.!?]+/).filter((s) => s.trim().length > 20)
+          textParts.push(...sentences.slice(0, 30).map((s) => s.trim()))
+        }
+      } catch {
+        // HTML scrape also failed
       }
     }
 
-    const content = textParts.join("\n").trim()
+    // Approach 3: Try notion.site URL format
+    if (textParts.length === 0) {
+      try {
+        const siteUrl = `https://${pageId}.notion.site`
+        const siteRes = await fetch(siteUrl, {
+          headers: { "User-Agent": "Mozilla/5.0 (compatible; PersonaAI/1.0)", "Accept": "text/html" },
+          signal: AbortSignal.timeout(8000),
+          redirect: "follow",
+        })
+
+        if (siteRes.ok) {
+          const html = await siteRes.text()
+          const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i)
+          if (titleMatch) textParts.push(titleMatch[1].trim())
+
+          const bodyText = html
+            .replace(/<script[\s\S]*?<\/script>/gi, "")
+            .replace(/<style[\s\S]*?<\/style>/gi, "")
+            .replace(/<[^>]+>/g, " ")
+            .replace(/\s+/g, " ")
+            .trim()
+
+          const sentences = bodyText.split(/[.!?]+/).filter((s) => s.trim().length > 20)
+          textParts.push(...sentences.slice(0, 20).map((s) => s.trim()))
+        }
+      } catch {
+        // All approaches failed
+      }
+    }
+
+    // Deduplicate and clean
+    const uniqueParts = [...new Set(textParts)].filter(
+      (t) => t.length > 5 && !t.includes("notion.so") && !t.includes("Notion") && !t.includes("Log in")
+    )
+    const content = uniqueParts.join("\n\n").trim()
 
     if (!content) {
       return NextResponse.json({
         content: null,
-        error: "Could not extract text content from this Notion page. It may be private or have restricted access.",
+        error: "Could not extract content from this page. Make sure the page is published publicly (Share > Publish to web).",
       })
     }
 
     return NextResponse.json({
       content,
-      title: textParts[0]?.substring(0, 100) || "Notion Page",
+      title: uniqueParts[0]?.substring(0, 100) || "Notion Page",
     })
   } catch (err) {
     const message = err instanceof Error ? err.message : "Failed to fetch Notion content"
     return NextResponse.json(
       { content: null, error: `Could not fetch Notion page: ${message}` },
-      { status: 200 } // Return 200 even on error so it doesn't block the wizard
+      { status: 200 }
     )
   }
 }
