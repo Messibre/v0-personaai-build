@@ -235,7 +235,7 @@ export default function Home() {
                   className="flex items-center justify-center gap-2 w-full sm:w-auto py-3 px-6 rounded-xl bg-[var(--persona-accent)] text-[var(--persona-bg)] font-semibold text-sm shadow-lg shadow-[var(--persona-accent)]/25 hover:shadow-xl hover:shadow-[var(--persona-accent)]/30 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
                 >
                   <Sparkles className="size-4" />
-                  Get Started Free
+                  Build Your Portfolio
                   <ArrowRight className="size-4" />
                 </Link>
                 <Link
