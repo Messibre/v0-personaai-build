@@ -1,6 +1,6 @@
 "use client"
 
-import { useReducer, useCallback } from "react"
+import { useReducer, useCallback, useRef, useEffect } from "react"
 import type { WizardState, WizardAction } from "@/lib/types"
 import { StepGithub } from "./step-github"
 import { StepResume } from "./step-resume"
@@ -117,6 +117,14 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
 
 export function WizardShell() {
   const [state, dispatch] = useReducer(wizardReducer, initialState)
+  const wizardTopRef = useRef<HTMLDivElement>(null)
+
+  // Scroll to wizard top when step changes (not to bottom of page)
+  useEffect(() => {
+    if (wizardTopRef.current) {
+      wizardTopRef.current.scrollIntoView({ behavior: "smooth", block: "start" })
+    }
+  }, [state.step])
 
   const canGoNext = useCallback(() => {
     switch (state.step) {
@@ -158,6 +166,7 @@ export function WizardShell() {
 
   return (
     <div className="w-full max-w-4xl mx-auto">
+      <div ref={wizardTopRef} className="scroll-mt-24" />
       {/* Step Indicators */}
       <div className="mb-10">
         {/* Steps row */}
