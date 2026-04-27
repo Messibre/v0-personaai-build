@@ -17,6 +17,7 @@ export interface GitHubRepo {
   description: string | null
   language: string | null
   stargazers_count: number
+  forks_count: number
   html_url: string
   fork: boolean
   topics: string[]
@@ -40,6 +41,8 @@ export type TemplateStyle =
   | "pastel-creative"
   | "designer-coder"
   | "minimal-clean"
+  | "brutalist"
+  | "glassmorphism"
 
 export type ColorScheme =
   | "ocean"
@@ -103,6 +106,18 @@ export const TEMPLATE_OPTIONS: {
     label: "Minimal Clean",
     description: "Ultra-clean whitespace, refined typography, subtle grid and elegant details",
     inspiration: "minimal",
+  },
+  {
+    id: "brutalist",
+    label: "Brutalist",
+    description: "Raw, high-contrast, bold borders and oversized typography — unapologetically loud",
+    inspiration: "brutalist",
+  },
+  {
+    id: "glassmorphism",
+    label: "Glassmorphism",
+    description: "Frosted glass cards over vivid blurred gradients — sleek and futuristic",
+    inspiration: "glass",
   },
 ]
 

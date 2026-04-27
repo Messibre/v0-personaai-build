@@ -128,24 +128,21 @@ export function StepPreview({ state, dispatch, onBack }: StepPreviewProps) {
     URL.revokeObjectURL(url)
   }, [portfolio.html, portfolio.title])
 
-  const openInV0 = useCallback(async () => {
-    if (!portfolio.html) return
-    try {
-      await navigator.clipboard.writeText(portfolio.html)
-    } catch {
-      /* silent */
-    }
-    window.open("https://v0.dev/chat", "_blank")
-  }, [portfolio.html])
-
-  // Open deploy dialog
+  // Open deploy dialog — smart first+last name slug
   const openDeployDialog = useCallback(() => {
-    // Generate a default name from portfolio title or user name
-    const defaultName = (portfolio.title || github.profile?.name || "my-portfolio")
+    const fullName = github.profile?.name || portfolio.title || "my-portfolio"
+    const parts = fullName.trim().split(/\s+/)
+    // Use first name + last name only (skip middle names)
+    const slug =
+      parts.length >= 2
+        ? `${parts[0]}-${parts[parts.length - 1]}-portfolio`
+        : `${parts[0]}-portfolio`
+    const defaultName = slug
       .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/[^a-z0-9-]/g, "-")
+      .replace(/-+/g, "-")
       .replace(/^-|-$/g, "")
-      .substring(0, 40)
+      .substring(0, 52)
     setDeployName(defaultName)
     setShowDeployDialog(true)
   }, [portfolio.title, github.profile?.name])
@@ -300,15 +297,6 @@ export function StepPreview({ state, dispatch, onBack }: StepPreviewProps) {
               <span className="hidden sm:inline">Download .html</span>
               <span className="sm:hidden">Download</span>
             </Button>
-            <Button
-              onClick={openInV0}
-              size="sm"
-              className="gap-2 bg-[var(--persona-accent)] text-[var(--persona-bg)] hover:bg-[var(--persona-accent)]/90 shadow-lg shadow-[var(--persona-accent)]/20 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
-            >
-              <ExternalLink className="size-4" />
-              Open in v0
-            </Button>
-            
             {/* Deploy to Vercel */}
             <Button
               onClick={deploying ? undefined : deployStatus === "ready" ? undefined : openDeployDialog}
@@ -432,15 +420,15 @@ export function StepPreview({ state, dispatch, onBack }: StepPreviewProps) {
           <div className="w-full max-w-md bg-card border border-border rounded-2xl shadow-2xl p-6 animate-fade-in-scale">
             <h3 className="text-lg font-semibold text-foreground mb-2">Name your site</h3>
             <p className="text-sm text-muted-foreground mb-4">
-              Choose a name for your deployed portfolio. This will be your site URL.
+              We&apos;ve generated a clean slug from your name. You can edit it below.
             </p>
             <div className="mb-4">
               <div className="flex items-center gap-2 mb-2">
                 <Input
                   value={deployName}
-                  onChange={(e) => setDeployName(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
-                  placeholder="my-portfolio"
-                  className="flex-1 bg-background border-border"
+                  onChange={(e) => setDeployName(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "").replace(/-+/g, "-"))}
+                  placeholder="firstname-lastname-portfolio"
+                  className="flex-1 bg-background border-border font-mono"
                   autoFocus
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && deployName.trim()) {
@@ -452,7 +440,10 @@ export function StepPreview({ state, dispatch, onBack }: StepPreviewProps) {
                 />
               </div>
               <p className="text-xs text-muted-foreground">
-                Your site will be at: <span className="font-mono text-[var(--persona-accent)]">{deployName || "my-portfolio"}.vercel.app</span>
+                Your site will be at:{" "}
+                <span className="font-mono text-[var(--persona-accent)]">
+                  {deployName || "firstname-lastname-portfolio"}.vercel.app
+                </span>
               </p>
             </div>
             <div className="flex gap-3 justify-end">

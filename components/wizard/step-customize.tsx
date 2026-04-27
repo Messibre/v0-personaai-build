@@ -150,6 +150,83 @@ function TemplatePreview({ templateId, isSelected }: { templateId: TemplateStyle
           <circle cx="80" cy="83" r="2" fill={accent} />
         </svg>
       )
+    case "brutalist":
+      return (
+        <svg viewBox="0 0 160 90" className="w-full h-full" aria-hidden="true">
+          <rect width="160" height="90" fill="#0a0a0a" />
+          {/* Bold top border */}
+          <rect x="0" y="0" width="160" height="3" fill={accent} />
+          {/* Left panel */}
+          <rect x="0" y="3" width="95" height="87" fill="#111" />
+          {/* Right panel / photo */}
+          <rect x="95" y="3" width="65" height="87" fill="#1a1a1a" />
+          <rect x="95" y="3" width="3" height="87" fill={accent} />
+          {/* Photo placeholder */}
+          <rect x="98" y="5" width="59" height="52" fill="#222" />
+          <ellipse cx="127" cy="25" rx="10" ry="12" fill="#333" />
+          {/* Oversized text */}
+          <text x="8" y="38" fontSize="20" fontWeight="900" fill="#fff" fontFamily="monospace">NAME</text>
+          <text x="8" y="55" fontSize="10" fontWeight="900" fill={accent} fontFamily="monospace">PORTFOLIO</text>
+          {/* Role tag */}
+          <rect x="8" y="20" width="40" height="8" fill={accent} />
+          <text x="10" y="26" fontSize="4" fontWeight="700" fill="#000" fontFamily="monospace">DEV</text>
+          {/* Stat boxes */}
+          <rect x="98" y="62" width="18" height="14" fill="none" stroke="#333" strokeWidth="1" />
+          <rect x="120" y="62" width="18" height="14" fill="none" stroke="#333" strokeWidth="1" />
+          <rect x="142" y="62" width="12" height="14" fill="none" stroke="#333" strokeWidth="1" />
+          <text x="104" y="72" fontSize="6" fontWeight="900" fill={accent} fontFamily="monospace">12</text>
+          <text x="126" y="72" fontSize="6" fontWeight="900" fill={accent} fontFamily="monospace">8</text>
+          <text x="146" y="72" fontSize="5" fontWeight="900" fill={accent} fontFamily="monospace">3</text>
+          {/* Nav */}
+          <rect x="0" y="0" width="160" height="12" fill="#0a0a0a" />
+          <text x="8" y="9" fontSize="5" fontWeight="900" fill="#fff" fontFamily="monospace">PERSONA</text>
+          <rect x="100" y="4" width="14" height="3" rx="0" fill="#222" />
+          <rect x="118" y="4" width="14" height="3" rx="0" fill="#222" />
+          <rect x="136" y="4" width="14" height="3" rx="0" fill={accent} />
+        </svg>
+      )
+    case "glassmorphism":
+      return (
+        <svg viewBox="0 0 160 90" className="w-full h-full" aria-hidden="true">
+          <defs>
+            <radialGradient id="g1" cx="30%" cy="30%">
+              <stop offset="0%" stopColor={accent} stopOpacity="0.4" />
+              <stop offset="100%" stopColor="#050510" stopOpacity="0" />
+            </radialGradient>
+            <radialGradient id="g2" cx="80%" cy="80%">
+              <stop offset="0%" stopColor="#6366f1" stopOpacity="0.3" />
+              <stop offset="100%" stopColor="#050510" stopOpacity="0" />
+            </radialGradient>
+          </defs>
+          {/* Dark background */}
+          <rect width="160" height="90" fill="#050510" />
+          {/* Glow orbs */}
+          <ellipse cx="40" cy="30" rx="50" ry="40" fill="url(#g1)" />
+          <ellipse cx="130" cy="70" rx="45" ry="35" fill="url(#g2)" />
+          {/* Glass card */}
+          <rect x="8" y="15" width="85" height="60" rx="6" fill="white" fillOpacity="0.04" stroke="white" strokeOpacity="0.1" strokeWidth="0.5" />
+          {/* Card content */}
+          <text x="16" y="35" fontSize="4" fontWeight="600" fill={accent} fontFamily="sans-serif" letterSpacing="1">DEVELOPER</text>
+          <text x="16" y="47" fontSize="9" fontWeight="800" fill="#fff" fontFamily="sans-serif">Jane Doe</text>
+          <text x="16" y="56" fontSize="3.5" fill="rgba(255,255,255,0.5)" fontFamily="sans-serif">Building beautiful things at</text>
+          <text x="16" y="62" fontSize="3.5" fill="rgba(255,255,255,0.5)" fontFamily="sans-serif">the edge of design & code.</text>
+          {/* CTA buttons */}
+          <rect x="16" y="65" width="28" height="7" rx="3" fill={accent} />
+          <text x="22" y="70" fontSize="3" fontWeight="700" fill="#000" fontFamily="sans-serif">My Work</text>
+          <rect x="48" y="65" width="28" height="7" rx="3" fill="white" fillOpacity="0.08" stroke="white" strokeOpacity="0.15" strokeWidth="0.5" />
+          <text x="53" y="70" fontSize="3" fill="rgba(255,255,255,0.7)" fontFamily="sans-serif">Contact</text>
+          {/* Photo */}
+          <rect x="100" y="10" width="52" height="70" rx="8" fill="white" fillOpacity="0.06" stroke={accent} strokeOpacity="0.3" strokeWidth="0.5" />
+          <ellipse cx="126" cy="38" rx="14" ry="16" fill="#1a1a2e" />
+          <ellipse cx="126" cy="30" rx="7" ry="8" fill="#222240" />
+          {/* Nav */}
+          <rect x="0" y="0" width="160" height="11" fill="rgba(5,5,16,0.8)" />
+          <text x="8" y="8" fontSize="5" fontWeight="800" fill="#fff" fontFamily="sans-serif">P.</text>
+          <rect x="90" y="4" width="14" height="3" rx="1" fill="rgba(255,255,255,0.1)" />
+          <rect x="108" y="4" width="14" height="3" rx="1" fill="rgba(255,255,255,0.1)" />
+          <rect x="126" y="3" width="20" height="5" rx="2" fill={accent} fillOpacity="0.9" />
+        </svg>
+      )
   }
 }
 
