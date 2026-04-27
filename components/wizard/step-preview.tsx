@@ -13,6 +13,9 @@ import {
   ExternalLink,
   Sparkles,
   Check,
+  Rocket,
+  Loader2,
+  Link2,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -26,6 +29,13 @@ export function StepPreview({ state, dispatch, onBack }: StepPreviewProps) {
   const { portfolio, github, resume, notion, config, photo } = state
   const [copied, setCopied] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
+  
+  // Deploy state
+  const [deploying, setDeploying] = useState(false)
+  const [deployStatus, setDeployStatus] = useState<"idle" | "uploading" | "deploying" | "ready" | "error">("idle")
+  const [deployUrl, setDeployUrl] = useState<string | null>(null)
+  const [deployError, setDeployError] = useState<string | null>(null)
+  const [urlCopied, setUrlCopied] = useState(false)
 
   const generate = useCallback(async () => {
     if (!github.profile) return
@@ -123,6 +133,60 @@ export function StepPreview({ state, dispatch, onBack }: StepPreviewProps) {
     window.open("https://v0.dev/chat", "_blank")
   }, [portfolio.html])
 
+  // Deploy to Vercel
+  const deployToVercel = useCallback(async () => {
+    if (!portfolio.html) return
+
+    setDeploying(true)
+    setDeployStatus("uploading")
+    setDeployError(null)
+    setDeployUrl(null)
+
+    try {
+      setDeployStatus("deploying")
+      
+      const res = await fetch("/api/deploy", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          html: portfolio.html,
+          projectName: portfolio.title || "my-portfolio",
+        }),
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        throw new Error(data.error || "Deployment failed")
+      }
+
+      setDeployUrl(data.url)
+      setDeployStatus("ready")
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Deployment failed"
+      setDeployError(message)
+      setDeployStatus("error")
+    } finally {
+      setDeploying(false)
+    }
+  }, [portfolio.html, portfolio.title])
+
+  const copyDeployUrl = useCallback(async () => {
+    if (!deployUrl) return
+    try {
+      await navigator.clipboard.writeText(deployUrl)
+    } catch {
+      const ta = document.createElement("textarea")
+      ta.value = deployUrl
+      document.body.appendChild(ta)
+      ta.select()
+      document.execCommand("copy")
+      document.body.removeChild(ta)
+    }
+    setUrlCopied(true)
+    setTimeout(() => setUrlCopied(false), 2000)
+  }, [deployUrl])
+
   const loading = isGenerating || portfolio.loading
 
   return (
@@ -219,9 +283,42 @@ export function StepPreview({ state, dispatch, onBack }: StepPreviewProps) {
               <ExternalLink className="size-4" />
               Open in v0
             </Button>
+            
+            {/* Deploy to Vercel */}
+            <Button
+              onClick={deployToVercel}
+              disabled={deploying}
+              size="sm"
+              className={cn(
+                "gap-2 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]",
+                deployStatus === "ready"
+                  ? "bg-green-600 hover:bg-green-700 text-white"
+                  : "bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100"
+              )}
+            >
+              {deploying ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" />
+                  {deployStatus === "uploading" ? "Uploading..." : "Deploying..."}
+                </>
+              ) : deployStatus === "ready" ? (
+                <>
+                  <Check className="size-4" />
+                  Deployed
+                </>
+              ) : (
+                <>
+                  <Rocket className="size-4" />
+                  Deploy to Vercel
+                </>
+              )}
+            </Button>
             <Button
               onClick={() => {
                 dispatch({ type: "CLEAR_PORTFOLIO" })
+                setDeployStatus("idle")
+                setDeployUrl(null)
+                setDeployError(null)
                 generate()
               }}
               variant="ghost"
@@ -232,6 +329,67 @@ export function StepPreview({ state, dispatch, onBack }: StepPreviewProps) {
               <span className="hidden sm:inline">Regenerate</span>
             </Button>
           </div>
+
+          {/* Deployment URL Success */}
+          {deployUrl && deployStatus === "ready" && (
+            <div className="mt-4 p-4 rounded-xl bg-green-500/10 border border-green-500/20 animate-fade-in-up">
+              <div className="flex items-center gap-2 mb-2">
+                <Check className="size-4 text-green-500" />
+                <span className="text-sm font-medium text-green-500">Successfully deployed!</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="flex-1 flex items-center gap-2 px-3 py-2 rounded-lg bg-background border border-border font-mono text-sm truncate">
+                  <Link2 className="size-4 text-muted-foreground shrink-0" />
+                  <a
+                    href={deployUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[var(--persona-accent)] hover:underline truncate"
+                  >
+                    {deployUrl}
+                  </a>
+                </div>
+                <Button
+                  onClick={copyDeployUrl}
+                  variant="outline"
+                  size="sm"
+                  className={cn(
+                    "gap-2 shrink-0",
+                    urlCopied && "border-green-500/30 text-green-500"
+                  )}
+                >
+                  {urlCopied ? <Check className="size-4" /> : <Copy className="size-4" />}
+                  {urlCopied ? "Copied" : "Copy"}
+                </Button>
+                <Button
+                  onClick={() => window.open(deployUrl, "_blank")}
+                  variant="outline"
+                  size="sm"
+                  className="gap-2 shrink-0"
+                >
+                  <ExternalLink className="size-4" />
+                  Visit
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Deployment Error */}
+          {deployError && deployStatus === "error" && (
+            <div className="mt-4 flex items-center gap-2 p-3 rounded-lg bg-destructive/10 text-destructive text-sm animate-fade-in-scale">
+              <AlertCircle className="size-4 shrink-0" />
+              <span>{deployError}</span>
+              <Button
+                onClick={deployToVercel}
+                variant="ghost"
+                size="sm"
+                className="ml-auto gap-1 text-destructive hover:text-destructive"
+              >
+                <RefreshCw className="size-3" />
+                Retry
+              </Button>
+            </div>
+          )}
         </div>
       )}
 
