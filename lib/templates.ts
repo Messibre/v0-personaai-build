@@ -1,6 +1,13 @@
 import type { GitHubProfile, GitHubRepo, PortfolioConfig, ColorScheme } from "./types"
 import { COLOR_SCHEMES } from "./types"
 
+interface SocialLinks {
+  linkedin?: string
+  twitter?: string
+  substack?: string
+  blog?: string
+}
+
 interface TemplateData {
   profile: GitHubProfile
   repos: GitHubRepo[]
@@ -9,6 +16,7 @@ interface TemplateData {
   config: PortfolioConfig
   photoUrl: string | null
   aiBio: string | null
+  socialLinks?: SocialLinks
 }
 
 function e(str: string): string {
@@ -240,7 +248,34 @@ function buildAbout(profile: GitHubProfile, aiBio: string | null, accent: string
   </section>`
 }
 
-function buildContact(profile: GitHubProfile, accent: string): string {
+function buildContact(profile: GitHubProfile, accent: string, socialLinks?: SocialLinks): string {
+  const links: string[] = []
+  
+  // GitHub (always present)
+  links.push(`<a href="${profile.html_url}" target="_blank" rel="noopener" style="padding:14px 32px;background:${accent};color:#000;border-radius:10px;font-weight:700;font-size:15px;display:inline-flex;align-items:center;gap:8px">GitHub &rarr;</a>`)
+  
+  // LinkedIn
+  if (socialLinks?.linkedin) {
+    links.push(`<a href="${socialLinks.linkedin}" target="_blank" rel="noopener" style="padding:14px 32px;border:2px solid ${accent};color:${accent};border-radius:10px;font-weight:700;font-size:15px">LinkedIn</a>`)
+  }
+  
+  // Twitter/X
+  if (socialLinks?.twitter) {
+    links.push(`<a href="${socialLinks.twitter}" target="_blank" rel="noopener" style="padding:14px 32px;border:2px solid ${accent};color:${accent};border-radius:10px;font-weight:700;font-size:15px">X / Twitter</a>`)
+  }
+  
+  // Substack
+  if (socialLinks?.substack) {
+    links.push(`<a href="${socialLinks.substack}" target="_blank" rel="noopener" style="padding:14px 32px;border:2px solid ${accent};color:${accent};border-radius:10px;font-weight:700;font-size:15px">Substack</a>`)
+  }
+  
+  // Blog / Personal website
+  if (socialLinks?.blog) {
+    links.push(`<a href="${socialLinks.blog.startsWith("http") ? socialLinks.blog : "https://" + socialLinks.blog}" target="_blank" rel="noopener" style="padding:14px 32px;border:2px solid ${accent};color:${accent};border-radius:10px;font-weight:700;font-size:15px">Website</a>`)
+  } else if (profile.blog) {
+    links.push(`<a href="${profile.blog.startsWith("http") ? profile.blog : "https://" + profile.blog}" target="_blank" rel="noopener" style="padding:14px 32px;border:2px solid ${accent};color:${accent};border-radius:10px;font-weight:700;font-size:15px">Website</a>`)
+  }
+  
   return `
   <section id="contact" class="section" style="background:rgba(255,255,255,0.01)">
     <div class="container" style="text-align:center">
@@ -248,8 +283,7 @@ function buildContact(profile: GitHubProfile, accent: string): string {
       <h2 class="section-title reveal" style="margin-left:auto;margin-right:auto">Let&rsquo;s work together</h2>
       <p class="section-desc reveal" style="margin-left:auto;margin-right:auto;text-align:center">Have a project in mind? I&rsquo;d love to hear about it.</p>
       <div style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap" class="reveal">
-        <a href="${profile.html_url}" target="_blank" rel="noopener" style="padding:14px 32px;background:${accent};color:#000;border-radius:10px;font-weight:700;font-size:15px;display:inline-flex;align-items:center;gap:8px">GitHub Profile &rarr;</a>
-        ${profile.blog ? `<a href="${profile.blog.startsWith("http") ? profile.blog : "https://" + profile.blog}" target="_blank" rel="noopener" style="padding:14px 32px;border:2px solid ${accent};color:${accent};border-radius:10px;font-weight:700;font-size:15px">Website</a>` : ""}
+        ${links.join("\n        ")}
       </div>
     </div>
   </section>`
@@ -262,12 +296,40 @@ function buildFooter(name: string, accent: string): string {
   </footer>`
 }
 
-function shell(accent: string, extraStyles: string, bodyContent: string, name: string): string {
+function shell(accent: string, extraStyles: string, bodyContent: string, name: string, bio?: string, photoUrl?: string): string {
+  const description = bio 
+    ? `${name} - ${bio.substring(0, 150)}${bio.length > 150 ? "..." : ""}`
+    : `${name}'s personal portfolio showcasing projects, skills, and experience.`
+  const safeDescription = e(description)
+  const title = `${e(name)} - Portfolio`
+  
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>${e(name)} - Portfolio</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>${title}</title>
+<meta name="description" content="${safeDescription}">
+<meta name="author" content="${e(name)}">
+
+<!-- Open Graph / Facebook -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="${title}">
+<meta property="og:description" content="${safeDescription}">
+${photoUrl ? `<meta property="og:image" content="${photoUrl}">` : ""}
+
+<!-- Twitter -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="${title}">
+<meta name="twitter:description" content="${safeDescription}">
+${photoUrl ? `<meta name="twitter:image" content="${photoUrl}">` : ""}
+
+<!-- Theme Color -->
+<meta name="theme-color" content="${accent}">
+
+<!-- Favicon (generated from accent color) -->
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='${encodeURIComponent(accent)}'/><text y='.9em' x='50' text-anchor='middle' font-size='70' fill='white'>${e(name.charAt(0).toUpperCase())}</text></svg>">
+
 <style>${baseStyles(accent)}${extraStyles}</style>
 </head>
 <body>
@@ -324,11 +386,11 @@ function buildBoldPortrait(data: TemplateData): string {
   ${config.sections.includes("about") ? buildAbout(profile, aiBio, c.accent) : ""}
   ${config.sections.includes("skills") ? `<section id="skills" class="section"><div class="container"><p class="section-label reveal">Expertise</p><h2 class="section-title reveal">Skills & Technologies</h2><div style="display:flex;flex-wrap:wrap;gap:0">${buildSkills(langs, topics)}</div></div></section>` : ""}
   ${config.sections.includes("projects") ? `<section id="projects" class="section" style="background:rgba(255,255,255,0.01)"><div class="container"><p class="section-label reveal">Work</p><h2 class="section-title reveal">Featured Projects</h2><div class="projects-grid">${buildProjects(repos, c.accent)}</div></div></section>` : ""}
-  ${config.sections.includes("contact") ? buildContact(profile, c.accent) : ""}
+  ${config.sections.includes("contact") ? buildContact(profile, c.accent, data.socialLinks) : ""}
   </main>
   ${buildFooter(name, c.accent)}`
 
-  return shell(c.accent, extra, body, name)
+  return shell(c.accent, extra, body, name, aiBio || profile.bio || undefined, img)
 }
 
 /* ===== TEMPLATE: TYPOGRAPHIC ===== */
@@ -361,11 +423,11 @@ function buildTypographic(data: TemplateData): string {
   ${config.sections.includes("about") ? buildAbout(profile, aiBio, c.accent) : ""}
   ${config.sections.includes("skills") ? `<section id="skills" class="section"><div class="container"><p class="section-label reveal">Skills</p><h2 class="section-title reveal">What I work with</h2><div style="display:flex;flex-wrap:wrap;gap:0">${buildSkills(langs, topics)}</div></div></section>` : ""}
   ${config.sections.includes("projects") ? `<section id="projects" class="section" style="background:rgba(255,255,255,0.01)"><div class="container"><p class="section-label reveal">Projects</p><h2 class="section-title reveal">Selected Work</h2><div class="projects-grid">${buildProjects(repos, c.accent)}</div></div></section>` : ""}
-  ${config.sections.includes("contact") ? buildContact(profile, c.accent) : ""}
+  ${config.sections.includes("contact") ? buildContact(profile, c.accent, data.socialLinks) : ""}
   </main>
   ${buildFooter(name, c.accent)}`
 
-  return shell(c.accent, extra, body, name)
+  return shell(c.accent, extra, body, name, aiBio || profile.bio || undefined, img)
 }
 
 /* ===== TEMPLATE: SPLIT EDITORIAL ===== */
@@ -410,11 +472,11 @@ function buildSplitEditorial(data: TemplateData): string {
   ${config.sections.includes("about") ? buildAbout(profile, aiBio, c.accent) : ""}
   ${config.sections.includes("skills") ? `<section id="skills" class="section"><div class="container"><p class="section-label reveal">Expertise</p><h2 class="section-title reveal">Technologies</h2><div style="display:flex;flex-wrap:wrap;gap:0">${buildSkills(langs, topics)}</div></div></section>` : ""}
   ${config.sections.includes("projects") ? `<section id="projects" class="section" style="background:rgba(255,255,255,0.01)"><div class="container"><p class="section-label reveal">Work</p><h2 class="section-title reveal">Projects</h2><div class="projects-grid">${buildProjects(repos, c.accent)}</div></div></section>` : ""}
-  ${config.sections.includes("contact") ? buildContact(profile, c.accent) : ""}
+  ${config.sections.includes("contact") ? buildContact(profile, c.accent, data.socialLinks) : ""}
   </main>
   ${buildFooter(name, c.accent)}`
 
-  return shell(c.accent, extra, body, name)
+  return shell(c.accent, extra, body, name, aiBio || profile.bio || undefined, img)
 }
 
 /* ===== TEMPLATE: PASTEL CREATIVE (now dark premium) ===== */
@@ -469,11 +531,11 @@ function buildPastelCreative(data: TemplateData): string {
   ${config.sections.includes("about") ? buildAbout(profile, aiBio, c.accent) : ""}
   ${config.sections.includes("skills") ? `<section id="skills" class="section"><div class="container"><p class="section-label reveal">Skills</p><h2 class="section-title reveal">My Toolkit</h2><div style="display:flex;flex-wrap:wrap;gap:0">${buildSkills(langs, topics)}</div></div></section>` : ""}
   ${config.sections.includes("projects") ? `<section id="projects" class="section" style="background:rgba(255,255,255,0.01)"><div class="container"><p class="section-label reveal">Portfolio</p><h2 class="section-title reveal">Recent Projects</h2><div class="projects-grid">${buildProjects(repos, c.accent)}</div></div></section>` : ""}
-  ${config.sections.includes("contact") ? buildContact(profile, c.accent) : ""}
+  ${config.sections.includes("contact") ? buildContact(profile, c.accent, data.socialLinks) : ""}
   </main>
   ${buildFooter(name, c.accent)}`
 
-  return shell(c.accent, extra, body, name)
+  return shell(c.accent, extra, body, name, aiBio || profile.bio || undefined, img)
 }
 
 /* ===== TEMPLATE: DESIGNER CODER ===== */
@@ -518,11 +580,11 @@ function buildDesignerCoder(data: TemplateData): string {
   ${config.sections.includes("about") ? buildAbout(profile, aiBio, c.accent) : ""}
   ${config.sections.includes("skills") ? `<section id="skills" class="section"><div class="container"><p class="section-label reveal">Stack</p><h2 class="section-title reveal">Tech Stack</h2><div style="display:flex;flex-wrap:wrap;gap:0">${buildSkills(langs, topics)}</div></div></section>` : ""}
   ${config.sections.includes("projects") ? `<section id="projects" class="section" style="background:rgba(255,255,255,0.01)"><div class="container"><p class="section-label reveal">Work</p><h2 class="section-title reveal">Projects</h2><div class="projects-grid">${buildProjects(repos, c.accent)}</div></div></section>` : ""}
-  ${config.sections.includes("contact") ? buildContact(profile, c.accent) : ""}
+  ${config.sections.includes("contact") ? buildContact(profile, c.accent, data.socialLinks) : ""}
   </main>
   ${buildFooter(name, c.accent)}`
 
-  return shell(c.accent, extra, body, name)
+  return shell(c.accent, extra, body, name, aiBio || profile.bio || undefined, img)
 }
 
 /* ===== TEMPLATE: MINIMAL CLEAN (now premium dark minimal) ===== */
@@ -573,11 +635,11 @@ function buildMinimalClean(data: TemplateData): string {
       </div>
     </div>
   </section>` : ""}
-  ${config.sections.includes("contact") ? buildContact(profile, c.accent) : ""}
+  ${config.sections.includes("contact") ? buildContact(profile, c.accent, data.socialLinks) : ""}
   </main>
   ${buildFooter(name, c.accent)}`
 
-  return shell(c.accent, extra, body, name)
+  return shell(c.accent, extra, body, name, aiBio || profile.bio || undefined, img)
 }
 
 /* ========== MAIN EXPORT ========== */

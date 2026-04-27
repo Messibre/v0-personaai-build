@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState, type Dispatch } from "react"
 import type { WizardState, WizardAction } from "@/lib/types"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { PortfolioEditor } from "@/components/portfolio/portfolio-editor"
 import {
   ArrowLeft,
@@ -36,6 +37,10 @@ export function StepPreview({ state, dispatch, onBack }: StepPreviewProps) {
   const [deployUrl, setDeployUrl] = useState<string | null>(null)
   const [deployError, setDeployError] = useState<string | null>(null)
   const [urlCopied, setUrlCopied] = useState(false)
+  
+  // Deploy name dialog
+  const [showDeployDialog, setShowDeployDialog] = useState(false)
+  const [deployName, setDeployName] = useState("")
 
   const generate = useCallback(async () => {
     if (!github.profile) return
@@ -133,10 +138,23 @@ export function StepPreview({ state, dispatch, onBack }: StepPreviewProps) {
     window.open("https://v0.dev/chat", "_blank")
   }, [portfolio.html])
 
+  // Open deploy dialog
+  const openDeployDialog = useCallback(() => {
+    // Generate a default name from portfolio title or user name
+    const defaultName = (portfolio.title || github.profile?.name || "my-portfolio")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "")
+      .substring(0, 40)
+    setDeployName(defaultName)
+    setShowDeployDialog(true)
+  }, [portfolio.title, github.profile?.name])
+
   // Deploy to Vercel
   const deployToVercel = useCallback(async () => {
-    if (!portfolio.html) return
+    if (!portfolio.html || !deployName.trim()) return
 
+    setShowDeployDialog(false)
     setDeploying(true)
     setDeployStatus("uploading")
     setDeployError(null)
@@ -145,12 +163,19 @@ export function StepPreview({ state, dispatch, onBack }: StepPreviewProps) {
     try {
       setDeployStatus("deploying")
       
+      // Sanitize the deploy name
+      const sanitizedName = deployName
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, "")
+        .substring(0, 40) || "my-portfolio"
+      
       const res = await fetch("/api/deploy", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           html: portfolio.html,
-          projectName: portfolio.title || "my-portfolio",
+          projectName: sanitizedName,
         }),
       })
 
@@ -169,7 +194,7 @@ export function StepPreview({ state, dispatch, onBack }: StepPreviewProps) {
     } finally {
       setDeploying(false)
     }
-  }, [portfolio.html, portfolio.title])
+  }, [portfolio.html, deployName])
 
   const copyDeployUrl = useCallback(async () => {
     if (!deployUrl) return
@@ -286,7 +311,7 @@ export function StepPreview({ state, dispatch, onBack }: StepPreviewProps) {
             
             {/* Deploy to Vercel */}
             <Button
-              onClick={deployToVercel}
+              onClick={deploying ? undefined : deployStatus === "ready" ? undefined : openDeployDialog}
               disabled={deploying}
               size="sm"
               className={cn(
@@ -400,6 +425,56 @@ export function StepPreview({ state, dispatch, onBack }: StepPreviewProps) {
           Back
         </Button>
       </div>
+
+      {/* Deploy Name Dialog */}
+      {showDeployDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+          <div className="w-full max-w-md bg-card border border-border rounded-2xl shadow-2xl p-6 animate-fade-in-scale">
+            <h3 className="text-lg font-semibold text-foreground mb-2">Name your site</h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              Choose a name for your deployed portfolio. This will be your site URL.
+            </p>
+            <div className="mb-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Input
+                  value={deployName}
+                  onChange={(e) => setDeployName(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
+                  placeholder="my-portfolio"
+                  className="flex-1 bg-background border-border"
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && deployName.trim()) {
+                      deployToVercel()
+                    } else if (e.key === "Escape") {
+                      setShowDeployDialog(false)
+                    }
+                  }}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Your site will be at: <span className="font-mono text-[var(--persona-accent)]">{deployName || "my-portfolio"}.vercel.app</span>
+              </p>
+            </div>
+            <div className="flex gap-3 justify-end">
+              <Button
+                variant="outline"
+                onClick={() => setShowDeployDialog(false)}
+                className="border-border"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={deployToVercel}
+                disabled={!deployName.trim()}
+                className="gap-2 bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100"
+              >
+                <Rocket className="size-4" />
+                Deploy
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

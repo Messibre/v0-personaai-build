@@ -117,10 +117,19 @@ export const PORTFOLIO_SECTIONS = [
 
 export type SectionId = (typeof PORTFOLIO_SECTIONS)[number]["id"]
 
+export interface SocialLinks {
+  linkedin?: string
+  twitter?: string
+  substack?: string
+  blog?: string
+}
+
 export interface PortfolioConfig {
   template: TemplateStyle
   colorScheme: ColorScheme
   sections: SectionId[]
+  socialLinks: SocialLinks
+  additionalPrompt?: string
 }
 
 export interface GeneratedPortfolio {
@@ -183,6 +192,8 @@ export type WizardAction =
   | { type: "CLEAR_PHOTO" }
   | { type: "SET_CONFIG"; config: Partial<PortfolioConfig> }
   | { type: "TOGGLE_SECTION"; section: SectionId }
+  | { type: "SET_SOCIAL_LINKS"; socialLinks: SocialLinks }
+  | { type: "SET_ADDITIONAL_PROMPT"; prompt: string }
   | { type: "SET_PORTFOLIO_LOADING"; loading: boolean }
   | { type: "SET_PORTFOLIO"; html: string; title: string }
   | { type: "SET_PORTFOLIO_ERROR"; error: string }

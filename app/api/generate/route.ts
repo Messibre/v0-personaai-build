@@ -17,7 +17,7 @@ interface GenerateRequest {
   photoDataUrl: string | null
 }
 
-async function getAiBio(profile: GitHubProfile, repos: GitHubRepo[], resumeText: string | null, notionContent: string | null): Promise<string | null> {
+async function getAiBio(profile: GitHubProfile, repos: GitHubRepo[], resumeText: string | null, notionContent: string | null, additionalPrompt?: string): Promise<string | null> {
   if (GEMINI_KEYS.length === 0) return null
 
   const langs = [...new Set(repos.map((r) => r.language).filter(Boolean))].slice(0, 6)
@@ -30,6 +30,7 @@ Languages: ${langs.join(", ") || "Various"}
 Repos: ${profile.public_repos}
 ${resumeText ? `Resume excerpt: ${resumeText.substring(0, 500)}` : ""}
 ${notionContent ? `Additional context: ${notionContent.substring(0, 500)}` : ""}
+${additionalPrompt ? `User instructions: ${additionalPrompt}` : ""}
 
 Output ONLY the bio text, no quotes, no labels.`
 
@@ -66,7 +67,7 @@ export async function POST(request: Request) {
       return Response.json({ error: "Profile data is required. Please go back and enter your info." }, { status: 400 })
     }
 
-    const aiBio = await getAiBio(data.github.profile, data.github.repos || [], data.resumeText, data.notionContent)
+    const aiBio = await getAiBio(data.github.profile, data.github.repos || [], data.resumeText, data.notionContent, data.config.additionalPrompt)
 
     const html = buildPortfolioHtml({
       profile: data.github.profile,
@@ -76,6 +77,7 @@ export async function POST(request: Request) {
       config: data.config,
       photoUrl: data.photoDataUrl || null,
       aiBio,
+      socialLinks: data.config.socialLinks,
     })
 
     return Response.json({ html, title: `${data.github.profile.name || data.github.profile.username} - Portfolio` })

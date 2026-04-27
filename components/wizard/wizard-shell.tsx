@@ -45,6 +45,8 @@ const initialState: WizardState = {
     template: "bold-portrait",
     colorScheme: "ocean",
     sections: ["about", "skills", "projects", "experience", "contact"],
+    socialLinks: {},
+    additionalPrompt: "",
   },
   portfolio: {
     html: null,
@@ -100,6 +102,10 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
         : [...state.config.sections, action.section]
       return { ...state, config: { ...state.config, sections } }
     }
+    case "SET_SOCIAL_LINKS":
+      return { ...state, config: { ...state.config, socialLinks: action.socialLinks } }
+    case "SET_ADDITIONAL_PROMPT":
+      return { ...state, config: { ...state.config, additionalPrompt: action.prompt } }
     case "SET_PORTFOLIO_LOADING":
       return { ...state, portfolio: { ...state.portfolio, loading: action.loading, error: null } }
     case "SET_PORTFOLIO":
