@@ -41,7 +41,7 @@ const INTEGRATION_LOGOS = [
     name: "GitHub",
     svg: (
       <svg viewBox="0 0 24 24" className="size-6 sm:size-8" fill="currentColor">
-        <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+        <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
       </svg>
     ),
   },
@@ -49,7 +49,7 @@ const INTEGRATION_LOGOS = [
     name: "Notion",
     svg: (
       <svg viewBox="0 0 24 24" className="size-6 sm:size-8" fill="currentColor">
-        <path d="M4.459 4.208c.746.606 1.026.56 2.428.466l13.215-.793c.28 0 .047-.28-.046-.326L17.86 2.044c-.42-.326-.98-.7-2.052-.606L2.636 2.634c-.467.047-.56.28-.374.466l2.197 1.108zM5.252 7.38v13.54c0 .746.373 1.026 1.213.98l14.474-.84c.84-.046.933-.56.933-1.166V6.494c0-.606-.233-.933-.746-.886l-15.127.887c-.56.046-.747.326-.747.886zm14.288.513c.094.42 0 .84-.42.886l-.7.14v10.026c-.607.326-1.166.513-1.633.513-.746 0-.933-.233-1.493-.933L10.78 10.2v8.26l1.447.327s0 .84-1.166.84l-3.22.187c-.092-.187 0-.653.326-.747l.84-.233V8.9l-1.166-.094c-.093-.42.14-1.026.793-1.073l3.453-.233 4.76 7.273V8.227l-1.213-.14c-.093-.514.28-.886.746-.933l3.454-.26z"/>
+        <path d="M4.459 4.208c.746.606 1.026.56 2.428.466l13.215-.793c.28 0 .047-.28-.046-.326L17.86 2.044c-.42-.326-.98-.7-2.052-.606L2.636 2.634c-.467.047-.56.28-.374.466l2.197 1.108zM5.252 7.38v13.54c0 .746.373 1.026 1.213.98l14.474-.84c.84-.046.933-.56.933-1.166V6.494c0-.606-.233-.933-.746-.886l-15.127.887c-.56.046-.747.326-.747.886zm14.288.513c.094.42 0 .84-.42.886l-.7.14v10.026c-.607.326-1.166.513-1.633.513-.746 0-.933-.233-1.493-.933L10.78 10.2v8.26l1.447.327s0 .84-1.166.84l-3.22.187c-.092-.187 0-.653.326-.747l.84-.233V8.9l-1.166-.094c-.093-.42.14-1.026.793-1.073l3.453-.233 4.76 7.273V8.227l-1.213-.14c-.093-.514.28-.886.746-.933l3.454-.26z" />
       </svg>
     ),
   },
@@ -57,7 +57,7 @@ const INTEGRATION_LOGOS = [
     name: "Resume",
     svg: (
       <svg viewBox="0 0 24 24" className="size-6 sm:size-8" fill="currentColor">
-        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm4 18H6V4h7v5h5v11zm-3-9H9v2h6v-2zm0 4H9v2h6v-2z"/>
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm4 18H6V4h7v5h5v11zm-3-9H9v2h6v-2zm0 4H9v2h6v-2z" />
       </svg>
     ),
   },
@@ -65,7 +65,7 @@ const INTEGRATION_LOGOS = [
     name: "AI",
     svg: (
       <svg viewBox="0 0 24 24" className="size-6 sm:size-8" fill="currentColor">
-        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
       </svg>
     ),
   },
@@ -73,7 +73,7 @@ const INTEGRATION_LOGOS = [
     name: "HTML",
     svg: (
       <svg viewBox="0 0 24 24" className="size-6 sm:size-8" fill="currentColor">
-        <path d="M1.5 0h21l-1.91 21.563L11.977 24l-8.564-2.438L1.5 0zm7.031 9.75l-.232-2.718 10.059.003.23-2.622L5.412 4.41l.698 8.01h9.126l-.326 3.426-2.91.804-2.955-.81-.188-2.11H6.248l.33 4.171L12 19.351l5.379-1.443.744-8.157H8.531z"/>
+        <path d="M1.5 0h21l-1.91 21.563L11.977 24l-8.564-2.438L1.5 0zm7.031 9.75l-.232-2.718 10.059.003.23-2.622L5.412 4.41l.698 8.01h9.126l-.326 3.426-2.91.804-2.955-.81-.188-2.11H6.248l.33 4.171L12 19.351l5.379-1.443.744-8.157H8.531z" />
       </svg>
     ),
   },
@@ -107,7 +107,7 @@ function LogoMarquee() {
       {/* Gradient masks */}
       <div className="absolute left-0 top-0 bottom-0 w-16 sm:w-24 bg-gradient-to-r from-background to-transparent z-10" />
       <div className="absolute right-0 top-0 bottom-0 w-16 sm:w-24 bg-gradient-to-l from-background to-transparent z-10" />
-      
+
       {/* Marquee container */}
       <div ref={marqueeRef} className="flex gap-8 sm:gap-16 whitespace-nowrap">
         {/* Double the logos for seamless loop */}
@@ -143,13 +143,13 @@ export default function Home() {
           }}
         />
         {/* Background gradient */}
-        <div 
+        <div
           className="absolute inset-0 pointer-events-none"
           style={{
             background: "radial-gradient(ellipse 80% 50% at 50% -20%, color-mix(in oklch, var(--persona-accent) 15%, transparent), transparent)"
           }}
         />
-        
+
         {/* Navigation */}
         <nav className="relative z-20 flex items-center justify-between px-4 sm:px-8 lg:px-12 py-4 sm:py-6">
           {/* Logo */}
@@ -187,22 +187,22 @@ export default function Home() {
         {mobileMenuOpen && (
           <div className="md:hidden absolute top-full left-0 right-0 bg-background/95 backdrop-blur-lg border-b border-border z-50 animate-fade-in-up">
             <div className="flex flex-col p-4 gap-2">
-              <Link 
-                href="#how-it-works" 
+              <Link
+                href="#how-it-works"
                 className="py-3 px-4 rounded-lg hover:bg-secondary transition-colors"
                 onClick={() => setMobileMenuOpen(false)}
               >
                 How it works
               </Link>
-              <Link 
-                href="#templates" 
+              <Link
+                href="#templates"
                 className="py-3 px-4 rounded-lg hover:bg-secondary transition-colors"
                 onClick={() => setMobileMenuOpen(false)}
               >
                 Templates
               </Link>
-              <Link 
-                href="#examples" 
+              <Link
+                href="#examples"
                 className="py-3 px-4 rounded-lg hover:bg-secondary transition-colors"
                 onClick={() => setMobileMenuOpen(false)}
               >
@@ -215,7 +215,7 @@ export default function Home() {
         {/* Hero content */}
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-8 lg:px-12 pt-8 sm:pt-12 lg:pt-16 pb-8 sm:pb-12">
           <div className="grid lg:grid-cols-2 gap-8 lg:gap-16 items-center">
-            
+
             {/* Left side - Headline */}
             <div className="space-y-6 sm:space-y-8 text-center lg:text-left">
               <h1 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-bold tracking-tight text-foreground leading-[1.1] text-balance animate-fade-in-up">
@@ -223,7 +223,7 @@ export default function Home() {
                 <span className="italic font-serif text-[var(--persona-accent)] relative">stunning</span>{" "}
                 portfolio that gets you noticed
               </h1>
-              
+
               <p className="text-base sm:text-lg lg:text-xl text-muted-foreground max-w-lg mx-auto lg:mx-0 leading-relaxed text-balance animate-fade-in-up" style={{ animationDelay: "100ms" }}>
                 AI-powered portfolio generator for Professionals, Students, Entrepreneurs, and Freelancers.
               </p>
@@ -403,7 +403,7 @@ export default function Home() {
 
             {/* Links */}
             <div className="flex items-center gap-6 text-sm text-muted-foreground">
-              <span>Built with AI</span>
+              <span>your personal AI brand engine!</span>
               <span className="hidden sm:inline">|</span>
               <span className="hidden sm:inline">{new Date().getFullYear()}</span>
             </div>
