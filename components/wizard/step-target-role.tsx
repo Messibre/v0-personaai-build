@@ -164,10 +164,10 @@ export function StepTargetRole({ state, dispatch, onNext, onBack }: StepTargetRo
     <div className="flex flex-col gap-8">
       <div>
         <h2 className="text-2xl font-bold text-foreground mb-2 text-balance">
-          Target Your Portfolio
+          Make it sound like you
         </h2>
         <p className="text-muted-foreground leading-relaxed">
-          Tell us your dream role and share relevant links. Our AI will tailor your projects and bio to match.
+          Tell us the role you want. Then share links to your writing — blogs, Substack, LinkedIn — so the AI can pick up your actual voice and personality, not just your job title.
         </p>
       </div>
 
@@ -212,7 +212,7 @@ export function StepTargetRole({ state, dispatch, onNext, onBack }: StepTargetRo
           <span className="text-xs font-normal text-muted-foreground">(optional but recommended)</span>
         </h3>
         <p className="text-xs text-muted-foreground mb-3">
-          Add your LinkedIn, blog, Substack, or portfolio. We&apos;ll use them to enrich your bio and add them to your portfolio&apos;s contact section automatically.
+          Add your blog, Substack, LinkedIn, or any page where you write or share ideas. The AI reads your actual words to understand your personality and voice — so your portfolio sounds like you, not a template. Links are also auto-added to your contact section.
         </p>
 
         {/* Existing Links */}

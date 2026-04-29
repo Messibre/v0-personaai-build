@@ -163,45 +163,66 @@ export async function POST(request: Request) {
 
     const name = github.profile?.name || github.profile?.username || "User"
 
-    // Step 3: Single Gemini call for projects + aboutMe + tagline
-    const systemPrompt = `You are a career content specialist. Output valid JSON only, no markdown, no code fences.`
+    // Step 3: Single Gemini call — personality-first approach
+    // The scraped content is the PRIMARY signal for voice, tone, and personality.
+    // Generic career bios are the failure mode we are explicitly avoiding.
+    const systemPrompt = `You are a ghostwriter who specializes in making developer portfolios sound like real humans, not LinkedIn templates.
+Your job is to extract WHO this person actually is from their writing, opinions, and projects — then write copy that sounds unmistakably like them.
+Output valid JSON only. No markdown. No code fences. No explanation outside the JSON.`
 
-    const userPrompt = `Given the following information:
+    const userPrompt = `You are building portfolio copy for ${name}, who is targeting the role: "${targetRole}".
 
-Target Role: ${targetRole}
+--- PERSONALITY SIGNALS (most important) ---
+Read the content below carefully. Extract:
+- Their writing style (casual? precise? humorous? blunt?)
+- Recurring themes or interests (what do they keep coming back to?)
+- Any strong opinions or stances they have
+- How they describe their own work
+- Their apparent values (speed, craft, open source, UX, etc.)
 
-Name: ${name}
+Scraped from their links (LinkedIn, blog, Substack, etc.):
+${scrapedContent || "None provided — rely on repos and resume instead."}
 
-GitHub Repos (JSON):
+--- SUPPORTING SIGNALS ---
+GitHub repos:
 ${JSON.stringify(reposForAI, null, 2)}
 
-Scraped Content from External Links (max 3000 chars):
-${scrapedContent || "None provided"}
+Resume excerpt:
+${resumeText?.substring(0, 1000) || "None"}
 
-Resume Text (excerpt):
-${resumeText?.substring(0, 1000) || "None provided"}
+Notion content:
+${notionContent?.substring(0, 500) || "None"}
 
-Notion Content (excerpt):
-${notionContent?.substring(0, 500) || "None provided"}
+Additional instructions from the person:
+${additionalPrompt || "None"}
 
-Additional Instructions: ${additionalPrompt || "None"}
+--- YOUR TASKS ---
 
----
+1. PROJECT SELECTION & DESCRIPTIONS
+   Pick up to 7 repos most relevant to "${targetRole}".
+   For each, write a 1-2 sentence description that:
+   - Highlights its relevance to the target role
+   - Uses language and framing consistent with how THIS PERSON talks about their work
+   - Avoids generic phrases like "a full-stack app" or "built with React"
 
-Task:
-1. Choose up to 7 repositories most relevant to the target role "${targetRole}". For each, write a compelling 1-2 sentence description highlighting its relevance to the target role. If a repo has no description, infer one from its name, language, and topics.
+2. ABOUT ME (3-4 sentences, third person)
+   This is the most important field. Rules:
+   - Mirror their actual writing style and tone from the scraped content
+   - Include at least one specific, concrete detail (a real project name, a real technology they care about, a real opinion they hold)
+   - Do NOT use these banned phrases: "passionate about", "driven by", "dedicated to", "strong background in", "results-oriented", "leverages"
+   - Sound like a person wrote this at 11pm, not a recruiter at 9am
 
-2. Write a professional 3-4 sentence 'About Me' in third person, targeting the role "${targetRole}", based on all provided information. Sound like a real person, not a generic template. Use simple English.
-
-3. Write a catchy 1-line hero tagline (max 10 words) that summarizes the person's expertise for the role "${targetRole}".
+3. HERO TAGLINE (max 10 words, first person or noun phrase)
+   Should feel like something this specific person would actually say.
+   Avoid: "Building the future", "Crafting experiences", "Turning ideas into reality"
 
 Return JSON in exactly this format:
 {
   "projects": [
-    {"name": "repo-name", "url": "https://github.com/...", "language": "JavaScript", "description": "Compelling description...", "stars": 10, "forks": 2}
+    {"name": "repo-name", "url": "https://github.com/...", "language": "JavaScript", "description": "...", "stars": 10, "forks": 2}
   ],
-  "aboutMe": "Professional bio text...",
-  "heroTagline": "Catchy one-liner..."
+  "aboutMe": "...",
+  "heroTagline": "..."
 }`
 
     const aiResponse = await callGemini(userPrompt, systemPrompt, true)
@@ -217,10 +238,11 @@ Return JSON in exactly this format:
         forks: r.forks,
       }))
 
+      const topLang = reposForAI[0]?.language || "software"
       return Response.json({
         projects: fallbackProjects,
-        aboutMe: github.profile?.bio || `${name} is a professional specializing in ${targetRole}.`,
-        heroTagline: targetRole,
+        aboutMe: github.profile?.bio || `${name} works on ${topLang} projects, currently targeting ${targetRole} roles.`,
+        heroTagline: `${targetRole} — ${topLang}`,
       })
     }
 
@@ -254,10 +276,11 @@ Return JSON in exactly this format:
         forks: r.forks,
       }))
 
+      const topLang2 = reposForAI[0]?.language || "software"
       return Response.json({
         projects: fallbackProjects,
-        aboutMe: github.profile?.bio || `${name} is a professional specializing in ${targetRole}.`,
-        heroTagline: targetRole,
+        aboutMe: github.profile?.bio || `${name} builds ${topLang2} projects, currently seeking ${targetRole} roles.`,
+        heroTagline: `${targetRole} — ${topLang2}`,
       })
     }
   } catch (err) {
