@@ -98,6 +98,10 @@ export function StepPreview({ state, dispatch, onBack }: StepPreviewProps) {
           return
         }
 
+        // Remember what AI chose so refinement can adjust it
+        if (data.designConfig?.template) setLastAITemplate(data.designConfig.template)
+        if (data.designConfig?.colorScheme) setLastAIColor(data.designConfig.colorScheme)
+
         dispatch({ type: "SET_PORTFOLIO", html: data.html, title: `${github.profile.name || github.profile.username} - Portfolio` })
         setIsGenerating(false)
         return
@@ -270,7 +274,11 @@ export function StepPreview({ state, dispatch, onBack }: StepPreviewProps) {
     setTimeout(() => setUrlCopied(false), 2000)
   }, [deployUrl])
 
-  // AI Template Refinement
+  // Track which template/color the AI last chose so refinement can tweak it
+  const [lastAITemplate, setLastAITemplate] = useState<string>(config.template)
+  const [lastAIColor, setLastAIColor] = useState<string>(config.colorScheme)
+
+  // AI Template Refinement — sends a small config-adjustment request, not raw HTML
   const refineTemplate = useCallback(async () => {
     if (!portfolio.html || !refinementPrompt.trim() || !config.useAITemplate) return
 
@@ -278,22 +286,31 @@ export function StepPreview({ state, dispatch, onBack }: StepPreviewProps) {
 
     try {
       const skills = [...new Set(github.repos.map((r) => r.language).filter(Boolean))] as string[]
-      
+
       const res = await fetch("/api/ai-template", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           targetRole: targetRole.role || "Software Developer",
           name: github.profile?.name || github.profile?.username || "User",
-          aboutMe: aiContent.aboutMe || "",
+          aboutMe: aiContent.aboutMe || github.profile?.bio || "",
           heroTagline: aiContent.heroTagline || "",
-          projects: aiContent.projects || [],
+          projects: aiContent.projects || github.repos.slice(0, 7).map((r) => ({
+            name: r.name,
+            url: r.html_url,
+            language: r.language,
+            description: r.description || "",
+            stars: r.stargazers_count,
+            forks: r.forks_count,
+          })),
           skills,
           photoUrl: photo.dataUrl,
           socialLinks: config.socialLinks,
           colorScheme: config.colorScheme,
-          refinementPrompt: refinementPrompt,
-          existingHtml: portfolio.html,
+          // Refinement-specific fields
+          refinementPrompt,
+          currentTemplate: lastAITemplate,
+          currentColorScheme: lastAIColor,
         }),
       })
 
@@ -305,6 +322,10 @@ export function StepPreview({ state, dispatch, onBack }: StepPreviewProps) {
         return
       }
 
+      // Store what AI chose so the next refinement knows what to modify
+      if (data.designConfig?.template) setLastAITemplate(data.designConfig.template)
+      if (data.designConfig?.colorScheme) setLastAIColor(data.designConfig.colorScheme)
+
       dispatch({ type: "SET_PORTFOLIO", html: data.html, title: portfolio.title || "Portfolio" })
       setRefinementPrompt("")
     } catch (err) {
@@ -313,7 +334,7 @@ export function StepPreview({ state, dispatch, onBack }: StepPreviewProps) {
     } finally {
       setIsRefining(false)
     }
-  }, [portfolio.html, refinementPrompt, config, github, aiContent, targetRole, photo.dataUrl, dispatch, portfolio.title])
+  }, [portfolio.html, refinementPrompt, config, github, aiContent, targetRole, photo.dataUrl, dispatch, portfolio.title, lastAITemplate, lastAIColor])
 
   const loading = isGenerating || portfolio.loading
 
