@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useState, type Dispatch } from "react"
+import { useCallback, useEffect, useRef, useState, type Dispatch } from "react"
 import type { WizardState, WizardAction } from "@/lib/types"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -149,10 +149,18 @@ export function StepPreview({ state, dispatch, onBack }: StepPreviewProps) {
     }
   }, [github, resume.text, notion.content, config, photo.dataUrl, dispatch, aiContent, targetRole])
 
-  // Auto-generate on first load
+  // Auto-generate on first load — use a ref so we capture the latest generate()
+  // without re-running the effect on every render. The empty dep array is intentional:
+  // we only want this to fire once when the step mounts, but we need the CURRENT
+  // generate() (not the stale version captured on first render), so we store it in a ref.
+  const generateRef = useRef(generate)
+  useEffect(() => {
+    generateRef.current = generate
+  })
+
   useEffect(() => {
     if (!portfolio.html && !portfolio.loading && !portfolio.error && !isGenerating) {
-      generate()
+      generateRef.current()
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
