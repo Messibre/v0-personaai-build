@@ -52,6 +52,13 @@ export function StepPreview({ state, dispatch, onBack }: StepPreviewProps) {
   const generate = useCallback(async () => {
     if (!github.profile) return
 
+    console.log("[v0] generate() called — aiContent:", {
+      hasProjects: !!aiContent.projects,
+      projectCount: aiContent.projects?.length,
+      hasAboutMe: !!aiContent.aboutMe,
+      hasTagline: !!aiContent.heroTagline,
+    })
+
     setIsGenerating(true)
     dispatch({ type: "SET_PORTFOLIO_LOADING", loading: true })
 
@@ -149,20 +156,19 @@ export function StepPreview({ state, dispatch, onBack }: StepPreviewProps) {
     }
   }, [github, resume.text, notion.content, config, photo.dataUrl, dispatch, aiContent, targetRole])
 
-  // Auto-generate on first load — use a ref so we capture the latest generate()
-  // without re-running the effect on every render. The empty dep array is intentional:
-  // we only want this to fire once when the step mounts, but we need the CURRENT
-  // generate() (not the stale version captured on first render), so we store it in a ref.
-  const generateRef = useRef(generate)
-  useEffect(() => {
-    generateRef.current = generate
-  })
+  // Track whether we've already fired the initial generation so we don't double-call.
+  const hasGeneratedRef = useRef(false)
 
+  // Auto-generate whenever this step is ready and has no portfolio yet.
+  // Depends on aiContent so it fires AFTER the wizard state has been populated
+  // by the Target Role step — not on the stale first render.
   useEffect(() => {
-    if (!portfolio.html && !portfolio.loading && !portfolio.error && !isGenerating) {
-      generateRef.current()
-    }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+    if (hasGeneratedRef.current) return
+    if (portfolio.html || portfolio.loading || portfolio.error || isGenerating) return
+
+    hasGeneratedRef.current = true
+    generate()
+  }, [generate, portfolio.html, portfolio.loading, portfolio.error, isGenerating])
 
   // Handle inline edits from the editor
   const handleHtmlChange = useCallback(
