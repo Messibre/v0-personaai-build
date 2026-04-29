@@ -15,8 +15,6 @@ import {
   ImagePlus,
   Check,
   User,
-  Linkedin,
-  Globe,
   MessageSquare,
   Wand2,
 } from "lucide-react"
@@ -493,58 +491,6 @@ export function StepCustomize({ state, dispatch, onNext, onBack }: StepCustomize
               </label>
             )
           })}
-        </div>
-      </div>
-
-      {/* Social Links (Optional) */}
-      <div>
-        <h3 className="text-sm font-semibold text-foreground mb-2 flex items-center gap-2">
-          <Globe className="size-4 text-[var(--persona-accent)]" />
-          Social Links
-          <span className="text-xs font-normal text-muted-foreground">(optional)</span>
-        </h3>
-        <p className="text-xs text-muted-foreground mb-3">Add links to your social profiles. These will appear in your portfolio&apos;s contact section.</p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div className="relative">
-            <Linkedin className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-            <Input
-              placeholder="LinkedIn profile URL"
-              value={config.socialLinks?.linkedin || ""}
-              onChange={(e) => dispatch({ type: "SET_SOCIAL_LINKS", socialLinks: { ...config.socialLinks, linkedin: e.target.value } })}
-              className="pl-10 bg-[var(--persona-surface)] border-[var(--persona-border)] focus-visible:border-[var(--persona-accent)] focus-visible:ring-[var(--persona-accent)]/20"
-            />
-          </div>
-          <div className="relative">
-            <svg viewBox="0 0 24 24" className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" fill="currentColor">
-              <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
-            </svg>
-            <Input
-              placeholder="X (Twitter) profile URL"
-              value={config.socialLinks?.twitter || ""}
-              onChange={(e) => dispatch({ type: "SET_SOCIAL_LINKS", socialLinks: { ...config.socialLinks, twitter: e.target.value } })}
-              className="pl-10 bg-[var(--persona-surface)] border-[var(--persona-border)] focus-visible:border-[var(--persona-accent)] focus-visible:ring-[var(--persona-accent)]/20"
-            />
-          </div>
-          <div className="relative">
-            <svg viewBox="0 0 24 24" className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" fill="currentColor">
-              <path d="M22.539 8.242H19.5V5.406h-3.75v2.836h-2.203v3.094h2.203v6.328c0 1.125.234 1.969.703 2.531s1.313.844 2.531.844c.438 0 .844-.031 1.219-.094a7.27 7.27 0 0 0 1.078-.234v-3.141a3.963 3.963 0 0 1-.516.094 4.477 4.477 0 0 1-.516.047c-.5 0-.828-.109-.984-.328s-.234-.594-.234-1.125v-4.922h2.508V8.242zM1.5 21.75h3.75v-9.375H1.5v9.375zm1.875-10.5a2.063 2.063 0 0 0 2.063-2.063A2.063 2.063 0 0 0 3.375 7.125a2.063 2.063 0 0 0-2.063 2.063 2.063 2.063 0 0 0 2.063 2.062z"/>
-            </svg>
-            <Input
-              placeholder="Substack URL"
-              value={config.socialLinks?.substack || ""}
-              onChange={(e) => dispatch({ type: "SET_SOCIAL_LINKS", socialLinks: { ...config.socialLinks, substack: e.target.value } })}
-              className="pl-10 bg-[var(--persona-surface)] border-[var(--persona-border)] focus-visible:border-[var(--persona-accent)] focus-visible:ring-[var(--persona-accent)]/20"
-            />
-          </div>
-          <div className="relative">
-            <Globe className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-            <Input
-              placeholder="Personal website or blog URL"
-              value={config.socialLinks?.blog || ""}
-              onChange={(e) => dispatch({ type: "SET_SOCIAL_LINKS", socialLinks: { ...config.socialLinks, blog: e.target.value } })}
-              className="pl-10 bg-[var(--persona-surface)] border-[var(--persona-border)] focus-visible:border-[var(--persona-accent)] focus-visible:ring-[var(--persona-accent)]/20"
-            />
-          </div>
         </div>
       </div>
 

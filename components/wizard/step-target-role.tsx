@@ -46,6 +46,20 @@ const LINK_PLACEHOLDERS = [
   { icon: BookOpen, placeholder: "https://yoursubstack.substack.com", label: "Substack" },
 ]
 
+// Detect what kind of link a URL is and return the matching social link key
+function detectLinkType(url: string): keyof import("@/lib/types").SocialLinks | null {
+  try {
+    const host = new URL(url).hostname.replace("www.", "")
+    if (host.includes("linkedin.com")) return "linkedin"
+    if (host.includes("twitter.com") || host.includes("x.com")) return "twitter"
+    if (host.includes("substack.com")) return "substack"
+    // Treat any personal domain or blog as "blog"
+    return "blog"
+  } catch {
+    return null
+  }
+}
+
 export function StepTargetRole({ state, dispatch, onNext, onBack }: StepTargetRoleProps) {
   const { targetRole, aiContent, github, resume, notion, config } = state
   const [newLink, setNewLink] = useState("")
@@ -54,15 +68,30 @@ export function StepTargetRole({ state, dispatch, onNext, onBack }: StepTargetRo
   const addLink = useCallback(() => {
     const trimmed = newLink.trim()
     if (!trimmed) return
-    // Basic URL validation
-    if (!trimmed.startsWith("http://") && !trimmed.startsWith("https://")) {
+    if (!trimmed.startsWith("http://") && !trimmed.startsWith("https://")) return
+    if (targetRole.externalLinks.includes(trimmed)) {
+      setNewLink("")
       return
     }
-    if (!targetRole.externalLinks.includes(trimmed)) {
-      dispatch({ type: "SET_EXTERNAL_LINKS", links: [...targetRole.externalLinks, trimmed] })
+
+    // Add to external links for scraping
+    dispatch({ type: "SET_EXTERNAL_LINKS", links: [...targetRole.externalLinks, trimmed] })
+
+    // Also auto-fill the matching social link in config so the portfolio contact section gets it
+    const linkType = detectLinkType(trimmed)
+    if (linkType) {
+      // Only set if the slot is empty — don't overwrite something already typed
+      const existing = config.socialLinks?.[linkType]
+      if (!existing) {
+        dispatch({
+          type: "SET_SOCIAL_LINKS",
+          socialLinks: { ...config.socialLinks, [linkType]: trimmed },
+        })
+      }
     }
+
     setNewLink("")
-  }, [newLink, targetRole.externalLinks, dispatch])
+  }, [newLink, targetRole.externalLinks, config.socialLinks, dispatch])
 
   const removeLink = useCallback(
     (url: string) => {
@@ -179,40 +208,50 @@ export function StepTargetRole({ state, dispatch, onNext, onBack }: StepTargetRo
       <div>
         <h3 className="text-sm font-semibold text-foreground mb-2 flex items-center gap-2">
           <Link2 className="size-4 text-[var(--persona-accent)]" />
-          External Links
+          Your Links
           <span className="text-xs font-normal text-muted-foreground">(optional but recommended)</span>
         </h3>
         <p className="text-xs text-muted-foreground mb-3">
-          Add links to your LinkedIn, blog, Substack, or any public page. We&apos;ll extract content to enhance your bio.
+          Add your LinkedIn, blog, Substack, or portfolio. We&apos;ll use them to enrich your bio and add them to your portfolio&apos;s contact section automatically.
         </p>
 
         {/* Existing Links */}
         {targetRole.externalLinks.length > 0 && (
           <div className="flex flex-col gap-2 mb-3">
-            {targetRole.externalLinks.map((url) => (
-              <div
-                key={url}
-                className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[var(--persona-surface)] border border-[var(--persona-border)] group"
-              >
-                <Link2 className="size-4 text-muted-foreground shrink-0" />
-                <a
-                  href={url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex-1 text-sm text-[var(--persona-accent)] hover:underline truncate"
+            {targetRole.externalLinks.map((url) => {
+              const linkType = detectLinkType(url)
+              const typeLabel = linkType === "linkedin" ? "LinkedIn"
+                : linkType === "twitter" ? "X / Twitter"
+                : linkType === "substack" ? "Substack"
+                : "Blog / Site"
+              return (
+                <div
+                  key={url}
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[var(--persona-surface)] border border-[var(--persona-border)] group"
                 >
-                  {url}
-                </a>
-                <button
-                  type="button"
-                  onClick={() => removeLink(url)}
-                  className="size-6 rounded-full flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors opacity-0 group-hover:opacity-100"
-                  aria-label="Remove link"
-                >
-                  <X className="size-3.5" />
-                </button>
-              </div>
-            ))}
+                  <Link2 className="size-4 text-muted-foreground shrink-0" />
+                  <a
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1 text-sm text-[var(--persona-accent)] hover:underline truncate"
+                  >
+                    {url}
+                  </a>
+                  <span className="shrink-0 text-[10px] font-medium px-2 py-0.5 rounded-full bg-[var(--persona-accent)]/10 text-[var(--persona-accent)] border border-[var(--persona-accent)]/20">
+                    {typeLabel}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => removeLink(url)}
+                    className="size-6 rounded-full flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors opacity-0 group-hover:opacity-100"
+                    aria-label="Remove link"
+                  >
+                    <X className="size-3.5" />
+                  </button>
+                </div>
+              )
+            })}
           </div>
         )}
 
