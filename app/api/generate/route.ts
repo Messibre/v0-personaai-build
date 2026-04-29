@@ -1,4 +1,4 @@
-import type { GitHubProfile, GitHubRepo, PortfolioConfig } from "@/lib/types"
+import type { GitHubProfile, GitHubRepo, PortfolioConfig, AIProject, AIGeneratedContent } from "@/lib/types"
 import { buildPortfolioHtml } from "@/lib/templates"
 
 const GEMINI_KEYS = [
@@ -15,9 +15,11 @@ interface GenerateRequest {
   notionContent: string | null
   config: PortfolioConfig
   photoDataUrl: string | null
+  aiContent: AIGeneratedContent | null
+  targetRole: string | null
 }
 
-async function getAiBio(profile: GitHubProfile, repos: GitHubRepo[], resumeText: string | null, notionContent: string | null): Promise<string | null> {
+async function getAiBio(profile: GitHubProfile, repos: GitHubRepo[], resumeText: string | null, notionContent: string | null, additionalPrompt?: string): Promise<string | null> {
   if (GEMINI_KEYS.length === 0) return null
 
   const langs = [...new Set(repos.map((r) => r.language).filter(Boolean))].slice(0, 6)
@@ -30,6 +32,7 @@ Languages: ${langs.join(", ") || "Various"}
 Repos: ${profile.public_repos}
 ${resumeText ? `Resume excerpt: ${resumeText.substring(0, 500)}` : ""}
 ${notionContent ? `Additional context: ${notionContent.substring(0, 500)}` : ""}
+${additionalPrompt ? `User instructions: ${additionalPrompt}` : ""}
 
 Output ONLY the bio text, no quotes, no labels.`
 
@@ -66,7 +69,19 @@ export async function POST(request: Request) {
       return Response.json({ error: "Profile data is required. Please go back and enter your info." }, { status: 400 })
     }
 
-    const aiBio = await getAiBio(data.github.profile, data.github.repos || [], data.resumeText, data.notionContent)
+    // Use AI-generated content if available, otherwise fall back to generating a bio
+    let aiBio: string | null = null
+    let aiProjects: AIProject[] | null = null
+    let heroTagline: string | null = null
+
+    if (data.aiContent?.aboutMe) {
+      aiBio = data.aiContent.aboutMe
+      heroTagline = data.aiContent.heroTagline || null
+      aiProjects = data.aiContent.projects || null
+    } else {
+      // Fall back to existing bio generation
+      aiBio = await getAiBio(data.github.profile, data.github.repos || [], data.resumeText, data.notionContent, data.config.additionalPrompt)
+    }
 
     const html = buildPortfolioHtml({
       profile: data.github.profile,
@@ -76,6 +91,10 @@ export async function POST(request: Request) {
       config: data.config,
       photoUrl: data.photoDataUrl || null,
       aiBio,
+      socialLinks: data.config.socialLinks,
+      aiProjects,
+      heroTagline,
+      targetRole: data.targetRole,
     })
 
     return Response.json({ html, title: `${data.github.profile.name || data.github.profile.username} - Portfolio` })

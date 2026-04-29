@@ -17,6 +17,7 @@ export interface GitHubRepo {
   description: string | null
   language: string | null
   stargazers_count: number
+  forks_count: number
   html_url: string
   fork: boolean
   topics: string[]
@@ -40,6 +41,8 @@ export type TemplateStyle =
   | "pastel-creative"
   | "designer-coder"
   | "minimal-clean"
+  | "brutalist"
+  | "glassmorphism"
 
 export type ColorScheme =
   | "ocean"
@@ -104,6 +107,18 @@ export const TEMPLATE_OPTIONS: {
     description: "Ultra-clean whitespace, refined typography, subtle grid and elegant details",
     inspiration: "minimal",
   },
+  {
+    id: "brutalist",
+    label: "Brutalist",
+    description: "Raw, high-contrast, bold borders and oversized typography — unapologetically loud",
+    inspiration: "brutalist",
+  },
+  {
+    id: "glassmorphism",
+    label: "Glassmorphism",
+    description: "Frosted glass cards over vivid blurred gradients — sleek and futuristic",
+    inspiration: "glass",
+  },
 ]
 
 export const PORTFOLIO_SECTIONS = [
@@ -117,10 +132,41 @@ export const PORTFOLIO_SECTIONS = [
 
 export type SectionId = (typeof PORTFOLIO_SECTIONS)[number]["id"]
 
+export interface SocialLinks {
+  linkedin?: string
+  twitter?: string
+  substack?: string
+  blog?: string
+}
+
+// AI-generated content
+export interface AIProject {
+  name: string
+  url: string
+  language: string | null
+  description: string
+  stars: number
+  forks: number
+}
+
+export interface AIGeneratedContent {
+  projects: AIProject[]
+  aboutMe: string
+  heroTagline: string
+}
+
+export interface TargetRoleConfig {
+  role: string
+  externalLinks: string[] // URLs for LinkedIn, blog, etc.
+}
+
 export interface PortfolioConfig {
-  template: TemplateStyle
+  template: TemplateStyle | "ai-generated"
   colorScheme: ColorScheme
   sections: SectionId[]
+  socialLinks: SocialLinks
+  additionalPrompt?: string
+  useAITemplate?: boolean
 }
 
 export interface GeneratedPortfolio {
@@ -153,6 +199,17 @@ export interface WizardState {
     file: File | null
     dataUrl: string | null
   }
+  targetRole: {
+    role: string
+    externalLinks: string[]
+  }
+  aiContent: {
+    projects: AIProject[] | null
+    aboutMe: string | null
+    heroTagline: string | null
+    loading: boolean
+    error: string | null
+  }
   config: PortfolioConfig
   portfolio: {
     html: string | null
@@ -183,6 +240,14 @@ export type WizardAction =
   | { type: "CLEAR_PHOTO" }
   | { type: "SET_CONFIG"; config: Partial<PortfolioConfig> }
   | { type: "TOGGLE_SECTION"; section: SectionId }
+  | { type: "SET_SOCIAL_LINKS"; socialLinks: SocialLinks }
+  | { type: "SET_ADDITIONAL_PROMPT"; prompt: string }
+  | { type: "SET_TARGET_ROLE"; role: string }
+  | { type: "SET_EXTERNAL_LINKS"; links: string[] }
+  | { type: "SET_AI_CONTENT_LOADING"; loading: boolean }
+  | { type: "SET_AI_CONTENT"; content: AIGeneratedContent }
+  | { type: "SET_AI_CONTENT_ERROR"; error: string }
+  | { type: "CLEAR_AI_CONTENT" }
   | { type: "SET_PORTFOLIO_LOADING"; loading: boolean }
   | { type: "SET_PORTFOLIO"; html: string; title: string }
   | { type: "SET_PORTFOLIO_ERROR"; error: string }

@@ -15,7 +15,10 @@ import {
   ImagePlus,
   Check,
   User,
+  MessageSquare,
+  Wand2,
 } from "lucide-react"
+import { Input } from "@/components/ui/input"
 
 interface StepCustomizeProps {
   state: WizardState
@@ -146,6 +149,83 @@ function TemplatePreview({ templateId, isSelected }: { templateId: TemplateStyle
           <circle cx="80" cy="83" r="2" fill={accent} />
         </svg>
       )
+    case "brutalist":
+      return (
+        <svg viewBox="0 0 160 90" className="w-full h-full" aria-hidden="true">
+          <rect width="160" height="90" fill="#0a0a0a" />
+          {/* Bold top border */}
+          <rect x="0" y="0" width="160" height="3" fill={accent} />
+          {/* Left panel */}
+          <rect x="0" y="3" width="95" height="87" fill="#111" />
+          {/* Right panel / photo */}
+          <rect x="95" y="3" width="65" height="87" fill="#1a1a1a" />
+          <rect x="95" y="3" width="3" height="87" fill={accent} />
+          {/* Photo placeholder */}
+          <rect x="98" y="5" width="59" height="52" fill="#222" />
+          <ellipse cx="127" cy="25" rx="10" ry="12" fill="#333" />
+          {/* Oversized text */}
+          <text x="8" y="38" fontSize="20" fontWeight="900" fill="#fff" fontFamily="monospace">NAME</text>
+          <text x="8" y="55" fontSize="10" fontWeight="900" fill={accent} fontFamily="monospace">PORTFOLIO</text>
+          {/* Role tag */}
+          <rect x="8" y="20" width="40" height="8" fill={accent} />
+          <text x="10" y="26" fontSize="4" fontWeight="700" fill="#000" fontFamily="monospace">DEV</text>
+          {/* Stat boxes */}
+          <rect x="98" y="62" width="18" height="14" fill="none" stroke="#333" strokeWidth="1" />
+          <rect x="120" y="62" width="18" height="14" fill="none" stroke="#333" strokeWidth="1" />
+          <rect x="142" y="62" width="12" height="14" fill="none" stroke="#333" strokeWidth="1" />
+          <text x="104" y="72" fontSize="6" fontWeight="900" fill={accent} fontFamily="monospace">12</text>
+          <text x="126" y="72" fontSize="6" fontWeight="900" fill={accent} fontFamily="monospace">8</text>
+          <text x="146" y="72" fontSize="5" fontWeight="900" fill={accent} fontFamily="monospace">3</text>
+          {/* Nav */}
+          <rect x="0" y="0" width="160" height="12" fill="#0a0a0a" />
+          <text x="8" y="9" fontSize="5" fontWeight="900" fill="#fff" fontFamily="monospace">PERSONA</text>
+          <rect x="100" y="4" width="14" height="3" rx="0" fill="#222" />
+          <rect x="118" y="4" width="14" height="3" rx="0" fill="#222" />
+          <rect x="136" y="4" width="14" height="3" rx="0" fill={accent} />
+        </svg>
+      )
+    case "glassmorphism":
+      return (
+        <svg viewBox="0 0 160 90" className="w-full h-full" aria-hidden="true">
+          <defs>
+            <radialGradient id="g1" cx="30%" cy="30%">
+              <stop offset="0%" stopColor={accent} stopOpacity="0.4" />
+              <stop offset="100%" stopColor="#050510" stopOpacity="0" />
+            </radialGradient>
+            <radialGradient id="g2" cx="80%" cy="80%">
+              <stop offset="0%" stopColor="#6366f1" stopOpacity="0.3" />
+              <stop offset="100%" stopColor="#050510" stopOpacity="0" />
+            </radialGradient>
+          </defs>
+          {/* Dark background */}
+          <rect width="160" height="90" fill="#050510" />
+          {/* Glow orbs */}
+          <ellipse cx="40" cy="30" rx="50" ry="40" fill="url(#g1)" />
+          <ellipse cx="130" cy="70" rx="45" ry="35" fill="url(#g2)" />
+          {/* Glass card */}
+          <rect x="8" y="15" width="85" height="60" rx="6" fill="white" fillOpacity="0.04" stroke="white" strokeOpacity="0.1" strokeWidth="0.5" />
+          {/* Card content */}
+          <text x="16" y="35" fontSize="4" fontWeight="600" fill={accent} fontFamily="sans-serif" letterSpacing="1">DEVELOPER</text>
+          <text x="16" y="47" fontSize="9" fontWeight="800" fill="#fff" fontFamily="sans-serif">Jane Doe</text>
+          <text x="16" y="56" fontSize="3.5" fill="rgba(255,255,255,0.5)" fontFamily="sans-serif">Building beautiful things at</text>
+          <text x="16" y="62" fontSize="3.5" fill="rgba(255,255,255,0.5)" fontFamily="sans-serif">the edge of design & code.</text>
+          {/* CTA buttons */}
+          <rect x="16" y="65" width="28" height="7" rx="3" fill={accent} />
+          <text x="22" y="70" fontSize="3" fontWeight="700" fill="#000" fontFamily="sans-serif">My Work</text>
+          <rect x="48" y="65" width="28" height="7" rx="3" fill="white" fillOpacity="0.08" stroke="white" strokeOpacity="0.15" strokeWidth="0.5" />
+          <text x="53" y="70" fontSize="3" fill="rgba(255,255,255,0.7)" fontFamily="sans-serif">Contact</text>
+          {/* Photo */}
+          <rect x="100" y="10" width="52" height="70" rx="8" fill="white" fillOpacity="0.06" stroke={accent} strokeOpacity="0.3" strokeWidth="0.5" />
+          <ellipse cx="126" cy="38" rx="14" ry="16" fill="#1a1a2e" />
+          <ellipse cx="126" cy="30" rx="7" ry="8" fill="#222240" />
+          {/* Nav */}
+          <rect x="0" y="0" width="160" height="11" fill="rgba(5,5,16,0.8)" />
+          <text x="8" y="8" fontSize="5" fontWeight="800" fill="#fff" fontFamily="sans-serif">P.</text>
+          <rect x="90" y="4" width="14" height="3" rx="1" fill="rgba(255,255,255,0.1)" />
+          <rect x="108" y="4" width="14" height="3" rx="1" fill="rgba(255,255,255,0.1)" />
+          <rect x="126" y="3" width="20" height="5" rx="2" fill={accent} fillOpacity="0.9" />
+        </svg>
+      )
   }
 }
 
@@ -250,13 +330,63 @@ export function StepCustomize({ state, dispatch, onNext, onBack }: StepCustomize
       <div>
         <h3 className="text-sm font-semibold text-foreground mb-3">Template Style</h3>
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 stagger-children">
+          {/* AI-Generated Template Option - Featured */}
+          <button
+            type="button"
+            onClick={() => dispatch({ type: "SET_CONFIG", config: { template: "ai-generated" as TemplateStyle, useAITemplate: true } })}
+            className={cn(
+              "flex flex-col items-start gap-0 rounded-xl border-2 transition-all duration-300 text-left overflow-hidden group col-span-2 lg:col-span-1",
+              config.useAITemplate
+                ? "border-[var(--persona-accent)] shadow-lg shadow-[var(--persona-accent)]/15 scale-[1.02] bg-gradient-to-br from-[var(--persona-accent)]/5 to-transparent"
+                : "border-[var(--persona-border)] hover:border-[var(--persona-accent)]/30 hover:shadow-md"
+            )}
+          >
+            {/* AI Preview */}
+            <div className={cn(
+              "w-full aspect-video flex flex-col items-center justify-center overflow-hidden transition-all duration-300 bg-gradient-to-br from-[var(--persona-accent)]/10 via-transparent to-[var(--persona-accent)]/5",
+              config.useAITemplate ? "opacity-100" : "opacity-80 group-hover:opacity-100"
+            )}>
+              <div className="relative">
+                <Wand2 className={cn(
+                  "size-10 transition-all duration-500",
+                  config.useAITemplate ? "text-[var(--persona-accent)]" : "text-muted-foreground group-hover:text-[var(--persona-accent)]"
+                )} />
+                <Sparkles className={cn(
+                  "size-4 absolute -top-1 -right-1 transition-all duration-300",
+                  config.useAITemplate ? "text-[var(--persona-accent)] animate-pulse" : "text-muted-foreground/50"
+                )} />
+              </div>
+              <span className={cn(
+                "text-xs font-medium mt-2 transition-colors",
+                config.useAITemplate ? "text-[var(--persona-accent)]" : "text-muted-foreground"
+              )}>
+                Powered by AI
+              </span>
+            </div>
+            <div className="flex flex-col gap-1 p-3 w-full bg-[var(--persona-surface)] border-t border-[var(--persona-border)]">
+              <div className="flex items-center gap-2">
+                <p className={cn(
+                  "text-sm font-semibold transition-colors",
+                  config.useAITemplate ? "text-[var(--persona-accent)]" : "text-foreground"
+                )}>
+                  AI-Generated Design
+                </p>
+                {config.useAITemplate && <Check className="size-3.5 text-[var(--persona-accent)] ml-auto animate-check-pop" />}
+              </div>
+              <p className="text-[11px] text-muted-foreground leading-relaxed line-clamp-2">
+                Let AI create a unique, modern design tailored to your role. You can refine it with chat.
+              </p>
+            </div>
+          </button>
+
+          {/* Standard Templates */}
           {TEMPLATE_OPTIONS.map((template) => {
-            const isSelected = config.template === template.id
+            const isSelected = config.template === template.id && !config.useAITemplate
             return (
               <button
                 key={template.id}
                 type="button"
-                onClick={() => dispatch({ type: "SET_CONFIG", config: { template: template.id } })}
+                onClick={() => dispatch({ type: "SET_CONFIG", config: { template: template.id, useAITemplate: false } })}
                 className={cn(
                   "flex flex-col items-start gap-0 rounded-xl border-2 transition-all duration-300 text-left overflow-hidden group",
                   isSelected
@@ -362,6 +492,23 @@ export function StepCustomize({ state, dispatch, onNext, onBack }: StepCustomize
             )
           })}
         </div>
+      </div>
+
+      {/* Additional Prompt (Optional) */}
+      <div>
+        <h3 className="text-sm font-semibold text-foreground mb-2 flex items-center gap-2">
+          <MessageSquare className="size-4 text-[var(--persona-accent)]" />
+          Additional Instructions
+          <span className="text-xs font-normal text-muted-foreground">(optional)</span>
+        </h3>
+        <p className="text-xs text-muted-foreground mb-3">Give the AI extra context or specific instructions for your portfolio.</p>
+        <textarea
+          placeholder="e.g. &quot;Focus on my machine learning experience&quot; or &quot;Make the tone more playful and casual&quot; or &quot;Highlight my open source contributions&quot;"
+          value={config.additionalPrompt || ""}
+          onChange={(e) => dispatch({ type: "SET_ADDITIONAL_PROMPT", prompt: e.target.value })}
+          rows={3}
+          className="w-full rounded-xl bg-[var(--persona-surface)] border-2 border-[var(--persona-border)] px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-[var(--persona-accent)] focus:ring-1 focus:ring-[var(--persona-accent)]/20 transition-all resize-none"
+        />
       </div>
 
       {/* Navigation */}

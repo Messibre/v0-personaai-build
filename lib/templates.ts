@@ -1,4 +1,4 @@
-import type { GitHubProfile, GitHubRepo, PortfolioConfig, ColorScheme } from "./types"
+import type { GitHubProfile, GitHubRepo, PortfolioConfig, ColorScheme, AIProject, SocialLinks } from "./types"
 import { COLOR_SCHEMES } from "./types"
 
 interface TemplateData {
@@ -9,6 +9,10 @@ interface TemplateData {
   config: PortfolioConfig
   photoUrl: string | null
   aiBio: string | null
+  socialLinks?: SocialLinks
+  aiProjects?: AIProject[] | null
+  heroTagline?: string | null
+  targetRole?: string | null
 }
 
 function e(str: string): string {
@@ -201,20 +205,65 @@ function buildNav(name: string, sections: string[], accent: string): string {
   </div>`
 }
 
-function buildProjects(repos: GitHubRepo[], accent: string): string {
-  return repos.filter(r => !r.fork).slice(0, 6).map(r => `
+function smartRepoDescription(name: string, language: string | null): string {
+  // Convert repo-name-with-hyphens to readable words
+  const words = name.replace(/[-_]/g, " ").replace(/([a-z])([A-Z])/g, "$1 $2").toLowerCase()
+  const lang = language ? `${language}-based ` : ""
+  // Detect common patterns
+  if (/api|backend|server/.test(words)) return `A ${lang}backend API service for ${words.replace(/api|backend|server/g, "").trim() || "data management"}.`
+  if (/cli|tool|script/.test(words)) return `A ${lang}command-line tool for ${words.replace(/cli|tool|script/g, "").trim() || "automation"}.`
+  if (/app|web|site|portfolio/.test(words)) return `A ${lang}web application — ${words}.`
+  if (/bot|discord|telegram/.test(words)) return `An automated ${lang}bot: ${words}.`
+  if (/ml|model|predict|classify/.test(words)) return `A machine learning project for ${words}.`
+  if (/game|chess|puzzle/.test(words)) return `A ${lang}game: ${words}.`
+  if (/dashboard|admin|panel/.test(words)) return `A ${lang}dashboard for managing ${words.replace(/dashboard|admin|panel/g, "").trim() || "data"}.`
+  return `A ${lang}project — ${words.charAt(0).toUpperCase() + words.slice(1)}.`
+}
+
+// Build projects from either AI-enhanced projects or raw repos
+function buildProjects(repos: GitHubRepo[], accent: string, aiProjects?: AIProject[] | null): string {
+  // Use AI projects if available, otherwise fall back to repos
+  if (aiProjects && aiProjects.length > 0) {
+    return aiProjects.slice(0, 7).map(p => `
+    <div class="project-card reveal" style="opacity:0;transform:translateY(40px)">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+        <h3 class="project-name">${e(p.name)}</h3>
+        <div style="display:flex;gap:8px;align-items:center">
+          ${p.stars > 0 ? `<span class="project-stars">&#9733; ${p.stars}</span>` : ""}
+          ${p.forks > 0 ? `<span class="project-stars" style="color:#888">&#9334; ${p.forks}</span>` : ""}
+        </div>
+      </div>
+      <p class="project-desc">${e(p.description)}</p>
+      <div class="project-meta">
+        ${p.language ? `<span class="project-lang">${e(p.language)}</span>` : ""}
+        <a href="${p.url}" target="_blank" rel="noopener" class="project-link">View Code &rarr;</a>
+      </div>
+    </div>`).join("")
+  }
+  
+  // Fallback to repos
+  return repos.filter(r => !r.fork).slice(0, 6).map(r => {
+    const desc = r.description && r.description.trim()
+      ? r.description
+      : smartRepoDescription(r.name, r.language)
+    return `
     <div class="project-card reveal" style="opacity:0;transform:translateY(40px)">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
         <h3 class="project-name">${e(r.name)}</h3>
-        ${r.stargazers_count > 0 ? `<span class="project-stars">&#9733; ${r.stargazers_count}</span>` : ""}
+        <div style="display:flex;gap:8px;align-items:center">
+          ${r.stargazers_count > 0 ? `<span class="project-stars">&#9733; ${r.stargazers_count}</span>` : ""}
+          ${r.forks_count && r.forks_count > 0 ? `<span class="project-stars" style="color:#888">&#9334; ${r.forks_count}</span>` : ""}
+        </div>
       </div>
-      <p class="project-desc">${e(r.description || "A project built with care and attention to detail.")}</p>
+      <p class="project-desc">${e(desc)}</p>
       <div class="project-meta">
         ${r.language ? `<span class="project-lang">${e(r.language)}</span>` : ""}
+        ${r.topics?.slice(0, 2).map(t => `<span class="project-lang" style="opacity:0.6">${e(t)}</span>`).join("") || ""}
         <a href="${r.html_url}" target="_blank" rel="noopener" class="project-link">View Code &rarr;</a>
         ${r.homepage ? `<a href="${r.homepage}" target="_blank" rel="noopener" class="project-link" style="color:#888">Live &rarr;</a>` : ""}
       </div>
-    </div>`).join("")
+    </div>`
+  }).join("")
 }
 
 function buildSkills(langs: string[], topics: string[]): string {
@@ -240,7 +289,34 @@ function buildAbout(profile: GitHubProfile, aiBio: string | null, accent: string
   </section>`
 }
 
-function buildContact(profile: GitHubProfile, accent: string): string {
+function buildContact(profile: GitHubProfile, accent: string, socialLinks?: SocialLinks): string {
+  const links: string[] = []
+  
+  // GitHub (always present)
+  links.push(`<a href="${profile.html_url}" target="_blank" rel="noopener" style="padding:14px 32px;background:${accent};color:#000;border-radius:10px;font-weight:700;font-size:15px;display:inline-flex;align-items:center;gap:8px">GitHub &rarr;</a>`)
+  
+  // LinkedIn
+  if (socialLinks?.linkedin) {
+    links.push(`<a href="${socialLinks.linkedin}" target="_blank" rel="noopener" style="padding:14px 32px;border:2px solid ${accent};color:${accent};border-radius:10px;font-weight:700;font-size:15px">LinkedIn</a>`)
+  }
+  
+  // Twitter/X
+  if (socialLinks?.twitter) {
+    links.push(`<a href="${socialLinks.twitter}" target="_blank" rel="noopener" style="padding:14px 32px;border:2px solid ${accent};color:${accent};border-radius:10px;font-weight:700;font-size:15px">X / Twitter</a>`)
+  }
+  
+  // Substack
+  if (socialLinks?.substack) {
+    links.push(`<a href="${socialLinks.substack}" target="_blank" rel="noopener" style="padding:14px 32px;border:2px solid ${accent};color:${accent};border-radius:10px;font-weight:700;font-size:15px">Substack</a>`)
+  }
+  
+  // Blog / Personal website
+  if (socialLinks?.blog) {
+    links.push(`<a href="${socialLinks.blog.startsWith("http") ? socialLinks.blog : "https://" + socialLinks.blog}" target="_blank" rel="noopener" style="padding:14px 32px;border:2px solid ${accent};color:${accent};border-radius:10px;font-weight:700;font-size:15px">Website</a>`)
+  } else if (profile.blog) {
+    links.push(`<a href="${profile.blog.startsWith("http") ? profile.blog : "https://" + profile.blog}" target="_blank" rel="noopener" style="padding:14px 32px;border:2px solid ${accent};color:${accent};border-radius:10px;font-weight:700;font-size:15px">Website</a>`)
+  }
+  
   return `
   <section id="contact" class="section" style="background:rgba(255,255,255,0.01)">
     <div class="container" style="text-align:center">
@@ -248,8 +324,7 @@ function buildContact(profile: GitHubProfile, accent: string): string {
       <h2 class="section-title reveal" style="margin-left:auto;margin-right:auto">Let&rsquo;s work together</h2>
       <p class="section-desc reveal" style="margin-left:auto;margin-right:auto;text-align:center">Have a project in mind? I&rsquo;d love to hear about it.</p>
       <div style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap" class="reveal">
-        <a href="${profile.html_url}" target="_blank" rel="noopener" style="padding:14px 32px;background:${accent};color:#000;border-radius:10px;font-weight:700;font-size:15px;display:inline-flex;align-items:center;gap:8px">GitHub Profile &rarr;</a>
-        ${profile.blog ? `<a href="${profile.blog.startsWith("http") ? profile.blog : "https://" + profile.blog}" target="_blank" rel="noopener" style="padding:14px 32px;border:2px solid ${accent};color:${accent};border-radius:10px;font-weight:700;font-size:15px">Website</a>` : ""}
+        ${links.join("\n        ")}
       </div>
     </div>
   </section>`
@@ -258,16 +333,47 @@ function buildContact(profile: GitHubProfile, accent: string): string {
 function buildFooter(name: string, accent: string): string {
   return `
   <footer class="footer">
-    <p>&copy; ${new Date().getFullYear()} ${e(name)}. Built with <a href="https://personaai.dev" target="_blank">PersonaAI</a></p>
+    <div style="max-width:1100px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <span>Built with <a href="https://personaai.vercel.app" target="_blank" rel="noopener" style="color:${accent}">PersonaAI</a></span>
+      <span>&copy; ${new Date().getFullYear()} ${e(name)}. All rights reserved.</span>
+    </div>
   </footer>`
 }
 
-function shell(accent: string, extraStyles: string, bodyContent: string, name: string): string {
+function shell(accent: string, extraStyles: string, bodyContent: string, name: string, bio?: string, photoUrl?: string): string {
+  const description = bio 
+    ? `${name} - ${bio.substring(0, 150)}${bio.length > 150 ? "..." : ""}`
+    : `${name}'s personal portfolio showcasing projects, skills, and experience.`
+  const safeDescription = e(description)
+  const title = `${e(name)} - Portfolio`
+  
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>${e(name)} - Portfolio</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>${title}</title>
+<meta name="description" content="${safeDescription}">
+<meta name="author" content="${e(name)}">
+
+<!-- Open Graph / Facebook -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="${title}">
+<meta property="og:description" content="${safeDescription}">
+${photoUrl ? `<meta property="og:image" content="${photoUrl}">` : ""}
+
+<!-- Twitter -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="${title}">
+<meta name="twitter:description" content="${safeDescription}">
+${photoUrl ? `<meta name="twitter:image" content="${photoUrl}">` : ""}
+
+<!-- Theme Color -->
+<meta name="theme-color" content="${accent}">
+
+<!-- Favicon (generated from accent color) -->
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='${encodeURIComponent(accent)}'/><text y='.9em' x='50' text-anchor='middle' font-size='70' fill='white'>${e(name.charAt(0).toUpperCase())}</text></svg>">
+
 <style>${baseStyles(accent)}${extraStyles}</style>
 </head>
 <body>
@@ -280,7 +386,7 @@ ${gsapScript()}
 
 /* ===== TEMPLATE: BOLD PORTRAIT ===== */
 function buildBoldPortrait(data: TemplateData): string {
-  const { profile, repos, config, photoUrl, aiBio } = data
+  const { profile, repos, config, photoUrl, aiBio, aiProjects, heroTagline, targetRole } = data
   const c = COLOR_SCHEMES[config.colorScheme as ColorScheme]
   const langs = getLangs(repos)
   const topics = getTopics(repos)
@@ -323,17 +429,17 @@ function buildBoldPortrait(data: TemplateData): string {
   <main>
   ${config.sections.includes("about") ? buildAbout(profile, aiBio, c.accent) : ""}
   ${config.sections.includes("skills") ? `<section id="skills" class="section"><div class="container"><p class="section-label reveal">Expertise</p><h2 class="section-title reveal">Skills & Technologies</h2><div style="display:flex;flex-wrap:wrap;gap:0">${buildSkills(langs, topics)}</div></div></section>` : ""}
-  ${config.sections.includes("projects") ? `<section id="projects" class="section" style="background:rgba(255,255,255,0.01)"><div class="container"><p class="section-label reveal">Work</p><h2 class="section-title reveal">Featured Projects</h2><div class="projects-grid">${buildProjects(repos, c.accent)}</div></div></section>` : ""}
-  ${config.sections.includes("contact") ? buildContact(profile, c.accent) : ""}
+  ${config.sections.includes("projects") ? `<section id="projects" class="section" style="background:rgba(255,255,255,0.01)"><div class="container"><p class="section-label reveal">Work</p><h2 class="section-title reveal">Featured Projects</h2><div class="projects-grid">${buildProjects(repos, c.accent, aiProjects)}</div></div></section>` : ""}
+  ${config.sections.includes("contact") ? buildContact(profile, c.accent, data.socialLinks) : ""}
   </main>
   ${buildFooter(name, c.accent)}`
 
-  return shell(c.accent, extra, body, name)
+  return shell(c.accent, extra, body, name, aiBio || profile.bio || undefined, img)
 }
 
 /* ===== TEMPLATE: TYPOGRAPHIC ===== */
 function buildTypographic(data: TemplateData): string {
-  const { profile, repos, config, photoUrl, aiBio } = data
+  const { profile, repos, config, photoUrl, aiBio, aiProjects, heroTagline, targetRole } = data
   const c = COLOR_SCHEMES[config.colorScheme as ColorScheme]
   const langs = getLangs(repos)
   const topics = getTopics(repos)
@@ -360,17 +466,17 @@ function buildTypographic(data: TemplateData): string {
   <main>
   ${config.sections.includes("about") ? buildAbout(profile, aiBio, c.accent) : ""}
   ${config.sections.includes("skills") ? `<section id="skills" class="section"><div class="container"><p class="section-label reveal">Skills</p><h2 class="section-title reveal">What I work with</h2><div style="display:flex;flex-wrap:wrap;gap:0">${buildSkills(langs, topics)}</div></div></section>` : ""}
-  ${config.sections.includes("projects") ? `<section id="projects" class="section" style="background:rgba(255,255,255,0.01)"><div class="container"><p class="section-label reveal">Projects</p><h2 class="section-title reveal">Selected Work</h2><div class="projects-grid">${buildProjects(repos, c.accent)}</div></div></section>` : ""}
-  ${config.sections.includes("contact") ? buildContact(profile, c.accent) : ""}
+  ${config.sections.includes("projects") ? `<section id="projects" class="section" style="background:rgba(255,255,255,0.01)"><div class="container"><p class="section-label reveal">Projects</p><h2 class="section-title reveal">Selected Work</h2><div class="projects-grid">${buildProjects(repos, c.accent, aiProjects)}</div></div></section>` : ""}
+  ${config.sections.includes("contact") ? buildContact(profile, c.accent, data.socialLinks) : ""}
   </main>
   ${buildFooter(name, c.accent)}`
 
-  return shell(c.accent, extra, body, name)
+  return shell(c.accent, extra, body, name, aiBio || profile.bio || undefined, img)
 }
 
 /* ===== TEMPLATE: SPLIT EDITORIAL ===== */
 function buildSplitEditorial(data: TemplateData): string {
-  const { profile, repos, config, photoUrl, aiBio } = data
+  const { profile, repos, config, photoUrl, aiBio, aiProjects, heroTagline, targetRole } = data
   const c = COLOR_SCHEMES[config.colorScheme as ColorScheme]
   const langs = getLangs(repos)
   const topics = getTopics(repos)
@@ -409,17 +515,17 @@ function buildSplitEditorial(data: TemplateData): string {
   <main>
   ${config.sections.includes("about") ? buildAbout(profile, aiBio, c.accent) : ""}
   ${config.sections.includes("skills") ? `<section id="skills" class="section"><div class="container"><p class="section-label reveal">Expertise</p><h2 class="section-title reveal">Technologies</h2><div style="display:flex;flex-wrap:wrap;gap:0">${buildSkills(langs, topics)}</div></div></section>` : ""}
-  ${config.sections.includes("projects") ? `<section id="projects" class="section" style="background:rgba(255,255,255,0.01)"><div class="container"><p class="section-label reveal">Work</p><h2 class="section-title reveal">Projects</h2><div class="projects-grid">${buildProjects(repos, c.accent)}</div></div></section>` : ""}
-  ${config.sections.includes("contact") ? buildContact(profile, c.accent) : ""}
+  ${config.sections.includes("projects") ? `<section id="projects" class="section" style="background:rgba(255,255,255,0.01)"><div class="container"><p class="section-label reveal">Work</p><h2 class="section-title reveal">Projects</h2><div class="projects-grid">${buildProjects(repos, c.accent, aiProjects)}</div></div></section>` : ""}
+  ${config.sections.includes("contact") ? buildContact(profile, c.accent, data.socialLinks) : ""}
   </main>
   ${buildFooter(name, c.accent)}`
 
-  return shell(c.accent, extra, body, name)
+  return shell(c.accent, extra, body, name, aiBio || profile.bio || undefined, img)
 }
 
 /* ===== TEMPLATE: PASTEL CREATIVE (now dark premium) ===== */
 function buildPastelCreative(data: TemplateData): string {
-  const { profile, repos, config, photoUrl, aiBio } = data
+  const { profile, repos, config, photoUrl, aiBio, aiProjects, heroTagline, targetRole } = data
   const c = COLOR_SCHEMES[config.colorScheme as ColorScheme]
   const langs = getLangs(repos)
   const topics = getTopics(repos)
@@ -468,17 +574,17 @@ function buildPastelCreative(data: TemplateData): string {
   <main>
   ${config.sections.includes("about") ? buildAbout(profile, aiBio, c.accent) : ""}
   ${config.sections.includes("skills") ? `<section id="skills" class="section"><div class="container"><p class="section-label reveal">Skills</p><h2 class="section-title reveal">My Toolkit</h2><div style="display:flex;flex-wrap:wrap;gap:0">${buildSkills(langs, topics)}</div></div></section>` : ""}
-  ${config.sections.includes("projects") ? `<section id="projects" class="section" style="background:rgba(255,255,255,0.01)"><div class="container"><p class="section-label reveal">Portfolio</p><h2 class="section-title reveal">Recent Projects</h2><div class="projects-grid">${buildProjects(repos, c.accent)}</div></div></section>` : ""}
-  ${config.sections.includes("contact") ? buildContact(profile, c.accent) : ""}
+  ${config.sections.includes("projects") ? `<section id="projects" class="section" style="background:rgba(255,255,255,0.01)"><div class="container"><p class="section-label reveal">Portfolio</p><h2 class="section-title reveal">Recent Projects</h2><div class="projects-grid">${buildProjects(repos, c.accent, aiProjects)}</div></div></section>` : ""}
+  ${config.sections.includes("contact") ? buildContact(profile, c.accent, data.socialLinks) : ""}
   </main>
   ${buildFooter(name, c.accent)}`
 
-  return shell(c.accent, extra, body, name)
+  return shell(c.accent, extra, body, name, aiBio || profile.bio || undefined, img)
 }
 
 /* ===== TEMPLATE: DESIGNER CODER ===== */
 function buildDesignerCoder(data: TemplateData): string {
-  const { profile, repos, config, photoUrl, aiBio } = data
+  const { profile, repos, config, photoUrl, aiBio, aiProjects, heroTagline, targetRole } = data
   const c = COLOR_SCHEMES[config.colorScheme as ColorScheme]
   const langs = getLangs(repos)
   const topics = getTopics(repos)
@@ -517,17 +623,17 @@ function buildDesignerCoder(data: TemplateData): string {
   <main>
   ${config.sections.includes("about") ? buildAbout(profile, aiBio, c.accent) : ""}
   ${config.sections.includes("skills") ? `<section id="skills" class="section"><div class="container"><p class="section-label reveal">Stack</p><h2 class="section-title reveal">Tech Stack</h2><div style="display:flex;flex-wrap:wrap;gap:0">${buildSkills(langs, topics)}</div></div></section>` : ""}
-  ${config.sections.includes("projects") ? `<section id="projects" class="section" style="background:rgba(255,255,255,0.01)"><div class="container"><p class="section-label reveal">Work</p><h2 class="section-title reveal">Projects</h2><div class="projects-grid">${buildProjects(repos, c.accent)}</div></div></section>` : ""}
-  ${config.sections.includes("contact") ? buildContact(profile, c.accent) : ""}
+  ${config.sections.includes("projects") ? `<section id="projects" class="section" style="background:rgba(255,255,255,0.01)"><div class="container"><p class="section-label reveal">Work</p><h2 class="section-title reveal">Projects</h2><div class="projects-grid">${buildProjects(repos, c.accent, aiProjects)}</div></div></section>` : ""}
+  ${config.sections.includes("contact") ? buildContact(profile, c.accent, data.socialLinks) : ""}
   </main>
   ${buildFooter(name, c.accent)}`
 
-  return shell(c.accent, extra, body, name)
+  return shell(c.accent, extra, body, name, aiBio || profile.bio || undefined, img)
 }
 
 /* ===== TEMPLATE: MINIMAL CLEAN (now premium dark minimal) ===== */
 function buildMinimalClean(data: TemplateData): string {
-  const { profile, repos, config, photoUrl, aiBio } = data
+  const { profile, repos, config, photoUrl, aiBio, aiProjects, heroTagline, targetRole } = data
   const c = COLOR_SCHEMES[config.colorScheme as ColorScheme]
   const langs = getLangs(repos)
   const topics = getTopics(repos)
@@ -565,19 +671,213 @@ function buildMinimalClean(data: TemplateData): string {
       <p class="section-label reveal">Work</p>
       <h2 class="section-title reveal">Projects</h2>
       <div class="project-list">
-        ${repos.filter(r => !r.fork).slice(0, 8).map(r => `
+        ${(aiProjects && aiProjects.length > 0 ? aiProjects.slice(0, 8).map(p => `
+          <div class="project-item reveal">
+            <div><h3>${e(p.name)}</h3><p>${e(p.description)}</p></div>
+            <a href="${p.url}" target="_blank" rel="noopener">&rarr;</a>
+          </div>`) : repos.filter(r => !r.fork).slice(0, 8).map(r => `
           <div class="project-item reveal">
             <div><h3>${e(r.name)}</h3><p>${e(r.description || "A carefully crafted project.")}</p></div>
             <a href="${r.html_url}" target="_blank" rel="noopener">&rarr;</a>
-          </div>`).join("")}
+          </div>`)).join("")}
       </div>
     </div>
   </section>` : ""}
-  ${config.sections.includes("contact") ? buildContact(profile, c.accent) : ""}
+  ${config.sections.includes("contact") ? buildContact(profile, c.accent, data.socialLinks) : ""}
   </main>
   ${buildFooter(name, c.accent)}`
 
-  return shell(c.accent, extra, body, name)
+  return shell(c.accent, extra, body, name, aiBio || profile.bio || undefined, img)
+}
+
+/* ===== TEMPLATE: BRUTALIST ===== */
+function buildBrutalist(data: TemplateData): string {
+  const { profile, repos, config, photoUrl, aiBio, aiProjects, heroTagline, targetRole } = data
+  const c = COLOR_SCHEMES[config.colorScheme as ColorScheme]
+  const langs = getLangs(repos)
+  const topics = getTopics(repos)
+  const name = profile.name || profile.username
+  const img = photoUrl || profile.avatar_url
+  const role = langs.length > 0 ? `${langs[0]} Dev` : "Developer"
+
+  const extra = `
+    * { border-radius: 0 !important; }
+    body { background: #0a0a0a; color: #f0f0f0; font-family: 'JetBrains Mono', monospace; }
+    .hero { min-height: 100vh; display: flex; align-items: stretch; border-bottom: 4px solid ${c.accent}; }
+    .hero-left { flex: 1.2; background: #0a0a0a; padding: 120px 48px 80px; display: flex; flex-direction: column; justify-content: flex-end; border-right: 4px solid ${c.accent}; }
+    .hero-left h1 { font-size: clamp(3rem, 9vw, 7.5rem); font-weight: 900; line-height: 0.9; color: #fff; text-transform: uppercase; letter-spacing: -0.03em; margin-bottom: 24px; }
+    .hero-left h1 em { color: ${c.accent}; font-style: normal; display: block; }
+    .hero-left p { font-size: 13px; color: #888; line-height: 1.8; max-width: 360px; font-family: 'Inter', sans-serif; }
+    .hero-left .role-tag { display: inline-block; background: ${c.accent}; color: #000; font-size: 11px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; padding: 6px 16px; margin-bottom: 20px; }
+    .hero-right { flex: 0.7; background: #111; display: flex; flex-direction: column; align-items: stretch; }
+    .hero-right img { width: 100%; height: 65%; object-fit: cover; filter: grayscale(100%) contrast(1.2); border-bottom: 4px solid ${c.accent}; }
+    .hero-right-info { padding: 24px; flex: 1; display: flex; flex-direction: column; gap: 16px; }
+    .stat-box { border: 2px solid rgba(255,255,255,0.08); padding: 14px 16px; }
+    .stat-box .num { font-size: 28px; font-weight: 900; color: ${c.accent}; }
+    .stat-box .lbl { font-size: 10px; color: #666; text-transform: uppercase; letter-spacing: 2px; }
+    .brut-section { border-top: 4px solid ${c.accent}; }
+    .brut-section .section-label { background: ${c.accent}; color: #000; display: inline-block; padding: 4px 16px; font-size: 10px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 0; }
+    .brut-section .section-title { font-size: clamp(1.8rem, 3.5vw, 2.8rem); font-weight: 900; text-transform: uppercase; letter-spacing: -0.02em; border-bottom: 2px solid rgba(255,255,255,0.06); padding-bottom: 24px; margin-bottom: 40px; }
+    .projects-grid { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+    .project-card { border: 2px solid rgba(255,255,255,0.08); background: #0f0f0f; }
+    .project-card:hover { border-color: ${c.accent}; }
+    .project-name { font-family: 'JetBrains Mono', monospace; font-size: 15px; }
+    @media (max-width:768px) { .hero { flex-direction: column; } .hero-right { border-left: none; border-top: 4px solid ${c.accent}; } .hero-left { padding: 100px 24px 40px; } }
+  `
+  const body = `
+  ${buildNav(name, config.sections, c.accent)}
+  <section id="home" class="hero">
+    <div class="hero-left">
+      <span class="role-tag hero-anim">${e(role)}</span>
+      <h1 class="hero-anim">${e(name.split(" ")[0])}<em>${e(name.split(" ").slice(1).join(" ") || ".")}</em></h1>
+      <p class="hero-anim">${e(aiBio || profile.bio || "Building things that matter. One commit at a time.")}</p>
+    </div>
+    <div class="hero-right hero-anim">
+      <img src="${img}" alt="${e(name)}" crossorigin="anonymous">
+      <div class="hero-right-info">
+        <div class="stat-box"><div class="num">${profile.public_repos}</div><div class="lbl">Repositories</div></div>
+        <div class="stat-box"><div class="num">${profile.followers}</div><div class="lbl">Followers</div></div>
+        <div class="stat-box"><div class="num">${langs.length}</div><div class="lbl">Languages</div></div>
+      </div>
+    </div>
+  </section>
+  <main>
+  ${config.sections.includes("about") ? `
+  <section id="about" class="section brut-section">
+    <div class="container">
+      <span class="section-label">About</span>
+      <h2 class="section-title reveal">Who Am I</h2>
+      <p class="section-desc reveal" style="max-width:700px;font-family:'Inter',sans-serif">${e(aiBio || profile.bio || "A developer dedicated to crafting exceptional digital experiences.")}</p>
+      <div style="display:flex;gap:24px;flex-wrap:wrap" class="reveal">
+        ${profile.location ? `<span style="border:2px solid rgba(255,255,255,0.08);padding:8px 16px;font-size:13px;color:#aaa">${e(profile.location)}</span>` : ""}
+        ${profile.company ? `<span style="border:2px solid rgba(255,255,255,0.08);padding:8px 16px;font-size:13px;color:#aaa">${e(profile.company)}</span>` : ""}
+      </div>
+    </div>
+  </section>` : ""}
+  ${config.sections.includes("skills") ? `<section id="skills" class="section brut-section"><div class="container"><span class="section-label">Skills</span><h2 class="section-title reveal">Tech Stack</h2><div style="display:flex;flex-wrap:wrap;gap:0">${buildSkills(langs, topics)}</div></div></section>` : ""}
+  ${config.sections.includes("projects") ? `<section id="projects" class="section brut-section"><div class="container"><span class="section-label">Work</span><h2 class="section-title reveal">Projects</h2><div class="projects-grid">${buildProjects(repos, c.accent, aiProjects)}</div></div></section>` : ""}
+  ${config.sections.includes("contact") ? buildContact(profile, c.accent, data.socialLinks) : ""}
+  </main>
+  ${buildFooter(name, c.accent)}`
+
+  return shell(c.accent, extra, body, name, aiBio || profile.bio || undefined, img)
+}
+
+/* ===== TEMPLATE: GLASSMORPHISM ===== */
+function buildGlassmorphism(data: TemplateData): string {
+  const { profile, repos, config, photoUrl, aiBio, aiProjects, heroTagline, targetRole } = data
+  const c = COLOR_SCHEMES[config.colorScheme as ColorScheme]
+  const langs = getLangs(repos)
+  const topics = getTopics(repos)
+  const name = profile.name || profile.username
+  const img = photoUrl || profile.avatar_url
+  const role = langs.length > 0 ? `${langs[0]} Developer` : "Software Developer"
+
+  const extra = `
+    body { background: #050510; overflow-x: hidden; }
+    .glass-bg { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+    .glass-bg::before { content: ''; position: absolute; top: -20%; left: -10%; width: 60%; height: 60%; border-radius: 50%; background: ${c.accent}; filter: blur(120px); opacity: 0.12; }
+    .glass-bg::after { content: ''; position: absolute; bottom: -20%; right: -10%; width: 50%; height: 50%; border-radius: 50%; background: ${c.primary}; filter: blur(100px); opacity: 0.1; }
+    .hero { min-height: 100vh; display: flex; align-items: center; position: relative; z-index: 1; padding: 100px 24px 60px; }
+    .hero-inner { max-width: 1100px; margin: 0 auto; width: 100%; display: flex; align-items: center; gap: 60px; }
+    .hero-glass { background: rgba(255,255,255,0.04); backdrop-filter: blur(24px); border: 1px solid rgba(255,255,255,0.08); border-radius: 32px; padding: 56px 48px; flex: 1; }
+    .hero-glass .tag { font-size: 13px; color: ${c.accent}; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+    .hero-glass .tag::before { content: ''; display: inline-block; width: 24px; height: 2px; background: ${c.accent}; }
+    .hero-glass h1 { font-size: clamp(2.2rem, 4vw, 3.2rem); font-weight: 800; color: #fff; line-height: 1.2; margin-bottom: 16px; }
+    .hero-glass p { font-size: 15px; color: rgba(255,255,255,0.6); line-height: 1.75; margin-bottom: 32px; max-width: 440px; }
+    .hero-glass .ctas { display: flex; gap: 12px; flex-wrap: wrap; }
+    .hero-glass .ctas a { padding: 13px 28px; border-radius: 14px; font-weight: 700; font-size: 14px; transition: all .3s; }
+    .hero-glass .ctas .primary { background: ${c.accent}; color: #000; box-shadow: 0 8px 32px ${c.accent}35; }
+    .hero-glass .ctas .primary:hover { transform: translateY(-2px); box-shadow: 0 12px 40px ${c.accent}50; }
+    .hero-glass .ctas .secondary { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: #ccc; backdrop-filter: blur(8px); }
+    .hero-glass .ctas .secondary:hover { background: rgba(255,255,255,0.1); }
+    .hero-photo-wrap { flex-shrink: 0; position: relative; }
+    .hero-photo-wrap img { width: clamp(200px, 22vw, 300px); height: clamp(260px, 28vw, 380px); object-fit: cover; border-radius: 28px; border: 1px solid rgba(255,255,255,0.1); }
+    .hero-photo-wrap::before { content: ''; position: absolute; inset: -2px; border-radius: 30px; background: linear-gradient(135deg, ${c.accent}60, transparent 50%, ${c.primary}40); z-index: -1; }
+    .hero-photo-wrap::after { content: ''; position: absolute; inset: -20px; border-radius: 40px; background: ${c.accent}; filter: blur(40px); opacity: 0.12; z-index: -2; }
+    .glass-card { background: rgba(255,255,255,0.04); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.07); border-radius: 20px; padding: 28px; transition: all .4s; }
+    .glass-card:hover { background: rgba(255,255,255,0.07); border-color: ${c.accent}30; transform: translateY(-4px); }
+    .glass-section { position: relative; z-index: 1; }
+    .skill-badge { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); backdrop-filter: blur(8px); }
+    .skill-badge:hover { background: ${c.accent}15; }
+    @media (max-width:768px) { .hero-inner { flex-direction: column; } .hero-glass { padding: 36px 24px; } .hero-photo-wrap img { width: 200px; height: 260px; } }
+  `
+  const body = `
+  <div class="glass-bg"></div>
+  ${buildNav(name, config.sections, c.accent)}
+  <section id="home" class="hero">
+    <div class="hero-inner">
+      <div class="hero-glass hero-anim">
+        <div class="tag">${e(role)}</div>
+        <h1>${e(name)}</h1>
+        <p>${e(aiBio || profile.bio || "Crafting elegant digital experiences at the intersection of design and technology.")}</p>
+        <div class="ctas">
+          <a href="#projects" class="primary">View My Work</a>
+          <a href="#contact" class="secondary">Get in Touch</a>
+        </div>
+      </div>
+      <div class="hero-photo-wrap hero-anim">
+        <img src="${img}" alt="${e(name)}" class="hero-photo-parallax" crossorigin="anonymous">
+      </div>
+    </div>
+  </section>
+  <main class="glass-section">
+  ${config.sections.includes("about") ? `
+  <section id="about" class="section">
+    <div class="container">
+      <p class="section-label reveal">About</p>
+      <h2 class="section-title reveal">A little about me</h2>
+      <div class="glass-card reveal" style="max-width:700px">
+        <p style="color:rgba(255,255,255,0.7);line-height:1.75;font-size:15px">${e(aiBio || profile.bio || "A passionate developer dedicated to crafting exceptional digital experiences.")}</p>
+        <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:24px">
+          ${profile.location ? `<span style="font-size:13px;color:${c.accent}">&#9679; ${e(profile.location)}</span>` : ""}
+          ${profile.company ? `<span style="font-size:13px;color:${c.accent}">&#9679; ${e(profile.company)}</span>` : ""}
+          ${profile.blog ? `<a href="${profile.blog.startsWith("http") ? profile.blog : "https://" + profile.blog}" target="_blank" style="font-size:13px;color:${c.accent}">&#9679; ${e(profile.blog)}</a>` : ""}
+        </div>
+      </div>
+    </div>
+  </section>` : ""}
+  ${config.sections.includes("skills") ? `<section id="skills" class="section"><div class="container"><p class="section-label reveal">Expertise</p><h2 class="section-title reveal">Skills & Technologies</h2><div style="display:flex;flex-wrap:wrap;gap:0">${buildSkills(langs, topics)}</div></div></section>` : ""}
+  ${config.sections.includes("projects") ? `
+  <section id="projects" class="section">
+    <div class="container">
+      <p class="section-label reveal">Work</p>
+      <h2 class="section-title reveal">Featured Projects</h2>
+      <div class="projects-grid">
+        ${(aiProjects && aiProjects.length > 0 ? aiProjects.slice(0, 7).map(p => `
+        <div class="glass-card reveal" style="opacity:0;transform:translateY(40px)">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+            <h3 style="font-size:17px;font-weight:700;color:#fff">${e(p.name)}</h3>
+            ${p.stars > 0 ? `<span style="font-size:12px;color:${c.accent};font-weight:600">&#9733; ${p.stars}</span>` : ""}
+          </div>
+          <p style="font-size:13px;color:rgba(255,255,255,0.5);line-height:1.6;margin-bottom:16px">${e(p.description)}</p>
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            ${p.language ? `<span style="font-size:11px;padding:3px 12px;border-radius:20px;background:${c.accent}12;color:${c.accent};border:1px solid ${c.accent}25">${e(p.language)}</span>` : ""}
+            <a href="${p.url}" target="_blank" rel="noopener" style="font-size:13px;color:${c.accent};font-weight:500;margin-left:auto">View &rarr;</a>
+          </div>
+        </div>`) : repos.filter(r => !r.fork).slice(0, 6).map(r => {
+          const desc = r.description && r.description.trim() ? r.description : smartRepoDescription(r.name, r.language)
+          return `
+        <div class="glass-card reveal" style="opacity:0;transform:translateY(40px)">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+            <h3 style="font-size:17px;font-weight:700;color:#fff">${e(r.name)}</h3>
+            ${r.stargazers_count > 0 ? `<span style="font-size:12px;color:${c.accent};font-weight:600">&#9733; ${r.stargazers_count}</span>` : ""}
+          </div>
+          <p style="font-size:13px;color:rgba(255,255,255,0.5);line-height:1.6;margin-bottom:16px">${e(desc)}</p>
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            ${r.language ? `<span style="font-size:11px;padding:3px 12px;border-radius:20px;background:${c.accent}12;color:${c.accent};border:1px solid ${c.accent}25">${e(r.language)}</span>` : ""}
+            <a href="${r.html_url}" target="_blank" rel="noopener" style="font-size:13px;color:${c.accent};font-weight:500;margin-left:auto">View &rarr;</a>
+          </div>
+        </div>`
+        })).join("")}
+      </div>
+    </div>
+  </section>` : ""}
+  ${config.sections.includes("contact") ? buildContact(profile, c.accent, data.socialLinks) : ""}
+  </main>
+  ${buildFooter(name, c.accent)}`
+
+  return shell(c.accent, extra, body, name, aiBio || profile.bio || undefined, img)
 }
 
 /* ========== MAIN EXPORT ========== */
@@ -588,6 +888,8 @@ const TEMPLATE_BUILDERS: Record<string, (data: TemplateData) => string> = {
   "pastel-creative": buildPastelCreative,
   "designer-coder": buildDesignerCoder,
   "minimal-clean": buildMinimalClean,
+  "brutalist": buildBrutalist,
+  "glassmorphism": buildGlassmorphism,
 }
 
 export function buildPortfolioHtml(data: TemplateData): string {

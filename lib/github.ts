@@ -64,6 +64,7 @@ export async function fetchGitHubRepos(username: string): Promise<GitHubRepo[]> 
       description: repo.description,
       language: repo.language,
       stargazers_count: repo.stargazers_count,
+      forks_count: repo.forks_count || 0,
       html_url: repo.html_url,
       fork: repo.fork,
       topics: repo.topics || [],
