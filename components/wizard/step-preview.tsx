@@ -17,6 +17,9 @@ import {
   Rocket,
   Loader2,
   Link2,
+  MessageSquare,
+  Send,
+  Wand2,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -27,9 +30,13 @@ interface StepPreviewProps {
 }
 
 export function StepPreview({ state, dispatch, onBack }: StepPreviewProps) {
-  const { portfolio, github, resume, notion, config, photo } = state
+  const { portfolio, github, resume, notion, config, photo, aiContent, targetRole } = state
   const [copied, setCopied] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
+  
+  // AI Template refinement
+  const [refinementPrompt, setRefinementPrompt] = useState("")
+  const [isRefining, setIsRefining] = useState(false)
   
   // Deploy state
   const [deploying, setDeploying] = useState(false)
@@ -49,6 +56,54 @@ export function StepPreview({ state, dispatch, onBack }: StepPreviewProps) {
     dispatch({ type: "SET_PORTFOLIO_LOADING", loading: true })
 
     try {
+      // Check if user wants AI-generated template
+      if (config.useAITemplate) {
+        // Get skills from repos
+        const skills = [...new Set(github.repos.map((r) => r.language).filter(Boolean))] as string[]
+        
+        const res = await fetch("/api/ai-template", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            targetRole: targetRole.role || "Software Developer",
+            name: github.profile.name || github.profile.username,
+            aboutMe: aiContent.aboutMe || github.profile.bio || `${github.profile.name || github.profile.username} is a software developer.`,
+            heroTagline: aiContent.heroTagline || targetRole.role || "Building amazing software",
+            projects: aiContent.projects || github.repos.slice(0, 7).map((r) => ({
+              name: r.name,
+              url: r.html_url,
+              language: r.language,
+              description: r.description || `A ${r.language || "software"} project.`,
+              stars: r.stargazers_count,
+              forks: r.forks_count,
+            })),
+            skills,
+            photoUrl: photo.dataUrl,
+            socialLinks: config.socialLinks,
+            colorScheme: config.colorScheme,
+          }),
+        })
+
+        const data = await res.json()
+
+        if (!res.ok) {
+          dispatch({ type: "SET_PORTFOLIO_ERROR", error: data.error || `Server error (${res.status})` })
+          setIsGenerating(false)
+          return
+        }
+
+        if (!data.html || data.html.length < 100) {
+          dispatch({ type: "SET_PORTFOLIO_ERROR", error: "AI template generation failed. Please try again or use a saved template." })
+          setIsGenerating(false)
+          return
+        }
+
+        dispatch({ type: "SET_PORTFOLIO", html: data.html, title: `${github.profile.name || github.profile.username} - Portfolio` })
+        setIsGenerating(false)
+        return
+      }
+
+      // Standard template generation
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -58,6 +113,12 @@ export function StepPreview({ state, dispatch, onBack }: StepPreviewProps) {
           notionContent: notion.content,
           config,
           photoDataUrl: photo.dataUrl,
+          aiContent: aiContent.projects ? {
+            projects: aiContent.projects,
+            aboutMe: aiContent.aboutMe,
+            heroTagline: aiContent.heroTagline,
+          } : null,
+          targetRole: targetRole.role,
         }),
       })
 
@@ -82,7 +143,7 @@ export function StepPreview({ state, dispatch, onBack }: StepPreviewProps) {
       dispatch({ type: "SET_PORTFOLIO_ERROR", error: message })
       setIsGenerating(false)
     }
-  }, [github, resume.text, notion.content, config, photo.dataUrl, dispatch])
+  }, [github, resume.text, notion.content, config, photo.dataUrl, dispatch, aiContent, targetRole])
 
   // Auto-generate on first load
   useEffect(() => {
@@ -209,6 +270,51 @@ export function StepPreview({ state, dispatch, onBack }: StepPreviewProps) {
     setTimeout(() => setUrlCopied(false), 2000)
   }, [deployUrl])
 
+  // AI Template Refinement
+  const refineTemplate = useCallback(async () => {
+    if (!portfolio.html || !refinementPrompt.trim() || !config.useAITemplate) return
+
+    setIsRefining(true)
+
+    try {
+      const skills = [...new Set(github.repos.map((r) => r.language).filter(Boolean))] as string[]
+      
+      const res = await fetch("/api/ai-template", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          targetRole: targetRole.role || "Software Developer",
+          name: github.profile?.name || github.profile?.username || "User",
+          aboutMe: aiContent.aboutMe || "",
+          heroTagline: aiContent.heroTagline || "",
+          projects: aiContent.projects || [],
+          skills,
+          photoUrl: photo.dataUrl,
+          socialLinks: config.socialLinks,
+          colorScheme: config.colorScheme,
+          refinementPrompt: refinementPrompt,
+          existingHtml: portfolio.html,
+        }),
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        dispatch({ type: "SET_PORTFOLIO_ERROR", error: data.error || "Failed to refine template" })
+        setIsRefining(false)
+        return
+      }
+
+      dispatch({ type: "SET_PORTFOLIO", html: data.html, title: portfolio.title || "Portfolio" })
+      setRefinementPrompt("")
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to refine template"
+      dispatch({ type: "SET_PORTFOLIO_ERROR", error: message })
+    } finally {
+      setIsRefining(false)
+    }
+  }, [portfolio.html, refinementPrompt, config, github, aiContent, targetRole, photo.dataUrl, dispatch, portfolio.title])
+
   const loading = isGenerating || portfolio.loading
 
   return (
@@ -262,8 +368,53 @@ export function StepPreview({ state, dispatch, onBack }: StepPreviewProps) {
       {/* Portfolio Preview with Editor */}
       {portfolio.html && !loading && (
         <div className="animate-fade-in-up">
-          <PortfolioEditor html={portfolio.html} onHtmlChange={handleHtmlChange} />
+<PortfolioEditor html={portfolio.html} onHtmlChange={handleHtmlChange} />
 
+          {/* AI Template Refinement Chat */}
+          {config.useAITemplate && (
+            <div className="mt-6 p-4 rounded-xl bg-[var(--persona-surface)] border border-[var(--persona-border)]">
+              <div className="flex items-center gap-2 mb-3">
+                <Wand2 className="size-4 text-[var(--persona-accent)]" />
+                <span className="text-sm font-semibold text-foreground">Refine with AI</span>
+              </div>
+              <p className="text-xs text-muted-foreground mb-3">
+                Tell the AI how to adjust your design. Try: &quot;Make it darker&quot;, &quot;Add more spacing&quot;, &quot;Use a different font&quot;
+              </p>
+              <div className="flex gap-2">
+                <Input
+                  value={refinementPrompt}
+                  onChange={(e) => setRefinementPrompt(e.target.value)}
+                  placeholder="e.g., Make the color scheme more vibrant..."
+                  className="flex-1 bg-background border-[var(--persona-border)] focus-visible:border-[var(--persona-accent)]"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && refinementPrompt.trim() && !isRefining) {
+                      refineTemplate()
+                    }
+                  }}
+                  disabled={isRefining}
+                />
+                <Button
+                  onClick={refineTemplate}
+                  disabled={!refinementPrompt.trim() || isRefining}
+                  size="sm"
+                  className="gap-2 bg-[var(--persona-accent)] text-[var(--persona-bg)] hover:bg-[var(--persona-accent)]/90"
+                >
+                  {isRefining ? (
+                    <>
+                      <Loader2 className="size-4 animate-spin" />
+                      Refining...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="size-4" />
+                      Apply
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          )}
+          
           {/* Export Actions */}
           <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-6">
             <Button

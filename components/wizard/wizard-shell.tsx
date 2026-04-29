@@ -1,17 +1,19 @@
 "use client"
 
 import { useReducer, useCallback, useRef, useEffect } from "react"
-import type { WizardState, WizardAction } from "@/lib/types"
+import type { WizardState, WizardAction, AIGeneratedContent } from "@/lib/types"
 import { StepStart } from "./step-start"
 import { StepResume } from "./step-resume"
+import { StepTargetRole } from "./step-target-role"
 import { StepCustomize } from "./step-customize"
 import { StepPreview } from "./step-preview"
 import { cn } from "@/lib/utils"
-import { Sparkles, FileText, Palette, Eye, Check } from "lucide-react"
+import { Sparkles, FileText, Target, Palette, Eye, Check } from "lucide-react"
 
 const STEPS = [
   { label: "Get Started", icon: Sparkles },
   { label: "Resume", icon: FileText },
+  { label: "Target Role", icon: Target },
   { label: "Customize", icon: Palette },
   { label: "Preview", icon: Eye },
 ]
@@ -40,6 +42,17 @@ const initialState: WizardState = {
   photo: {
     file: null,
     dataUrl: null,
+  },
+  targetRole: {
+    role: "",
+    externalLinks: [],
+  },
+  aiContent: {
+    projects: null,
+    aboutMe: null,
+    heroTagline: null,
+    loading: false,
+    error: null,
   },
   config: {
     template: "bold-portrait",
@@ -106,6 +119,18 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
       return { ...state, config: { ...state.config, socialLinks: action.socialLinks } }
     case "SET_ADDITIONAL_PROMPT":
       return { ...state, config: { ...state.config, additionalPrompt: action.prompt } }
+    case "SET_TARGET_ROLE":
+      return { ...state, targetRole: { ...state.targetRole, role: action.role } }
+    case "SET_EXTERNAL_LINKS":
+      return { ...state, targetRole: { ...state.targetRole, externalLinks: action.links } }
+    case "SET_AI_CONTENT_LOADING":
+      return { ...state, aiContent: { ...state.aiContent, loading: action.loading, error: null } }
+    case "SET_AI_CONTENT":
+      return { ...state, aiContent: { ...state.aiContent, projects: action.content.projects, aboutMe: action.content.aboutMe, heroTagline: action.content.heroTagline, loading: false, error: null } }
+    case "SET_AI_CONTENT_ERROR":
+      return { ...state, aiContent: { ...state.aiContent, error: action.error, loading: false } }
+    case "CLEAR_AI_CONTENT":
+      return { ...state, aiContent: { ...initialState.aiContent } }
     case "SET_PORTFOLIO_LOADING":
       return { ...state, portfolio: { ...state.portfolio, loading: action.loading, error: null } }
     case "SET_PORTFOLIO":
@@ -135,7 +160,9 @@ export function WizardShell() {
         return state.github.profile !== null || state.notion.content !== null
       case 1: // Resume - always optional
         return true
-      case 2: // Customize
+      case 2: // Target Role - always optional (can skip AI generation)
+        return true
+      case 3: // Customize
         return state.config.sections.length > 0
       default:
         return false
@@ -143,7 +170,7 @@ export function WizardShell() {
   }, [state.step, state.github.profile, state.notion.content, state.config.sections.length])
 
   const goNext = useCallback(() => {
-    if (state.step < 3 && canGoNext()) {
+    if (state.step < 4 && canGoNext()) {
       dispatch({ type: "SET_STEP", step: state.step + 1 })
     }
   }, [state.step, canGoNext])
@@ -163,7 +190,7 @@ export function WizardShell() {
     [state.step]
   )
 
-  const progressPercent = (state.step / 3) * 100
+  const progressPercent = (state.step / 4) * 100
 
   return (
     <div className="w-full max-w-4xl mx-auto">
@@ -237,9 +264,12 @@ export function WizardShell() {
             <StepResume state={state} dispatch={dispatch} onNext={goNext} onBack={goBack} />
           )}
           {state.step === 2 && (
-            <StepCustomize state={state} dispatch={dispatch} onNext={goNext} onBack={goBack} />
+            <StepTargetRole state={state} dispatch={dispatch} onNext={goNext} onBack={goBack} />
           )}
           {state.step === 3 && (
+            <StepCustomize state={state} dispatch={dispatch} onNext={goNext} onBack={goBack} />
+          )}
+          {state.step === 4 && (
             <StepPreview state={state} dispatch={dispatch} onBack={goBack} />
           )}
         </div>

@@ -1,12 +1,5 @@
-import type { GitHubProfile, GitHubRepo, PortfolioConfig, ColorScheme } from "./types"
+import type { GitHubProfile, GitHubRepo, PortfolioConfig, ColorScheme, AIProject, SocialLinks } from "./types"
 import { COLOR_SCHEMES } from "./types"
-
-interface SocialLinks {
-  linkedin?: string
-  twitter?: string
-  substack?: string
-  blog?: string
-}
 
 interface TemplateData {
   profile: GitHubProfile
@@ -17,6 +10,9 @@ interface TemplateData {
   photoUrl: string | null
   aiBio: string | null
   socialLinks?: SocialLinks
+  aiProjects?: AIProject[] | null
+  heroTagline?: string | null
+  targetRole?: string | null
 }
 
 function e(str: string): string {
@@ -224,7 +220,28 @@ function smartRepoDescription(name: string, language: string | null): string {
   return `A ${lang}project — ${words.charAt(0).toUpperCase() + words.slice(1)}.`
 }
 
-function buildProjects(repos: GitHubRepo[], accent: string): string {
+// Build projects from either AI-enhanced projects or raw repos
+function buildProjects(repos: GitHubRepo[], accent: string, aiProjects?: AIProject[] | null): string {
+  // Use AI projects if available, otherwise fall back to repos
+  if (aiProjects && aiProjects.length > 0) {
+    return aiProjects.slice(0, 7).map(p => `
+    <div class="project-card reveal" style="opacity:0;transform:translateY(40px)">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+        <h3 class="project-name">${e(p.name)}</h3>
+        <div style="display:flex;gap:8px;align-items:center">
+          ${p.stars > 0 ? `<span class="project-stars">&#9733; ${p.stars}</span>` : ""}
+          ${p.forks > 0 ? `<span class="project-stars" style="color:#888">&#9334; ${p.forks}</span>` : ""}
+        </div>
+      </div>
+      <p class="project-desc">${e(p.description)}</p>
+      <div class="project-meta">
+        ${p.language ? `<span class="project-lang">${e(p.language)}</span>` : ""}
+        <a href="${p.url}" target="_blank" rel="noopener" class="project-link">View Code &rarr;</a>
+      </div>
+    </div>`).join("")
+  }
+  
+  // Fallback to repos
   return repos.filter(r => !r.fork).slice(0, 6).map(r => {
     const desc = r.description && r.description.trim()
       ? r.description
@@ -369,7 +386,7 @@ ${gsapScript()}
 
 /* ===== TEMPLATE: BOLD PORTRAIT ===== */
 function buildBoldPortrait(data: TemplateData): string {
-  const { profile, repos, config, photoUrl, aiBio } = data
+  const { profile, repos, config, photoUrl, aiBio, aiProjects, heroTagline, targetRole } = data
   const c = COLOR_SCHEMES[config.colorScheme as ColorScheme]
   const langs = getLangs(repos)
   const topics = getTopics(repos)
@@ -412,7 +429,7 @@ function buildBoldPortrait(data: TemplateData): string {
   <main>
   ${config.sections.includes("about") ? buildAbout(profile, aiBio, c.accent) : ""}
   ${config.sections.includes("skills") ? `<section id="skills" class="section"><div class="container"><p class="section-label reveal">Expertise</p><h2 class="section-title reveal">Skills & Technologies</h2><div style="display:flex;flex-wrap:wrap;gap:0">${buildSkills(langs, topics)}</div></div></section>` : ""}
-  ${config.sections.includes("projects") ? `<section id="projects" class="section" style="background:rgba(255,255,255,0.01)"><div class="container"><p class="section-label reveal">Work</p><h2 class="section-title reveal">Featured Projects</h2><div class="projects-grid">${buildProjects(repos, c.accent)}</div></div></section>` : ""}
+  ${config.sections.includes("projects") ? `<section id="projects" class="section" style="background:rgba(255,255,255,0.01)"><div class="container"><p class="section-label reveal">Work</p><h2 class="section-title reveal">Featured Projects</h2><div class="projects-grid">${buildProjects(repos, c.accent, aiProjects)}</div></div></section>` : ""}
   ${config.sections.includes("contact") ? buildContact(profile, c.accent, data.socialLinks) : ""}
   </main>
   ${buildFooter(name, c.accent)}`
@@ -422,7 +439,7 @@ function buildBoldPortrait(data: TemplateData): string {
 
 /* ===== TEMPLATE: TYPOGRAPHIC ===== */
 function buildTypographic(data: TemplateData): string {
-  const { profile, repos, config, photoUrl, aiBio } = data
+  const { profile, repos, config, photoUrl, aiBio, aiProjects, heroTagline, targetRole } = data
   const c = COLOR_SCHEMES[config.colorScheme as ColorScheme]
   const langs = getLangs(repos)
   const topics = getTopics(repos)
@@ -449,7 +466,7 @@ function buildTypographic(data: TemplateData): string {
   <main>
   ${config.sections.includes("about") ? buildAbout(profile, aiBio, c.accent) : ""}
   ${config.sections.includes("skills") ? `<section id="skills" class="section"><div class="container"><p class="section-label reveal">Skills</p><h2 class="section-title reveal">What I work with</h2><div style="display:flex;flex-wrap:wrap;gap:0">${buildSkills(langs, topics)}</div></div></section>` : ""}
-  ${config.sections.includes("projects") ? `<section id="projects" class="section" style="background:rgba(255,255,255,0.01)"><div class="container"><p class="section-label reveal">Projects</p><h2 class="section-title reveal">Selected Work</h2><div class="projects-grid">${buildProjects(repos, c.accent)}</div></div></section>` : ""}
+  ${config.sections.includes("projects") ? `<section id="projects" class="section" style="background:rgba(255,255,255,0.01)"><div class="container"><p class="section-label reveal">Projects</p><h2 class="section-title reveal">Selected Work</h2><div class="projects-grid">${buildProjects(repos, c.accent, aiProjects)}</div></div></section>` : ""}
   ${config.sections.includes("contact") ? buildContact(profile, c.accent, data.socialLinks) : ""}
   </main>
   ${buildFooter(name, c.accent)}`
@@ -459,7 +476,7 @@ function buildTypographic(data: TemplateData): string {
 
 /* ===== TEMPLATE: SPLIT EDITORIAL ===== */
 function buildSplitEditorial(data: TemplateData): string {
-  const { profile, repos, config, photoUrl, aiBio } = data
+  const { profile, repos, config, photoUrl, aiBio, aiProjects, heroTagline, targetRole } = data
   const c = COLOR_SCHEMES[config.colorScheme as ColorScheme]
   const langs = getLangs(repos)
   const topics = getTopics(repos)
@@ -498,7 +515,7 @@ function buildSplitEditorial(data: TemplateData): string {
   <main>
   ${config.sections.includes("about") ? buildAbout(profile, aiBio, c.accent) : ""}
   ${config.sections.includes("skills") ? `<section id="skills" class="section"><div class="container"><p class="section-label reveal">Expertise</p><h2 class="section-title reveal">Technologies</h2><div style="display:flex;flex-wrap:wrap;gap:0">${buildSkills(langs, topics)}</div></div></section>` : ""}
-  ${config.sections.includes("projects") ? `<section id="projects" class="section" style="background:rgba(255,255,255,0.01)"><div class="container"><p class="section-label reveal">Work</p><h2 class="section-title reveal">Projects</h2><div class="projects-grid">${buildProjects(repos, c.accent)}</div></div></section>` : ""}
+  ${config.sections.includes("projects") ? `<section id="projects" class="section" style="background:rgba(255,255,255,0.01)"><div class="container"><p class="section-label reveal">Work</p><h2 class="section-title reveal">Projects</h2><div class="projects-grid">${buildProjects(repos, c.accent, aiProjects)}</div></div></section>` : ""}
   ${config.sections.includes("contact") ? buildContact(profile, c.accent, data.socialLinks) : ""}
   </main>
   ${buildFooter(name, c.accent)}`
@@ -508,7 +525,7 @@ function buildSplitEditorial(data: TemplateData): string {
 
 /* ===== TEMPLATE: PASTEL CREATIVE (now dark premium) ===== */
 function buildPastelCreative(data: TemplateData): string {
-  const { profile, repos, config, photoUrl, aiBio } = data
+  const { profile, repos, config, photoUrl, aiBio, aiProjects, heroTagline, targetRole } = data
   const c = COLOR_SCHEMES[config.colorScheme as ColorScheme]
   const langs = getLangs(repos)
   const topics = getTopics(repos)
@@ -557,7 +574,7 @@ function buildPastelCreative(data: TemplateData): string {
   <main>
   ${config.sections.includes("about") ? buildAbout(profile, aiBio, c.accent) : ""}
   ${config.sections.includes("skills") ? `<section id="skills" class="section"><div class="container"><p class="section-label reveal">Skills</p><h2 class="section-title reveal">My Toolkit</h2><div style="display:flex;flex-wrap:wrap;gap:0">${buildSkills(langs, topics)}</div></div></section>` : ""}
-  ${config.sections.includes("projects") ? `<section id="projects" class="section" style="background:rgba(255,255,255,0.01)"><div class="container"><p class="section-label reveal">Portfolio</p><h2 class="section-title reveal">Recent Projects</h2><div class="projects-grid">${buildProjects(repos, c.accent)}</div></div></section>` : ""}
+  ${config.sections.includes("projects") ? `<section id="projects" class="section" style="background:rgba(255,255,255,0.01)"><div class="container"><p class="section-label reveal">Portfolio</p><h2 class="section-title reveal">Recent Projects</h2><div class="projects-grid">${buildProjects(repos, c.accent, aiProjects)}</div></div></section>` : ""}
   ${config.sections.includes("contact") ? buildContact(profile, c.accent, data.socialLinks) : ""}
   </main>
   ${buildFooter(name, c.accent)}`
@@ -567,7 +584,7 @@ function buildPastelCreative(data: TemplateData): string {
 
 /* ===== TEMPLATE: DESIGNER CODER ===== */
 function buildDesignerCoder(data: TemplateData): string {
-  const { profile, repos, config, photoUrl, aiBio } = data
+  const { profile, repos, config, photoUrl, aiBio, aiProjects, heroTagline, targetRole } = data
   const c = COLOR_SCHEMES[config.colorScheme as ColorScheme]
   const langs = getLangs(repos)
   const topics = getTopics(repos)
@@ -606,7 +623,7 @@ function buildDesignerCoder(data: TemplateData): string {
   <main>
   ${config.sections.includes("about") ? buildAbout(profile, aiBio, c.accent) : ""}
   ${config.sections.includes("skills") ? `<section id="skills" class="section"><div class="container"><p class="section-label reveal">Stack</p><h2 class="section-title reveal">Tech Stack</h2><div style="display:flex;flex-wrap:wrap;gap:0">${buildSkills(langs, topics)}</div></div></section>` : ""}
-  ${config.sections.includes("projects") ? `<section id="projects" class="section" style="background:rgba(255,255,255,0.01)"><div class="container"><p class="section-label reveal">Work</p><h2 class="section-title reveal">Projects</h2><div class="projects-grid">${buildProjects(repos, c.accent)}</div></div></section>` : ""}
+  ${config.sections.includes("projects") ? `<section id="projects" class="section" style="background:rgba(255,255,255,0.01)"><div class="container"><p class="section-label reveal">Work</p><h2 class="section-title reveal">Projects</h2><div class="projects-grid">${buildProjects(repos, c.accent, aiProjects)}</div></div></section>` : ""}
   ${config.sections.includes("contact") ? buildContact(profile, c.accent, data.socialLinks) : ""}
   </main>
   ${buildFooter(name, c.accent)}`
@@ -616,7 +633,7 @@ function buildDesignerCoder(data: TemplateData): string {
 
 /* ===== TEMPLATE: MINIMAL CLEAN (now premium dark minimal) ===== */
 function buildMinimalClean(data: TemplateData): string {
-  const { profile, repos, config, photoUrl, aiBio } = data
+  const { profile, repos, config, photoUrl, aiBio, aiProjects, heroTagline, targetRole } = data
   const c = COLOR_SCHEMES[config.colorScheme as ColorScheme]
   const langs = getLangs(repos)
   const topics = getTopics(repos)
@@ -654,11 +671,15 @@ function buildMinimalClean(data: TemplateData): string {
       <p class="section-label reveal">Work</p>
       <h2 class="section-title reveal">Projects</h2>
       <div class="project-list">
-        ${repos.filter(r => !r.fork).slice(0, 8).map(r => `
+        ${(aiProjects && aiProjects.length > 0 ? aiProjects.slice(0, 8).map(p => `
+          <div class="project-item reveal">
+            <div><h3>${e(p.name)}</h3><p>${e(p.description)}</p></div>
+            <a href="${p.url}" target="_blank" rel="noopener">&rarr;</a>
+          </div>`) : repos.filter(r => !r.fork).slice(0, 8).map(r => `
           <div class="project-item reveal">
             <div><h3>${e(r.name)}</h3><p>${e(r.description || "A carefully crafted project.")}</p></div>
             <a href="${r.html_url}" target="_blank" rel="noopener">&rarr;</a>
-          </div>`).join("")}
+          </div>`)).join("")}
       </div>
     </div>
   </section>` : ""}
@@ -671,7 +692,7 @@ function buildMinimalClean(data: TemplateData): string {
 
 /* ===== TEMPLATE: BRUTALIST ===== */
 function buildBrutalist(data: TemplateData): string {
-  const { profile, repos, config, photoUrl, aiBio } = data
+  const { profile, repos, config, photoUrl, aiBio, aiProjects, heroTagline, targetRole } = data
   const c = COLOR_SCHEMES[config.colorScheme as ColorScheme]
   const langs = getLangs(repos)
   const topics = getTopics(repos)
@@ -734,7 +755,7 @@ function buildBrutalist(data: TemplateData): string {
     </div>
   </section>` : ""}
   ${config.sections.includes("skills") ? `<section id="skills" class="section brut-section"><div class="container"><span class="section-label">Skills</span><h2 class="section-title reveal">Tech Stack</h2><div style="display:flex;flex-wrap:wrap;gap:0">${buildSkills(langs, topics)}</div></div></section>` : ""}
-  ${config.sections.includes("projects") ? `<section id="projects" class="section brut-section"><div class="container"><span class="section-label">Work</span><h2 class="section-title reveal">Projects</h2><div class="projects-grid">${buildProjects(repos, c.accent)}</div></div></section>` : ""}
+  ${config.sections.includes("projects") ? `<section id="projects" class="section brut-section"><div class="container"><span class="section-label">Work</span><h2 class="section-title reveal">Projects</h2><div class="projects-grid">${buildProjects(repos, c.accent, aiProjects)}</div></div></section>` : ""}
   ${config.sections.includes("contact") ? buildContact(profile, c.accent, data.socialLinks) : ""}
   </main>
   ${buildFooter(name, c.accent)}`
@@ -744,7 +765,7 @@ function buildBrutalist(data: TemplateData): string {
 
 /* ===== TEMPLATE: GLASSMORPHISM ===== */
 function buildGlassmorphism(data: TemplateData): string {
-  const { profile, repos, config, photoUrl, aiBio } = data
+  const { profile, repos, config, photoUrl, aiBio, aiProjects, heroTagline, targetRole } = data
   const c = COLOR_SCHEMES[config.colorScheme as ColorScheme]
   const langs = getLangs(repos)
   const topics = getTopics(repos)
@@ -823,7 +844,18 @@ function buildGlassmorphism(data: TemplateData): string {
       <p class="section-label reveal">Work</p>
       <h2 class="section-title reveal">Featured Projects</h2>
       <div class="projects-grid">
-        ${repos.filter(r => !r.fork).slice(0, 6).map(r => {
+        ${(aiProjects && aiProjects.length > 0 ? aiProjects.slice(0, 7).map(p => `
+        <div class="glass-card reveal" style="opacity:0;transform:translateY(40px)">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+            <h3 style="font-size:17px;font-weight:700;color:#fff">${e(p.name)}</h3>
+            ${p.stars > 0 ? `<span style="font-size:12px;color:${c.accent};font-weight:600">&#9733; ${p.stars}</span>` : ""}
+          </div>
+          <p style="font-size:13px;color:rgba(255,255,255,0.5);line-height:1.6;margin-bottom:16px">${e(p.description)}</p>
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            ${p.language ? `<span style="font-size:11px;padding:3px 12px;border-radius:20px;background:${c.accent}12;color:${c.accent};border:1px solid ${c.accent}25">${e(p.language)}</span>` : ""}
+            <a href="${p.url}" target="_blank" rel="noopener" style="font-size:13px;color:${c.accent};font-weight:500;margin-left:auto">View &rarr;</a>
+          </div>
+        </div>`) : repos.filter(r => !r.fork).slice(0, 6).map(r => {
           const desc = r.description && r.description.trim() ? r.description : smartRepoDescription(r.name, r.language)
           return `
         <div class="glass-card reveal" style="opacity:0;transform:translateY(40px)">
@@ -837,7 +869,7 @@ function buildGlassmorphism(data: TemplateData): string {
             <a href="${r.html_url}" target="_blank" rel="noopener" style="font-size:13px;color:${c.accent};font-weight:500;margin-left:auto">View &rarr;</a>
           </div>
         </div>`
-        }).join("")}
+        })).join("")}
       </div>
     </div>
   </section>` : ""}
