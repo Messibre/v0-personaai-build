@@ -57,7 +57,7 @@ const initialState: WizardState = {
   config: {
     template: "bold-portrait",
     colorScheme: "ocean",
-    sections: ["about", "skills", "projects", "experience", "contact"],
+    sections: ["about", "skills", "projects", "experience", "github-stats", "contact"],
     socialLinks: {},
     additionalPrompt: "",
   },
