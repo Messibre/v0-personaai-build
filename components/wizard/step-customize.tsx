@@ -16,7 +16,6 @@ import {
   Check,
   User,
   MessageSquare,
-  Wand2,
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 
@@ -583,57 +582,7 @@ export function StepCustomize({ state, dispatch, onNext, onBack }: StepCustomize
       {/* Template Selection */}
       <div>
         <h3 className="text-sm font-semibold text-foreground mb-3">Template Style</h3>
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 stagger-children">
-          {/* AI-Generated Template Option - Featured */}
-          <button
-            type="button"
-            onClick={() => dispatch({ type: "SET_CONFIG", config: { template: "ai-generated" as TemplateStyle, useAITemplate: true } })}
-            className={cn(
-              "flex flex-col items-start gap-0 rounded-xl border-2 transition-all duration-300 text-left overflow-hidden group col-span-2 lg:col-span-1",
-              config.useAITemplate
-                ? "border-[var(--persona-accent)] shadow-lg shadow-[var(--persona-accent)]/15 scale-[1.02] bg-gradient-to-br from-[var(--persona-accent)]/5 to-transparent"
-                : "border-[var(--persona-border)] hover:border-[var(--persona-accent)]/30 hover:shadow-md"
-            )}
-          >
-            {/* AI Preview */}
-            <div className={cn(
-              "w-full aspect-video flex flex-col items-center justify-center overflow-hidden transition-all duration-300 bg-gradient-to-br from-[var(--persona-accent)]/10 via-transparent to-[var(--persona-accent)]/5",
-              config.useAITemplate ? "opacity-100" : "opacity-80 group-hover:opacity-100"
-            )}>
-              <div className="relative">
-                <Wand2 className={cn(
-                  "size-10 transition-all duration-500",
-                  config.useAITemplate ? "text-[var(--persona-accent)]" : "text-muted-foreground group-hover:text-[var(--persona-accent)]"
-                )} />
-                <Sparkles className={cn(
-                  "size-4 absolute -top-1 -right-1 transition-all duration-300",
-                  config.useAITemplate ? "text-[var(--persona-accent)] animate-pulse" : "text-muted-foreground/50"
-                )} />
-              </div>
-              <span className={cn(
-                "text-xs font-medium mt-2 transition-colors",
-                config.useAITemplate ? "text-[var(--persona-accent)]" : "text-muted-foreground"
-              )}>
-                Powered by AI
-              </span>
-            </div>
-            <div className="flex flex-col gap-1 p-3 w-full bg-[var(--persona-surface)] border-t border-[var(--persona-border)]">
-              <div className="flex items-center gap-2">
-                <p className={cn(
-                  "text-sm font-semibold transition-colors",
-                  config.useAITemplate ? "text-[var(--persona-accent)]" : "text-foreground"
-                )}>
-                  AI-Generated Design
-                </p>
-                {config.useAITemplate && <Check className="size-3.5 text-[var(--persona-accent)] ml-auto animate-check-pop" />}
-              </div>
-              <p className="text-[11px] text-muted-foreground leading-relaxed line-clamp-2">
-                Let AI create a unique, modern design tailored to your role. You can refine it with chat.
-              </p>
-            </div>
-          </button>
-
-          {/* Standard Templates */}
+        <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-2 stagger-children">
           {TEMPLATE_OPTIONS.map((template) => {
             const isSelected = config.template === template.id && !config.useAITemplate
             return (
@@ -642,32 +591,29 @@ export function StepCustomize({ state, dispatch, onNext, onBack }: StepCustomize
                 type="button"
                 onClick={() => dispatch({ type: "SET_CONFIG", config: { template: template.id, useAITemplate: false } })}
                 className={cn(
-                  "flex flex-col items-start gap-0 rounded-xl border-2 transition-all duration-300 text-left overflow-hidden group",
+                  "flex flex-col items-start gap-0 rounded-lg border-2 transition-all duration-300 text-left overflow-hidden group",
                   isSelected
-                    ? "border-[var(--persona-accent)] shadow-lg shadow-[var(--persona-accent)]/15 scale-[1.02]"
-                    : "border-[var(--persona-border)] hover:border-[var(--persona-accent)]/30 hover:shadow-md"
+                    ? "border-[var(--persona-accent)] shadow-md shadow-[var(--persona-accent)]/15 scale-[1.02]"
+                    : "border-[var(--persona-border)] hover:border-[var(--persona-accent)]/30 hover:shadow-sm"
                 )}
               >
                 {/* SVG Preview */}
                 <div className={cn(
-                  "w-full aspect-video flex items-center justify-center overflow-hidden transition-all duration-300",
+                  "w-full h-16 flex items-center justify-center overflow-hidden transition-all duration-300",
                   isSelected ? "opacity-100" : "opacity-70 group-hover:opacity-90"
                 )}>
                   <TemplatePreview templateId={template.id} isSelected={isSelected} />
                 </div>
-                <div className="flex flex-col gap-1 p-3 w-full bg-[var(--persona-surface)] border-t border-[var(--persona-border)]">
-                  <div className="flex items-center gap-2">
+                <div className="flex flex-col gap-0.5 px-2 py-1.5 w-full bg-[var(--persona-surface)] border-t border-[var(--persona-border)]">
+                  <div className="flex items-center gap-1">
                     <p className={cn(
-                      "text-sm font-semibold transition-colors",
+                      "text-[11px] font-semibold leading-tight transition-colors truncate",
                       isSelected ? "text-[var(--persona-accent)]" : "text-foreground"
                     )}>
                       {template.label}
                     </p>
-                    {isSelected && <Check className="size-3.5 text-[var(--persona-accent)] ml-auto animate-check-pop" />}
+                    {isSelected && <Check className="size-3 text-[var(--persona-accent)] ml-auto shrink-0" />}
                   </div>
-                  <p className="text-[11px] text-muted-foreground leading-relaxed line-clamp-2">
-                    {template.description}
-                  </p>
                 </div>
               </button>
             )
