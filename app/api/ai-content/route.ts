@@ -136,7 +136,14 @@ async function callGemini(prompt: string, systemPrompt: string, expectJson = fal
 export async function POST(request: Request) {
   try {
     const data: AIContentRequest = await request.json()
-    const { targetRole, externalLinks, github, resumeText, notionContent, additionalPrompt } = data
+    const {
+      targetRole,
+      externalLinks = [],
+      github = { profile: null, repos: [] },
+      resumeText = null,
+      notionContent = null,
+      additionalPrompt,
+    } = data
 
     // targetRole is optional — if missing, AI generates based on repos/links alone
     const resolvedRole = targetRole?.trim() || "Software Developer"
