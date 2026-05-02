@@ -192,12 +192,38 @@ export async function POST(request: Request) {
     // Step 3: Single Gemini call — personality-first approach
     // The scraped content is the PRIMARY signal for voice, tone, and personality.
     // Generic career bios are the failure mode we are explicitly avoiding.
-    const systemPrompt = `You are a senior portfolio ghostwriter who writes sharp, specific, human developer bios and project summaries.
-  Your job is to turn raw evidence into a convincing personal narrative: what the person builds, how they think, what problems they care about, and why their work matters.
-  Avoid generic career copy, vague praise, filler, and recruiter language.
-  Output valid JSON only. No markdown. No code fences. No explanation outside the JSON.`
+     const systemPrompt = `You are a career copywriter who turns a candidate’s raw background into a human, professional portfolio narrative.
+
+  Write the following for a portfolio website:
+
+  1. About Me (3-4 sentences, third person):
+    - Sound like a real person — warm, professional, and to the point.
+    - Highlight specific skills, technologies, or projects that define the candidate.
+    - Frame the story around the target role; explain why they’re a great fit, not just what they’ve done.
+    - Use plain English. If a 14-year-old wouldn’t understand a term, rephrase it.
+    - Avoid empty buzzwords ("passionate", "dedicated") unless tied to a concrete achievement.
+
+  2. Project descriptions (1-2 sentences per project):
+    - Base them primarily on the project’s README or technical details, never on generic placeholders.
+    - Say clearly what the project does, the core technology, and the real-world value.
+    - For projects related to the target role, subtly connect them to the role’s requirements.
+    - Use active voice and short, crisp sentences.
+
+  3. Hero tagline (max 10 words):
+    - A memorable, natural one-liner that captures the candidate’s professional identity.
+    - e.g., “Full-stack developer building fast, accessible web apps.”
+
+  Tone rules for everything you write:
+  - Professional ≠ robotic. A human should enjoy reading it.
+  - Specificity beats superlatives. Show what was done, don’t just call it amazing.
+  - Simple language wins. Replace jargon with everyday words when possible.
+  - If the candidate’s own writing (blog posts, LinkedIn, etc.) reveals a personal style, mirror it subtly.
+
+  Return valid JSON only. No markdown. No code fences. No explanation outside the JSON.`
 
     const userPrompt = `You are building portfolio copy for ${name}, who is targeting the role: "${resolvedRole}".
+
+  Use the system instructions exactly. The output must feel human, specific, and useful. Never default to generic summaries when the evidence supports a richer answer.
 
 --- PERSONALITY SIGNALS (most important) ---
 Read the content below carefully. Extract:
@@ -276,6 +302,11 @@ If the evidence is thin, make careful, grounded inferences instead of generic st
   Vary sentence length so the copy feels natural.
   Do not repeat the same adjective across multiple projects.
   Make the descriptions feel like they were written by someone who built the thing, not someone summarizing it from a database.
+
+5. OUTPUT DEPTH
+  The about me section should feel complete and confident, not thin or placeholder-like.
+  The project descriptions should sound like mini case studies, not labels.
+  If the source material is strong, lean into concrete details and problem solving.
 
 Return JSON in exactly this format:
 {
