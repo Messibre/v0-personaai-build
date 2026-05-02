@@ -880,6 +880,695 @@ function buildGlassmorphism(data: TemplateData): string {
   return shell(c.accent, extra, body, name, aiBio || profile.bio || undefined, img)
 }
 
+/* ========== TEMPLATE: TERMINAL / CLI ========== */
+function buildTerminal(data: TemplateData): string {
+  const { profile, config, aiBio, aiProjects } = data
+  const repos = data.repos
+  const c = COLOR_SCHEMES[config.colorScheme as ColorScheme] || COLOR_SCHEMES.forest
+  const name = profile.name || profile.username
+  const role = data.targetRole || "Developer"
+  const bio = aiBio || profile.bio || "Building things that matter."
+  const langs = getLangs(repos)
+  const topics = getTopics(repos)
+  const img = data.photoUrl || profile.avatar_url
+
+  const extra = `
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;600;700&display=swap');
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+    html { scroll-behavior:smooth; }
+    body { font-family:'JetBrains Mono', monospace; background:#0d0d0d; color:#c8ffc8; overflow-x:hidden; }
+    body::before { content:''; position:fixed; inset:0; background: repeating-linear-gradient(0deg,rgba(0,255,0,0.015) 0px,rgba(0,255,0,0.015) 1px,transparent 1px,transparent 4px); pointer-events:none; z-index:0; }
+    a { text-decoration:none; transition:all .2s; }
+    .nav { position:fixed; top:0; left:0; right:0; z-index:100; background:#0d0d0d; border-bottom:1px solid ${c.accent}40; padding:0 24px; }
+    .nav-inner { max-width:1100px; margin:0 auto; display:flex; align-items:center; justify-content:space-between; height:56px; }
+    .nav-brand { font-size:15px; font-weight:700; color:${c.accent}; }
+    .nav-links { display:flex; gap:24px; }
+    .nav-links a { font-size:12px; color:#666; }
+    .nav-links a:hover { color:${c.accent}; }
+    .nav-toggle { display:none; background:none; border:none; cursor:pointer; }
+    .nav-toggle span { display:block; width:20px; height:1px; background:${c.accent}; margin:5px 0; }
+    .mobile-menu { display:none; position:fixed; top:56px; left:0; right:0; background:#0d0d0d; padding:20px 24px; border-bottom:1px solid ${c.accent}30; z-index:99; }
+    .mobile-menu.open { display:flex; flex-direction:column; gap:12px; }
+    .mobile-menu a { font-size:14px; color:#888; padding:8px 0; }
+    .mobile-menu a:hover { color:${c.accent}; }
+    .section { position:relative; z-index:1; padding:80px 24px; max-width:1100px; margin:0 auto; }
+    .prompt { color:${c.accent}; }
+    .prompt::before { content:'> '; }
+    .cmd-line { font-size:13px; color:#555; margin-bottom:4px; }
+    .cmd-line::before { content:'$ '; color:${c.accent}60; }
+    .hero { min-height:100vh; display:flex; align-items:center; padding-top:56px; }
+    .hero-terminal { background:#111; border:1px solid ${c.accent}30; border-radius:8px; padding:32px; max-width:700px; width:100%; }
+    .terminal-bar { display:flex; gap:8px; margin-bottom:24px; }
+    .terminal-dot { width:12px; height:12px; border-radius:50%; }
+    .terminal-output { font-size:14px; line-height:2; }
+    .terminal-output .key { color:${c.accent}; }
+    .terminal-output .val { color:#e0e0e0; }
+    .terminal-output .comment { color:#444; }
+    .blink { animation:blink 1s step-end infinite; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+    .section-heading { font-size:11px; letter-spacing:4px; text-transform:uppercase; color:${c.accent}; margin-bottom:32px; }
+    .section-heading::before { content:'// '; color:#333; }
+    .project-card { background:#111; border:1px solid #222; border-radius:6px; padding:24px; margin-bottom:16px; transition:border-color .3s; }
+    .project-card:hover { border-color:${c.accent}50; }
+    .project-name { font-size:15px; font-weight:700; color:#fff; margin-bottom:6px; }
+    .project-name::before { content:'['; color:${c.accent}; }
+    .project-name::after { content:']'; color:${c.accent}; }
+    .project-desc { font-size:12px; color:#666; line-height:1.7; margin-bottom:12px; }
+    .project-meta { display:flex; gap:12px; flex-wrap:wrap; align-items:center; }
+    .project-lang { font-size:11px; color:${c.accent}80; }
+    .project-lang::before { content:'lang:'; color:#333; }
+    .project-link { font-size:12px; color:${c.accent}; margin-left:auto; }
+    .skill-badge { display:inline-block; font-size:12px; color:${c.accent}; margin:4px; padding:4px 12px; border:1px solid ${c.accent}20; border-radius:3px; background:${c.accent}06; }
+    .footer { text-align:center; padding:40px 24px; font-size:12px; color:#333; border-top:1px solid #1a1a1a; }
+    .footer a { color:${c.accent}; }
+    @media(max-width:768px) { .nav-links{display:none} .nav-toggle{display:block} }
+  `
+  const projects = aiProjects && aiProjects.length > 0 ? aiProjects : repos.filter(r => !r.fork).slice(0, 7).map(r => ({ name: r.name, url: r.html_url, language: r.language, description: r.description?.trim() || smartRepoDescription(r.name, r.language), stars: r.stargazers_count, forks: r.forks_count }))
+
+  const body = `
+  ${buildNav(name, config.sections, c.accent)}
+  <section id="home" class="hero">
+    <div class="section">
+      <div class="terminal-bar">
+        <div class="terminal-dot" style="background:#ff5f57"></div>
+        <div class="terminal-dot" style="background:#febc2e"></div>
+        <div class="terminal-dot" style="background:#28c840"></div>
+      </div>
+      <div class="terminal-output hero-anim">
+        <div class="cmd-line">whoami</div>
+        <div style="margin-bottom:16px"><span class="key">name</span>: <span class="val">"${e(name)}"</span> <span class="comment">// ${e(role)}</span></div>
+        <div class="cmd-line">cat about.txt</div>
+        <div style="margin-bottom:16px;color:#aaa;font-size:13px;line-height:1.8;max-width:580px">${e(bio)}</div>
+        <div class="cmd-line">ls -la skills/</div>
+        <div style="margin-bottom:16px">${langs.slice(0, 6).map(l => `<span class="skill-badge">${e(l)}</span>`).join("")}</div>
+        <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:8px">
+          <a href="#projects" style="font-size:13px;color:${c.accent};border:1px solid ${c.accent}40;padding:8px 20px;border-radius:4px">./view-projects</a>
+          <a href="#contact" style="font-size:13px;color:#666;border:1px solid #333;padding:8px 20px;border-radius:4px">./contact</a>
+        </div>
+        <div style="margin-top:16px;font-size:13px;color:#555">_<span class="blink">|</span></div>
+      </div>
+    </div>
+  </section>
+  ${config.sections.includes("about") ? `<section id="about" class="section"><p class="section-heading reveal">about_me</p><p style="font-size:13px;color:#888;line-height:1.9;max-width:640px" class="reveal">${e(bio)}</p></section>` : ""}
+  ${config.sections.includes("skills") ? `<section id="skills" class="section"><p class="section-heading reveal">skills_and_tools</p><div class="reveal">${[...langs,...topics].slice(0,16).map(s=>`<span class="skill-badge">${e(s)}</span>`).join("")}</div></section>` : ""}
+  ${config.sections.includes("projects") ? `<section id="projects" class="section"><p class="section-heading reveal">projects</p>${projects.map(p=>`<div class="project-card reveal"><div style="display:flex;justify-content:space-between;align-items:flex-start"><p class="project-name">${e(p.name)}</p>${p.stars>0?`<span style="font-size:11px;color:${c.accent}60">&#9733;${p.stars}</span>`:""}</div><p class="project-desc">${e(p.description)}</p><div class="project-meta">${p.language?`<span class="project-lang">${e(p.language)}</span>`:""}<a href="${p.url}" target="_blank" rel="noopener" class="project-link">open &rarr;</a></div></div>`).join("")}</section>` : ""}
+  ${config.sections.includes("contact") ? buildContact(profile, c.accent, data.socialLinks) : ""}
+  <footer class="footer"><span>Built with <a href="https://personaai.vercel.app">PersonaAI</a></span></footer>`
+
+  return shell(c.accent, extra, body, name, bio, img)
+}
+
+/* ========== TEMPLATE: LIQUID GLASS ========== */
+function buildLiquidGlass(data: TemplateData): string {
+  const { profile, config, aiBio, aiProjects } = data
+  const repos = data.repos
+  const c = COLOR_SCHEMES[config.colorScheme as ColorScheme] || COLOR_SCHEMES.arctic
+  const name = profile.name || profile.username
+  const role = data.targetRole || "Developer"
+  const bio = aiBio || profile.bio || "Crafting digital experiences."
+  const langs = getLangs(repos)
+  const topics = getTopics(repos)
+  const img = data.photoUrl || profile.avatar_url
+
+  const extra = `
+    @import url('https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,600;0,700;1,300&display=swap');
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+    html { scroll-behavior:smooth; }
+    body { font-family:'Inter', sans-serif; background:#050510; color:#e8e8f5; overflow-x:hidden; -webkit-font-smoothing:antialiased; }
+    a { text-decoration:none; transition:all .3s; }
+    /* Animated background orbs */
+    .orb { position:fixed; border-radius:50%; filter:blur(80px); pointer-events:none; animation:float 8s ease-in-out infinite; }
+    .orb-1 { width:600px; height:600px; background:${c.primary}18; top:-200px; left:-100px; animation-delay:0s; }
+    .orb-2 { width:500px; height:500px; background:${c.accent}12; bottom:-100px; right:-100px; animation-delay:-4s; }
+    .orb-3 { width:300px; height:300px; background:${c.secondary}10; top:50%; left:40%; animation-delay:-2s; }
+    @keyframes float { 0%,100%{transform:translateY(0) scale(1)} 50%{transform:translateY(-40px) scale(1.05)} }
+    /* Glass card */
+    .glass { background:rgba(255,255,255,0.04); backdrop-filter:blur(24px) saturate(180%); -webkit-backdrop-filter:blur(24px) saturate(180%); border:1px solid rgba(255,255,255,0.08); border-radius:24px; }
+    .glass-strong { background:rgba(255,255,255,0.07); backdrop-filter:blur(40px) saturate(200%); -webkit-backdrop-filter:blur(40px) saturate(200%); border:1px solid rgba(255,255,255,0.12); border-radius:24px; }
+    .nav { position:fixed; top:16px; left:50%; transform:translateX(-50%); z-index:100; width:calc(100% - 48px); max-width:900px; }
+    .nav-inner { display:flex; align-items:center; justify-content:space-between; padding:12px 24px; background:rgba(5,5,16,0.6); backdrop-filter:blur(40px); border:1px solid rgba(255,255,255,0.08); border-radius:50px; }
+    .nav-brand { font-size:16px; font-weight:700; color:#fff; }
+    .nav-brand span { color:${c.accent}; }
+    .nav-links { display:flex; gap:24px; }
+    .nav-links a { font-size:13px; color:rgba(255,255,255,0.5); }
+    .nav-links a:hover { color:${c.accent}; }
+    .nav-cta { padding:8px 20px; background:${c.accent}; color:#000; border-radius:50px; font-size:13px; font-weight:600; }
+    .nav-toggle { display:none; background:none; border:none; cursor:pointer; }
+    .nav-toggle span { display:block; width:20px; height:2px; background:#fff; margin:4px 0; }
+    .mobile-menu { display:none; position:fixed; top:80px; left:24px; right:24px; z-index:99; padding:24px; border-radius:20px; background:rgba(5,5,16,0.95); backdrop-filter:blur(40px); border:1px solid rgba(255,255,255,0.1); }
+    .mobile-menu.open { display:flex; flex-direction:column; gap:12px; }
+    .mobile-menu a { font-size:15px; color:rgba(255,255,255,0.7); padding:8px 0; }
+    .section { position:relative; z-index:1; padding:100px 24px; }
+    .container { max-width:1100px; margin:0 auto; }
+    .section-label { font-size:11px; letter-spacing:3px; text-transform:uppercase; color:${c.accent}; font-weight:600; margin-bottom:12px; }
+    .section-title { font-size:clamp(1.8rem,3.5vw,2.8rem); font-weight:700; color:#fff; margin-bottom:20px; }
+    .hero { min-height:100vh; display:flex; align-items:center; padding-top:80px; }
+    .hero-grid { display:grid; grid-template-columns:1fr 1fr; gap:32px; align-items:center; }
+    .hero-tag { display:inline-block; padding:6px 16px; background:${c.accent}15; border:1px solid ${c.accent}30; border-radius:50px; font-size:12px; color:${c.accent}; font-weight:600; letter-spacing:1px; margin-bottom:20px; }
+    .hero-name { font-size:clamp(2.5rem,5vw,4rem); font-weight:700; color:#fff; line-height:1.1; margin-bottom:16px; }
+    .hero-bio { font-size:16px; color:rgba(255,255,255,0.55); line-height:1.75; margin-bottom:32px; }
+    .hero-photo { width:100%; aspect-ratio:3/4; object-fit:cover; border-radius:24px; }
+    .project-card { padding:28px; margin-bottom:16px; transition:transform .3s,box-shadow .3s; }
+    .project-card:hover { transform:translateY(-4px); box-shadow:0 24px 80px rgba(0,0,0,0.4),0 0 60px ${c.accent}10; }
+    .skill-badge { display:inline-block; padding:8px 18px; border-radius:50px; font-size:13px; border:1px solid rgba(255,255,255,0.1); color:rgba(255,255,255,0.6); margin:4px; background:rgba(255,255,255,0.04); backdrop-filter:blur(8px); transition:all .3s; }
+    .skill-badge:hover { border-color:${c.accent}40; color:${c.accent}; }
+    .footer { position:relative; z-index:1; padding:40px 24px; text-align:center; font-size:13px; color:#444; }
+    .footer a { color:${c.accent}; }
+    .reveal { opacity:0; transform:translateY(30px); }
+    .reveal-scale { opacity:0; transform:scale(0.95); }
+    @media(max-width:768px) { .hero-grid{grid-template-columns:1fr} .hero-photo{max-height:400px} .nav-links{display:none} .nav-cta{display:none} .nav-toggle{display:block} }
+  `
+  const projects = aiProjects && aiProjects.length > 0 ? aiProjects : repos.filter(r => !r.fork).slice(0, 7).map(r => ({ name: r.name, url: r.html_url, language: r.language, description: r.description?.trim() || smartRepoDescription(r.name, r.language), stars: r.stargazers_count, forks: r.forks_count }))
+
+  const body = `
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="orb orb-3"></div>
+  ${buildNav(name, config.sections, c.accent)}
+  <section id="home" class="hero">
+    <div class="container">
+      <div class="hero-grid">
+        <div>
+          <div class="hero-tag hero-anim">${e(role)}</div>
+          <h1 class="hero-name hero-anim">${e(name)}</h1>
+          <p class="hero-bio hero-anim">${e(bio)}</p>
+          <div style="display:flex;gap:12px;flex-wrap:wrap" class="hero-anim">
+            <a href="#projects" style="padding:14px 28px;background:${c.accent};color:#000;border-radius:50px;font-weight:600;font-size:14px">See Work</a>
+            <a href="#contact" style="padding:14px 28px;border:1px solid rgba(255,255,255,0.12);color:#fff;border-radius:50px;font-size:14px;backdrop-filter:blur(8px)">Contact</a>
+          </div>
+        </div>
+        <div class="glass hero-anim" style="overflow:hidden">
+          <img src="${img}" alt="${e(name)}" class="hero-photo hero-photo-parallax" crossorigin="anonymous">
+        </div>
+      </div>
+    </div>
+  </section>
+  ${config.sections.includes("about") ? `<section id="about" class="section"><div class="container"><p class="section-label reveal">About</p><h2 class="section-title reveal">${e(name.split(" ")[0])}&rsquo;s story</h2><div class="glass-strong reveal" style="padding:32px;max-width:680px"><p style="color:rgba(255,255,255,0.65);font-size:15px;line-height:1.8">${e(bio)}</p></div></div></section>` : ""}
+  ${config.sections.includes("skills") ? `<section id="skills" class="section"><div class="container"><p class="section-label reveal">Skills</p><h2 class="section-title reveal">Tech Stack</h2><div class="reveal">${[...langs,...topics].slice(0,16).map(s=>`<span class="skill-badge">${e(s)}</span>`).join("")}</div></div></section>` : ""}
+  ${config.sections.includes("projects") ? `<section id="projects" class="section"><div class="container"><p class="section-label reveal">Work</p><h2 class="section-title reveal">Featured Projects</h2><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px">${projects.map(p=>`<div class="glass project-card reveal"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px"><h3 style="font-size:16px;font-weight:700;color:#fff">${e(p.name)}</h3>${p.stars>0?`<span style="font-size:12px;color:${c.accent};font-weight:600">&#9733;${p.stars}</span>`:""}</div><p style="font-size:13px;color:rgba(255,255,255,0.45);line-height:1.6;margin-bottom:16px">${e(p.description)}</p><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">${p.language?`<span style="font-size:11px;padding:3px 12px;border-radius:50px;background:${c.accent}12;color:${c.accent};border:1px solid ${c.accent}20">${e(p.language)}</span>`:""}<a href="${p.url}" target="_blank" rel="noopener" style="font-size:13px;color:${c.accent};font-weight:600;margin-left:auto">View &rarr;</a></div></div>`).join("")}</div></div></section>` : ""}
+  ${config.sections.includes("contact") ? buildContact(profile, c.accent, data.socialLinks) : ""}
+  <footer class="footer">Built with <a href="https://personaai.vercel.app">PersonaAI</a></footer>`
+
+  return shell(c.accent, extra, body, name, bio, img)
+}
+
+/* ========== TEMPLATE: CYBERPUNK NOIR ========== */
+function buildCyberpunkNoir(data: TemplateData): string {
+  const { profile, config, aiBio, aiProjects } = data
+  const repos = data.repos
+  const c = COLOR_SCHEMES[config.colorScheme as ColorScheme] || COLOR_SCHEMES.rose
+  const name = profile.name || profile.username
+  const role = data.targetRole || "Developer"
+  const bio = aiBio || profile.bio || "Building the future, one line at a time."
+  const langs = getLangs(repos)
+  const topics = getTopics(repos)
+  const img = data.photoUrl || profile.avatar_url
+
+  const extra = `
+    @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Inter:wght@300;400;600&display=swap');
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+    html { scroll-behavior:smooth; }
+    body { font-family:'Inter', sans-serif; background:#080608; color:#ddd; overflow-x:hidden; }
+    a { text-decoration:none; transition:all .2s; }
+    .scanline { position:fixed; inset:0; pointer-events:none; z-index:0; background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.08) 2px,rgba(0,0,0,0.08) 4px); }
+    .noise { position:fixed; inset:0; pointer-events:none; z-index:0; opacity:0.025; background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E"); }
+    .nav { position:fixed; top:0; left:0; right:0; z-index:100; background:rgba(8,6,8,0.85); backdrop-filter:blur(16px); border-bottom:1px solid ${c.accent}30; padding:0 24px; }
+    .nav-inner { max-width:1100px; margin:0 auto; display:flex; align-items:center; justify-content:space-between; height:60px; }
+    .nav-brand { font-family:'Rajdhani',sans-serif; font-size:22px; font-weight:700; color:#fff; letter-spacing:2px; }
+    .nav-brand span { color:${c.accent}; text-shadow:0 0 12px ${c.accent}; }
+    .nav-links { display:flex; gap:28px; }
+    .nav-links a { font-family:'JetBrains Mono',monospace; font-size:11px; color:#555; letter-spacing:1px; text-transform:uppercase; }
+    .nav-links a:hover { color:${c.accent}; text-shadow:0 0 8px ${c.accent}60; }
+    .nav-cta { font-family:'Rajdhani',sans-serif; padding:8px 22px; background:transparent; border:1px solid ${c.accent}; color:${c.accent}; font-size:14px; font-weight:600; letter-spacing:1px; clip-path:polygon(8px 0%,100% 0%,calc(100% - 8px) 100%,0% 100%); }
+    .nav-cta:hover { background:${c.accent}15; text-shadow:0 0 8px ${c.accent}; }
+    .nav-toggle { display:none; background:none; border:none; cursor:pointer; }
+    .nav-toggle span { display:block; width:22px; height:1px; background:${c.accent}; margin:6px 0; }
+    .mobile-menu { display:none; position:fixed; top:60px; left:0; right:0; background:rgba(8,6,8,0.97); padding:24px; border-bottom:1px solid ${c.accent}30; z-index:99; }
+    .mobile-menu.open { display:flex; flex-direction:column; gap:16px; }
+    .mobile-menu a { font-family:'Rajdhani',sans-serif; font-size:18px; color:#888; letter-spacing:2px; padding:8px 0; border-bottom:1px solid rgba(255,255,255,0.04); }
+    .section { position:relative; z-index:1; padding:100px 24px; }
+    .container { max-width:1100px; margin:0 auto; }
+    .glitch-title { font-family:'Rajdhani',sans-serif; font-size:clamp(3rem,8vw,7rem); font-weight:700; color:#fff; line-height:1; letter-spacing:-2px; position:relative; }
+    .glitch-title::before,.glitch-title::after { content:attr(data-text); position:absolute; top:0; left:0; width:100%; overflow:hidden; }
+    .glitch-title::before { color:${c.accent}; animation:glitch1 3s infinite; clip-path:polygon(0 0,100% 0,100% 35%,0 35%); }
+    .glitch-title::after { color:#0ff; animation:glitch2 3s infinite; clip-path:polygon(0 65%,100% 65%,100% 100%,0 100%); }
+    @keyframes glitch1 { 0%,90%,100%{transform:translateX(0)} 92%{transform:translateX(-3px)} 94%{transform:translateX(3px)} 96%{transform:translateX(-1px)} }
+    @keyframes glitch2 { 0%,88%,100%{transform:translateX(0)} 90%{transform:translateX(3px)} 92%{transform:translateX(-3px)} }
+    .hero { min-height:100vh; display:flex; align-items:center; padding-top:60px; overflow:hidden; }
+    .hero-inner { display:grid; grid-template-columns:1fr 420px; gap:60px; align-items:center; }
+    .hero-sub { font-family:'JetBrains Mono',monospace; font-size:12px; color:${c.accent}; letter-spacing:3px; text-transform:uppercase; margin-bottom:24px; }
+    .hero-bio { font-size:15px; color:#888; line-height:1.8; margin:24px 0 32px; max-width:500px; }
+    .hero-img-wrap { position:relative; }
+    .hero-img-wrap::before { content:''; position:absolute; inset:-1px; background:linear-gradient(135deg,${c.accent}40,transparent 50%,${c.accent}20); border-radius:4px; }
+    .hero-img { width:100%; aspect-ratio:3/4; object-fit:cover; filter:grayscale(20%) contrast(1.1); border-radius:2px; display:block; }
+    .corner { position:absolute; width:20px; height:20px; border-color:${c.accent}; border-style:solid; }
+    .corner-tl { top:-4px; left:-4px; border-width:2px 0 0 2px; }
+    .corner-tr { top:-4px; right:-4px; border-width:2px 2px 0 0; }
+    .corner-bl { bottom:-4px; left:-4px; border-width:0 0 2px 2px; }
+    .corner-br { bottom:-4px; right:-4px; border-width:0 2px 2px 0; }
+    .section-label { font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:4px; text-transform:uppercase; color:${c.accent}; margin-bottom:16px; }
+    .section-title { font-family:'Rajdhani',sans-serif; font-size:clamp(1.8rem,3vw,2.8rem); font-weight:700; color:#fff; letter-spacing:1px; margin-bottom:32px; }
+    .project-card { border:1px solid rgba(255,255,255,0.06); padding:24px; margin-bottom:12px; position:relative; transition:border-color .3s; background:rgba(255,255,255,0.02); clip-path:polygon(0 0,calc(100% - 12px) 0,100% 12px,100% 100%,0 100%); }
+    .project-card:hover { border-color:${c.accent}40; background:rgba(255,255,255,0.04); }
+    .project-name { font-family:'Rajdhani',sans-serif; font-size:18px; font-weight:600; color:#fff; letter-spacing:1px; margin-bottom:8px; }
+    .project-desc { font-size:13px; color:#666; line-height:1.7; margin-bottom:14px; }
+    .project-meta { display:flex; gap:12px; flex-wrap:wrap; align-items:center; }
+    .project-lang { font-family:'JetBrains Mono',monospace; font-size:11px; color:${c.accent}70; padding:2px 10px; border:1px solid ${c.accent}20; }
+    .project-link { font-family:'JetBrains Mono',monospace; font-size:12px; color:${c.accent}; margin-left:auto; }
+    .skill-badge { display:inline-block; font-family:'JetBrains Mono',monospace; font-size:11px; color:${c.accent}80; margin:3px; padding:4px 12px; border:1px solid ${c.accent}15; background:${c.accent}05; }
+    .footer { position:relative; z-index:1; text-align:center; padding:40px 24px; font-family:'JetBrains Mono',monospace; font-size:11px; color:#333; border-top:1px solid rgba(255,255,255,0.04); }
+    .footer a { color:${c.accent}; }
+    .reveal { opacity:0; transform:translateY(30px); }
+    @media(max-width:768px) { .hero-inner{grid-template-columns:1fr} .hero-img-wrap{display:none} .nav-links{display:none} .nav-cta{display:none} .nav-toggle{display:block} .glitch-title::before,.glitch-title::after{display:none} }
+  `
+  const projects = aiProjects && aiProjects.length > 0 ? aiProjects : repos.filter(r => !r.fork).slice(0, 7).map(r => ({ name: r.name, url: r.html_url, language: r.language, description: r.description?.trim() || smartRepoDescription(r.name, r.language), stars: r.stargazers_count, forks: r.forks_count }))
+
+  const body = `
+  <div class="scanline"></div>
+  <div class="noise"></div>
+  ${buildNav(name, config.sections, c.accent)}
+  <section id="home" class="hero">
+    <div class="container">
+      <div class="hero-inner">
+        <div>
+          <p class="hero-sub hero-anim">${e(role)}</p>
+          <h1 class="glitch-title hero-anim" data-text="${e(name)}">${e(name)}</h1>
+          <p class="hero-bio hero-anim">${e(bio)}</p>
+          <div style="display:flex;gap:12px;flex-wrap:wrap" class="hero-anim">
+            <a href="#projects" style="font-family:'Rajdhani',sans-serif;padding:12px 28px;background:${c.accent};color:#000;font-size:15px;font-weight:700;letter-spacing:1px;clip-path:polygon(8px 0%,100% 0%,calc(100% - 8px) 100%,0% 100%)">PROJECTS</a>
+            <a href="#contact" style="font-family:'Rajdhani',sans-serif;padding:12px 28px;border:1px solid ${c.accent}40;color:${c.accent};font-size:15px;font-weight:600;letter-spacing:1px">CONTACT</a>
+          </div>
+        </div>
+        <div class="hero-img-wrap hero-anim">
+          <img src="${img}" alt="${e(name)}" class="hero-img hero-photo-parallax" crossorigin="anonymous">
+          <div class="corner corner-tl"></div>
+          <div class="corner corner-tr"></div>
+          <div class="corner corner-bl"></div>
+          <div class="corner corner-br"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+  ${config.sections.includes("about") ? `<section id="about" class="section"><div class="container"><p class="section-label reveal">about</p><h2 class="section-title reveal">Who I Am</h2><p style="font-size:15px;color:#888;line-height:1.85;max-width:680px" class="reveal">${e(bio)}</p></div></section>` : ""}
+  ${config.sections.includes("skills") ? `<section id="skills" class="section"><div class="container"><p class="section-label reveal">skills</p><h2 class="section-title reveal">Arsenal</h2><div class="reveal">${[...langs,...topics].slice(0,16).map(s=>`<span class="skill-badge">${e(s)}</span>`).join("")}</div></div></section>` : ""}
+  ${config.sections.includes("projects") ? `<section id="projects" class="section"><div class="container"><p class="section-label reveal">projects</p><h2 class="section-title reveal">Missions Completed</h2>${projects.map(p=>`<div class="project-card reveal"><div style="display:flex;justify-content:space-between;align-items:flex-start"><p class="project-name">${e(p.name)}</p>${p.stars>0?`<span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:${c.accent}60">&#9733;${p.stars}</span>`:""}</div><p class="project-desc">${e(p.description)}</p><div class="project-meta">${p.language?`<span class="project-lang">${e(p.language)}</span>`:""}<a href="${p.url}" target="_blank" rel="noopener" class="project-link">access &rarr;</a></div></div>`).join("")}</div></section>` : ""}
+  ${config.sections.includes("contact") ? buildContact(profile, c.accent, data.socialLinks) : ""}
+  <footer class="footer">Built with <a href="https://personaai.vercel.app">PersonaAI</a></footer>`
+
+  return shell(c.accent, extra, body, name, bio, img)
+}
+
+/* ========== TEMPLATE: BENTO GRID ========== */
+function buildBentoGrid(data: TemplateData): string {
+  const { profile, config, aiBio, aiProjects } = data
+  const repos = data.repos
+  const c = COLOR_SCHEMES[config.colorScheme as ColorScheme] || COLOR_SCHEMES.midnight
+  const name = profile.name || profile.username
+  const role = data.targetRole || "Developer"
+  const bio = aiBio || profile.bio || "Building delightful products."
+  const langs = getLangs(repos)
+  const topics = getTopics(repos)
+  const img = data.photoUrl || profile.avatar_url
+
+  const extra = `
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+    html { scroll-behavior:smooth; }
+    body { font-family:'Inter', sans-serif; background:#0a0a0a; color:#e0e0e0; overflow-x:hidden; -webkit-font-smoothing:antialiased; }
+    a { text-decoration:none; transition:all .3s; }
+    .nav { position:fixed; top:0; left:0; right:0; z-index:100; padding:0 24px; background:rgba(10,10,10,0.85); backdrop-filter:blur(20px); border-bottom:1px solid rgba(255,255,255,0.05); }
+    .nav-inner { max-width:1200px; margin:0 auto; display:flex; align-items:center; justify-content:space-between; height:60px; }
+    .nav-brand { font-size:17px; font-weight:800; color:#fff; }
+    .nav-brand span { color:${c.accent}; }
+    .nav-links { display:flex; gap:24px; }
+    .nav-links a { font-size:13px; color:#666; }
+    .nav-links a:hover { color:${c.accent}; }
+    .nav-cta { padding:8px 20px; background:${c.accent}; color:#000; border-radius:8px; font-size:13px; font-weight:600; }
+    .nav-toggle { display:none; background:none; border:none; cursor:pointer; }
+    .nav-toggle span { display:block; width:22px; height:2px; background:#fff; margin:5px 0; }
+    .mobile-menu { display:none; position:fixed; top:60px; left:0; right:0; background:rgba(10,10,10,0.97); padding:24px; border-bottom:1px solid rgba(255,255,255,0.06); z-index:99; }
+    .mobile-menu.open { display:flex; flex-direction:column; gap:16px; }
+    .mobile-menu a { font-size:16px; color:#888; padding:8px 0; }
+    .section { position:relative; padding:80px 24px; }
+    .container { max-width:1200px; margin:0 auto; }
+    .bento { display:grid; grid-template-columns:repeat(12,1fr); grid-auto-rows:minmax(80px,auto); gap:12px; }
+    .bento-cell { background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:20px; padding:28px; overflow:hidden; transition:border-color .3s,transform .3s; }
+    .bento-cell:hover { border-color:${c.accent}25; transform:translateY(-2px); }
+    .bento-name { grid-column:span 7; grid-row:span 3; background:linear-gradient(135deg,${c.accent}12,transparent); border-color:${c.accent}20; }
+    .bento-photo { grid-column:span 5; grid-row:span 3; padding:0; overflow:hidden; }
+    .bento-photo img { width:100%; height:100%; object-fit:cover; border-radius:18px; }
+    .bento-bio { grid-column:span 8; grid-row:span 2; }
+    .bento-stats { grid-column:span 4; grid-row:span 2; text-align:center; display:flex; flex-direction:column; align-items:center; justify-content:center; background:${c.accent}08; border-color:${c.accent}18; }
+    .bento-skills { grid-column:span 12; }
+    .bento-project { grid-column:span 4; }
+    .big-name { font-size:clamp(2rem,4.5vw,3.5rem); font-weight:800; color:#fff; line-height:1.1; margin-bottom:12px; }
+    .role-tag { display:inline-block; padding:6px 14px; background:${c.accent}20; border:1px solid ${c.accent}30; border-radius:8px; font-size:12px; color:${c.accent}; font-weight:600; letter-spacing:0.5px; margin-bottom:16px; }
+    .section-label { font-size:10px; letter-spacing:3px; text-transform:uppercase; color:${c.accent}; margin-bottom:8px; }
+    .section-title { font-size:clamp(1.6rem,2.5vw,2.2rem); font-weight:700; color:#fff; margin-bottom:24px; }
+    .skill-badge { display:inline-block; padding:6px 14px; border-radius:8px; font-size:12px; font-weight:500; border:1px solid rgba(255,255,255,0.08); color:rgba(255,255,255,0.55); margin:3px; background:rgba(255,255,255,0.03); transition:all .2s; }
+    .skill-badge:hover { border-color:${c.accent}30; color:${c.accent}; }
+    .proj-name { font-size:15px; font-weight:700; color:#fff; margin-bottom:6px; }
+    .proj-desc { font-size:12px; color:#666; line-height:1.6; margin-bottom:12px; }
+    .proj-lang { font-size:11px; color:${c.accent}; padding:2px 10px; border:1px solid ${c.accent}20; border-radius:20px; display:inline-block; }
+    .reveal { opacity:0; transform:translateY(30px); }
+    .footer { position:relative; text-align:center; padding:40px 24px; font-size:13px; color:#444; border-top:1px solid rgba(255,255,255,0.05); }
+    .footer a { color:${c.accent}; }
+    @media(max-width:768px) { .bento{grid-template-columns:1fr} .bento-name,.bento-photo,.bento-bio,.bento-stats,.bento-skills,.bento-project{grid-column:span 1;grid-row:span 1} .bento-photo{height:300px} .nav-links{display:none} .nav-cta{display:none} .nav-toggle{display:block} }
+  `
+  const projects = aiProjects && aiProjects.length > 0 ? aiProjects.slice(0, 6) : repos.filter(r => !r.fork).slice(0, 6).map(r => ({ name: r.name, url: r.html_url, language: r.language, description: r.description?.trim() || smartRepoDescription(r.name, r.language), stars: r.stargazers_count, forks: r.forks_count }))
+
+  const body = `
+  ${buildNav(name, config.sections, c.accent)}
+  <div style="padding-top:60px"></div>
+  <div class="container section">
+    <div class="bento">
+      <div class="bento-cell bento-name hero-anim">
+        <span class="role-tag">${e(role)}</span>
+        <h1 class="big-name">${e(name)}</h1>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:16px">
+          <a href="#projects" style="padding:10px 22px;background:${c.accent};color:#000;border-radius:10px;font-size:13px;font-weight:700">Projects</a>
+          <a href="#contact" style="padding:10px 22px;border:1px solid rgba(255,255,255,0.1);color:#fff;border-radius:10px;font-size:13px">Contact</a>
+        </div>
+      </div>
+      <div class="bento-cell bento-photo hero-anim">
+        <img src="${img}" alt="${e(name)}" crossorigin="anonymous">
+      </div>
+      <div class="bento-cell bento-bio hero-anim">
+        <p class="section-label">About</p>
+        <p style="font-size:14px;color:#888;line-height:1.8">${e(bio)}</p>
+      </div>
+      <div class="bento-cell bento-stats hero-anim">
+        <div style="font-size:2.5rem;font-weight:800;color:${c.accent}">${profile.public_repos}</div>
+        <div style="font-size:12px;color:#666;margin-top:4px">Public Repos</div>
+        <div style="font-size:2rem;font-weight:800;color:#fff;margin-top:16px">${profile.followers}</div>
+        <div style="font-size:12px;color:#666;margin-top:4px">Followers</div>
+      </div>
+      ${config.sections.includes("skills") ? `<div class="bento-cell bento-skills hero-anim"><p class="section-label">Stack</p><div style="margin-top:8px">${[...langs,...topics].slice(0,14).map(s=>`<span class="skill-badge">${e(s)}</span>`).join("")}</div></div>` : ""}
+      ${config.sections.includes("projects") ? projects.map(p=>`<div class="bento-cell bento-project reveal"><a href="${p.url}" target="_blank" rel="noopener"><p class="proj-name">${e(p.name)}</p></a><p class="proj-desc">${e(p.description)}</p><div style="display:flex;align-items:center;justify-content:space-between">${p.language?`<span class="proj-lang">${e(p.language)}</span>`:`<span></span>`}${p.stars>0?`<span style="font-size:11px;color:${c.accent}70">&#9733;${p.stars}</span>`:""}</div></div>`).join("") : ""}
+    </div>
+  </div>
+  ${config.sections.includes("contact") ? buildContact(profile, c.accent, data.socialLinks) : ""}
+  <footer class="footer">Built with <a href="https://personaai.vercel.app">PersonaAI</a></footer>`
+
+  return shell(c.accent, extra, body, name, bio, img)
+}
+
+/* ========== TEMPLATE: SPOTLIGHT DARK ========== */
+function buildSpotlightDark(data: TemplateData): string {
+  const { profile, config, aiBio, aiProjects } = data
+  const repos = data.repos
+  const c = COLOR_SCHEMES[config.colorScheme as ColorScheme] || COLOR_SCHEMES.ocean
+  const name = profile.name || profile.username
+  const role = data.targetRole || "Developer"
+  const bio = aiBio || profile.bio || "Focused on building great software."
+  const langs = getLangs(repos)
+  const topics = getTopics(repos)
+  const img = data.photoUrl || profile.avatar_url
+
+  const extra = `
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+    html { scroll-behavior:smooth; }
+    body { font-family:'Inter', sans-serif; background:#030303; color:#c8c8c8; overflow-x:hidden; -webkit-font-smoothing:antialiased; }
+    a { text-decoration:none; transition:all .3s; }
+    .spotlight { position:fixed; width:800px; height:800px; border-radius:50%; background:radial-gradient(circle,${c.accent}10 0%,transparent 70%); pointer-events:none; transform:translate(-50%,-50%); transition:left .15s,top .15s; z-index:0; }
+    .nav { position:fixed; top:0; left:0; right:0; z-index:100; padding:0 32px; }
+    .nav-inner { max-width:1100px; margin:0 auto; display:flex; align-items:center; justify-content:space-between; height:64px; }
+    .nav-brand { font-size:16px; font-weight:800; color:#fff; }
+    .nav-brand span { color:${c.accent}; }
+    .nav-links { display:flex; gap:32px; }
+    .nav-links a { font-size:13px; color:#555; font-weight:500; }
+    .nav-links a:hover { color:#fff; }
+    .nav-cta { padding:8px 22px; border:1px solid rgba(255,255,255,0.12); color:#fff; border-radius:8px; font-size:13px; }
+    .nav-cta:hover { border-color:${c.accent}; color:${c.accent}; }
+    .nav-toggle { display:none; background:none; border:none; cursor:pointer; }
+    .nav-toggle span { display:block; width:22px; height:1px; background:#fff; margin:6px 0; }
+    .mobile-menu { display:none; position:fixed; top:64px; left:0; right:0; background:#030303; padding:24px 32px; border-bottom:1px solid rgba(255,255,255,0.05); z-index:99; }
+    .mobile-menu.open { display:flex; flex-direction:column; gap:16px; }
+    .mobile-menu a { font-size:16px; color:#888; padding:8px 0; }
+    .section { position:relative; z-index:1; padding:100px 32px; }
+    .container { max-width:1100px; margin:0 auto; }
+    .hero { min-height:100vh; display:flex; align-items:center; padding-top:64px; }
+    .hero-layout { display:grid; grid-template-columns:1fr 380px; gap:80px; align-items:center; }
+    .eyebrow { font-size:12px; letter-spacing:3px; text-transform:uppercase; color:${c.accent}; font-weight:600; margin-bottom:24px; }
+    .hero-name { font-size:clamp(3rem,6vw,5.5rem); font-weight:800; color:#fff; line-height:1.0; letter-spacing:-2px; margin-bottom:24px; }
+    .hero-bio { font-size:16px; color:#666; line-height:1.8; margin-bottom:36px; max-width:500px; }
+    .hero-ctas { display:flex; gap:12px; flex-wrap:wrap; }
+    .btn-primary { padding:14px 32px; background:${c.accent}; color:#000; border-radius:8px; font-size:14px; font-weight:700; }
+    .btn-secondary { padding:14px 32px; border:1px solid rgba(255,255,255,0.1); color:#888; border-radius:8px; font-size:14px; }
+    .btn-secondary:hover { border-color:rgba(255,255,255,0.2); color:#fff; }
+    .hero-photo { width:100%; aspect-ratio:3/4; object-fit:cover; border-radius:16px; filter:grayscale(15%); }
+    .divider { height:1px; background:linear-gradient(90deg,transparent,rgba(255,255,255,0.06),transparent); margin:0 32px; }
+    .section-label { font-size:11px; letter-spacing:4px; text-transform:uppercase; color:${c.accent}; margin-bottom:16px; }
+    .section-title { font-size:clamp(1.8rem,3vw,2.5rem); font-weight:800; color:#fff; letter-spacing:-1px; margin-bottom:40px; }
+    .project-row { border-top:1px solid rgba(255,255,255,0.04); padding:28px 0; display:grid; grid-template-columns:1fr 2fr 120px; gap:24px; align-items:center; transition:all .3s; }
+    .project-row:hover { padding-left:12px; }
+    .project-row:hover .proj-num { color:${c.accent}; }
+    .proj-num { font-size:12px; color:#333; font-weight:600; font-variant-numeric:tabular-nums; }
+    .proj-name { font-size:17px; font-weight:700; color:#fff; margin-bottom:4px; }
+    .proj-desc { font-size:13px; color:#555; line-height:1.6; }
+    .proj-link { font-size:13px; color:${c.accent}; text-align:right; }
+    .proj-lang { font-size:11px; color:#444; }
+    .skill-wrap { display:flex; flex-wrap:wrap; gap:8px; }
+    .skill-badge { padding:8px 16px; border:1px solid rgba(255,255,255,0.06); color:#666; border-radius:6px; font-size:13px; transition:all .2s; }
+    .skill-badge:hover { border-color:${c.accent}30; color:${c.accent}; }
+    .reveal { opacity:0; transform:translateY(30px); }
+    .footer { position:relative; z-index:1; padding:40px 32px; text-align:center; font-size:13px; color:#333; border-top:1px solid rgba(255,255,255,0.04); }
+    .footer a { color:${c.accent}; }
+    @media(max-width:768px){ .hero-layout{grid-template-columns:1fr} .hero-photo-wrap{display:none} .project-row{grid-template-columns:1fr} .proj-num{display:none} .nav-links{display:none} .nav-cta{display:none} .nav-toggle{display:block} }
+  `
+  const projects = aiProjects && aiProjects.length > 0 ? aiProjects : repos.filter(r => !r.fork).slice(0, 7).map(r => ({ name: r.name, url: r.html_url, language: r.language, description: r.description?.trim() || smartRepoDescription(r.name, r.language), stars: r.stargazers_count, forks: r.forks_count }))
+
+  const body = `
+  <div class="spotlight" id="spotlight"></div>
+  ${buildNav(name, config.sections, c.accent)}
+  <section id="home" class="hero">
+    <div class="container">
+      <div class="hero-layout">
+        <div>
+          <p class="eyebrow hero-anim">${e(role)}</p>
+          <h1 class="hero-name hero-anim">${e(name)}</h1>
+          <p class="hero-bio hero-anim">${e(bio)}</p>
+          <div class="hero-ctas hero-anim">
+            <a href="#projects" class="btn-primary">View Projects</a>
+            <a href="#contact" class="btn-secondary">Get in Touch</a>
+          </div>
+        </div>
+        <div class="hero-photo-wrap hero-anim">
+          <img src="${img}" alt="${e(name)}" class="hero-photo hero-photo-parallax" crossorigin="anonymous">
+        </div>
+      </div>
+    </div>
+  </section>
+  <div class="divider"></div>
+  ${config.sections.includes("about") ? `<section id="about" class="section"><div class="container"><p class="section-label reveal">About</p><h2 class="section-title reveal">${e(name.split(" ")[0])}</h2><p style="font-size:16px;color:#666;line-height:1.85;max-width:680px" class="reveal">${e(bio)}</p></div></section><div class="divider"></div>` : ""}
+  ${config.sections.includes("skills") ? `<section id="skills" class="section"><div class="container"><p class="section-label reveal">Skills</p><h2 class="section-title reveal">What I work with</h2><div class="skill-wrap reveal">${[...langs,...topics].slice(0,16).map(s=>`<span class="skill-badge">${e(s)}</span>`).join("")}</div></div></section><div class="divider"></div>` : ""}
+  ${config.sections.includes("projects") ? `<section id="projects" class="section"><div class="container"><p class="section-label reveal">Projects</p><h2 class="section-title reveal">Selected Work</h2><div>${projects.map((p,i)=>`<div class="project-row reveal"><span class="proj-num">${String(i+1).padStart(2,"0")}</span><div><p class="proj-name">${e(p.name)}</p><p class="proj-desc">${e(p.description)}</p>${p.language?`<span class="proj-lang">${e(p.language)}</span>`:""}</div><a href="${p.url}" target="_blank" rel="noopener" class="proj-link">View &rarr;</a></div>`).join("")}</div></div></section><div class="divider"></div>` : ""}
+  ${config.sections.includes("contact") ? buildContact(profile, c.accent, data.socialLinks) : ""}
+  <footer class="footer">Built with <a href="https://personaai.vercel.app">PersonaAI</a></footer>
+  <script>
+    const spotlight = document.getElementById('spotlight');
+    document.addEventListener('mousemove', e => {
+      spotlight.style.left = e.clientX + 'px';
+      spotlight.style.top = e.clientY + 'px';
+    });
+  <\/script>`
+
+  return shell(c.accent, extra, body, name, bio, img)
+}
+
+/* ========== TEMPLATE: SWISS EDITORIAL ========== */
+function buildSwissEditorial(data: TemplateData): string {
+  const { profile, config, aiBio, aiProjects } = data
+  const repos = data.repos
+  const c = COLOR_SCHEMES[config.colorScheme as ColorScheme] || COLOR_SCHEMES.ember
+  const name = profile.name || profile.username
+  const role = data.targetRole || "Developer"
+  const bio = aiBio || profile.bio || "Precision engineering for the web."
+  const langs = getLangs(repos)
+  const topics = getTopics(repos)
+  const img = data.photoUrl || profile.avatar_url
+  const firstName = name.split(" ")[0].toUpperCase()
+  const lastName = (name.split(" ").slice(1).join(" ") || "").toUpperCase()
+
+  const extra = `
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+    html { scroll-behavior:smooth; }
+    body { font-family:'Inter', sans-serif; background:#f5f5f0; color:#111; overflow-x:hidden; -webkit-font-smoothing:antialiased; }
+    a { text-decoration:none; transition:all .2s; }
+    .nav { position:fixed; top:0; left:0; right:0; z-index:100; background:#f5f5f0; border-bottom:2px solid #111; padding:0 40px; }
+    .nav-inner { max-width:1200px; margin:0 auto; display:flex; align-items:center; justify-content:space-between; height:60px; }
+    .nav-brand { font-size:13px; font-weight:800; color:#111; letter-spacing:3px; text-transform:uppercase; }
+    .nav-brand span { color:${c.accent}; }
+    .nav-links { display:flex; gap:32px; }
+    .nav-links a { font-size:11px; color:#888; font-weight:600; letter-spacing:2px; text-transform:uppercase; }
+    .nav-links a:hover { color:#111; }
+    .nav-cta { padding:8px 20px; background:#111; color:#f5f5f0; font-size:11px; font-weight:700; letter-spacing:2px; text-transform:uppercase; }
+    .nav-cta:hover { background:${c.accent}; color:#fff; }
+    .nav-toggle { display:none; background:none; border:none; cursor:pointer; }
+    .nav-toggle span { display:block; width:22px; height:2px; background:#111; margin:5px 0; }
+    .mobile-menu { display:none; position:fixed; top:60px; left:0; right:0; background:#f5f5f0; padding:24px 40px; border-bottom:2px solid #111; z-index:99; }
+    .mobile-menu.open { display:flex; flex-direction:column; gap:12px; }
+    .mobile-menu a { font-size:14px; color:#888; letter-spacing:2px; text-transform:uppercase; padding:8px 0; border-bottom:1px solid #ddd; }
+    .section { position:relative; padding:80px 40px; }
+    .container { max-width:1200px; margin:0 auto; }
+    .hero { min-height:100vh; display:grid; grid-template-columns:1fr 1px 1fr; padding-top:60px; }
+    .hero-left { padding:80px 60px 80px 0; display:flex; flex-direction:column; justify-content:flex-end; border-right:2px solid #111; }
+    .hero-right { padding:80px 0 80px 60px; display:flex; flex-direction:column; }
+    .big-initial { font-size:clamp(8rem,16vw,14rem); font-weight:900; color:${c.accent}; line-height:1; letter-spacing:-4px; }
+    .hero-firstname { font-size:clamp(2.5rem,5vw,5rem); font-weight:900; color:#111; line-height:1; letter-spacing:-2px; }
+    .hero-lastname { font-size:clamp(2rem,4vw,4rem); font-weight:300; color:#888; line-height:1; letter-spacing:-1px; }
+    .hero-role { font-size:12px; font-weight:700; letter-spacing:4px; color:#888; text-transform:uppercase; margin-top:24px; }
+    .hero-photo-right { flex:1; overflow:hidden; margin-bottom:32px; }
+    .hero-photo-right img { width:100%; height:100%; object-fit:cover; min-height:400px; }
+    .hero-bio-right { font-size:14px; color:#888; line-height:1.8; }
+    .hero-cta { display:inline-block; margin-top:24px; padding:14px 32px; background:#111; color:#f5f5f0; font-size:12px; font-weight:700; letter-spacing:2px; text-transform:uppercase; }
+    .hero-cta:hover { background:${c.accent}; }
+    .border-top { border-top:2px solid #111; }
+    .section-num { font-size:80px; font-weight:900; color:#e8e8e3; line-height:1; }
+    .section-label { font-size:11px; font-weight:700; letter-spacing:4px; text-transform:uppercase; color:${c.accent}; margin-bottom:8px; }
+    .section-title { font-size:clamp(1.8rem,3vw,3rem); font-weight:900; color:#111; letter-spacing:-1px; margin-bottom:32px; }
+    .project-item { border-top:1px solid #ddd; padding:24px 0; display:flex; gap:40px; align-items:flex-start; transition:padding-left .2s; }
+    .project-item:hover { padding-left:8px; }
+    .project-item:hover .proj-num { color:${c.accent}; }
+    .proj-num { font-size:11px; font-weight:800; color:#ccc; letter-spacing:1px; min-width:28px; margin-top:3px; }
+    .proj-name { font-size:18px; font-weight:700; color:#111; margin-bottom:6px; }
+    .proj-desc { font-size:13px; color:#888; line-height:1.65; }
+    .proj-lang { font-size:10px; font-weight:700; letter-spacing:2px; color:${c.accent}; text-transform:uppercase; margin-top:8px; display:block; }
+    .proj-link { font-size:12px; font-weight:700; color:#111; margin-left:auto; letter-spacing:1px; white-space:nowrap; }
+    .proj-link:hover { color:${c.accent}; }
+    .skill-badge { display:inline-block; font-size:11px; font-weight:600; letter-spacing:1px; text-transform:uppercase; color:#111; padding:6px 14px; border:2px solid #111; margin:4px; }
+    .skill-badge:hover { background:#111; color:#f5f5f0; }
+    .footer { text-align:center; padding:40px; font-size:11px; font-weight:700; letter-spacing:2px; text-transform:uppercase; color:#bbb; border-top:2px solid #111; }
+    .footer a { color:${c.accent}; }
+    .reveal { opacity:0; transform:translateY(20px); }
+    @media(max-width:768px){ .hero{grid-template-columns:1fr;grid-template-rows:auto auto} .hero-left{border-right:none;border-bottom:2px solid #111;padding:60px 24px} .hero-right{padding:40px 24px} .nav-links{display:none} .nav-cta{display:none} .nav-toggle{display:block} .section{padding:60px 24px} }
+  `
+  const projects = aiProjects && aiProjects.length > 0 ? aiProjects : repos.filter(r => !r.fork).slice(0, 7).map(r => ({ name: r.name, url: r.html_url, language: r.language, description: r.description?.trim() || smartRepoDescription(r.name, r.language), stars: r.stargazers_count, forks: r.forks_count }))
+
+  const body = `
+  ${buildNav(name, config.sections, c.accent)}
+  <section id="home" class="hero">
+    <div class="hero-left">
+      <div class="big-initial hero-anim">${firstName.charAt(0)}</div>
+      <div>
+        <div class="hero-firstname hero-anim">${e(firstName)}</div>
+        <div class="hero-lastname hero-anim">${e(lastName || role.toUpperCase())}</div>
+        <div class="hero-role hero-anim">${e(role)}</div>
+      </div>
+    </div>
+    <div class="hero-right">
+      <div class="hero-photo-right hero-anim">
+        <img src="${img}" alt="${e(name)}" crossorigin="anonymous">
+      </div>
+      <p class="hero-bio-right hero-anim">${e(bio)}</p>
+      <a href="#projects" class="hero-cta hero-anim">View Projects</a>
+    </div>
+  </section>
+  ${config.sections.includes("about") ? `<section id="about" class="section border-top"><div class="container"><div style="display:grid;grid-template-columns:1fr 3fr;gap:60px;align-items:start"><div class="section-num">01</div><div><p class="section-label reveal">About</p><h2 class="section-title reveal">The human<br>behind the code</h2><p style="font-size:15px;color:#888;line-height:1.85;max-width:600px" class="reveal">${e(bio)}</p></div></div></div></section>` : ""}
+  ${config.sections.includes("skills") ? `<section id="skills" class="section border-top"><div class="container"><div style="display:grid;grid-template-columns:1fr 3fr;gap:60px;align-items:start"><div class="section-num">02</div><div><p class="section-label reveal">Skills</p><h2 class="section-title reveal">Toolkit</h2><div class="reveal">${[...langs,...topics].slice(0,16).map(s=>`<span class="skill-badge">${e(s)}</span>`).join("")}</div></div></div></div></section>` : ""}
+  ${config.sections.includes("projects") ? `<section id="projects" class="section border-top"><div class="container"><div style="display:grid;grid-template-columns:1fr 3fr;gap:60px;align-items:start"><div class="section-num">03</div><div><p class="section-label reveal">Projects</p><h2 class="section-title reveal">Selected<br>Work</h2><div>${projects.map((p,i)=>`<div class="project-item reveal"><span class="proj-num">${String(i+1).padStart(2,"0")}</span><div style="flex:1"><p class="proj-name">${e(p.name)}</p><p class="proj-desc">${e(p.description)}</p>${p.language?`<span class="proj-lang">${e(p.language)}</span>`:""}</div><a href="${p.url}" target="_blank" rel="noopener" class="proj-link">Open &rarr;</a></div>`).join("")}</div></div></div></div></section>` : ""}
+  ${config.sections.includes("contact") ? `<section id="contact" class="section border-top"><div class="container"><div style="display:grid;grid-template-columns:1fr 3fr;gap:60px;align-items:start"><div class="section-num">04</div><div><p class="section-label reveal">Contact</p><h2 class="section-title reveal">Let&rsquo;s<br>build together</h2><div style="display:flex;gap:12px;flex-wrap:wrap" class="reveal"><a href="${profile.html_url}" target="_blank" style="padding:14px 28px;background:#111;color:#f5f5f0;font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase">GitHub</a>${data.socialLinks?.linkedin?`<a href="${data.socialLinks.linkedin}" target="_blank" style="padding:14px 28px;border:2px solid #111;color:#111;font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase">LinkedIn</a>`:""}</div></div></div></div></section>` : ""}
+  <footer class="footer">Built with <a href="https://personaai.vercel.app">PersonaAI</a></footer>`
+
+  return shell(c.accent, extra, body, name, bio, img)
+}
+
+/* ========== TEMPLATE: GRADIENT AURORA ========== */
+function buildGradientAurora(data: TemplateData): string {
+  const { profile, config, aiBio, aiProjects } = data
+  const repos = data.repos
+  const c = COLOR_SCHEMES[config.colorScheme as ColorScheme] || COLOR_SCHEMES.lavender
+  const name = profile.name || profile.username
+  const role = data.targetRole || "Developer"
+  const bio = aiBio || profile.bio || "Creating beautiful digital experiences."
+  const langs = getLangs(repos)
+  const topics = getTopics(repos)
+  const img = data.photoUrl || profile.avatar_url
+
+  const extra = `
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Syne:wght@400;600;700;800&display=swap');
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+    html { scroll-behavior:smooth; }
+    body { font-family:'Inter', sans-serif; background:#07070f; color:#ddd; overflow-x:hidden; -webkit-font-smoothing:antialiased; }
+    a { text-decoration:none; transition:all .3s; }
+    .aurora { position:fixed; inset:0; z-index:0; pointer-events:none; overflow:hidden; }
+    .aurora-band { position:absolute; width:200%; height:300px; opacity:0.12; filter:blur(60px); animation:aurora-drift 12s ease-in-out infinite; }
+    .aurora-1 { background:linear-gradient(90deg,${c.primary},${c.accent},transparent); top:10%; animation-delay:0s; }
+    .aurora-2 { background:linear-gradient(90deg,transparent,${c.secondary},${c.primary}); top:30%; animation-delay:-4s; }
+    .aurora-3 { background:linear-gradient(90deg,${c.accent},transparent,${c.secondary}); top:60%; animation-delay:-8s; }
+    @keyframes aurora-drift { 0%,100%{transform:translateX(-50%) skewY(-2deg)} 50%{transform:translateX(0%) skewY(2deg)} }
+    .nav { position:fixed; top:0; left:0; right:0; z-index:100; padding:0 32px; background:rgba(7,7,15,0.7); backdrop-filter:blur(20px); border-bottom:1px solid rgba(255,255,255,0.06); }
+    .nav-inner { max-width:1100px; margin:0 auto; display:flex; align-items:center; justify-content:space-between; height:64px; }
+    .nav-brand { font-family:'Syne',sans-serif; font-size:18px; font-weight:800; color:#fff; }
+    .nav-brand span { color:${c.accent}; }
+    .nav-links { display:flex; gap:28px; }
+    .nav-links a { font-size:13px; color:rgba(255,255,255,0.4); }
+    .nav-links a:hover { color:#fff; }
+    .nav-cta { padding:9px 22px; background:linear-gradient(135deg,${c.primary},${c.accent}); color:#fff; border-radius:8px; font-size:13px; font-weight:600; }
+    .nav-toggle { display:none; background:none; border:none; cursor:pointer; }
+    .nav-toggle span { display:block; width:22px; height:2px; background:#fff; margin:5px 0; }
+    .mobile-menu { display:none; position:fixed; top:64px; left:0; right:0; background:rgba(7,7,15,0.97); padding:24px 32px; border-bottom:1px solid rgba(255,255,255,0.06); z-index:99; }
+    .mobile-menu.open { display:flex; flex-direction:column; gap:16px; }
+    .mobile-menu a { font-size:16px; color:rgba(255,255,255,0.6); padding:8px 0; }
+    .section { position:relative; z-index:1; padding:100px 32px; }
+    .container { max-width:1100px; margin:0 auto; }
+    .hero { min-height:100vh; display:flex; align-items:center; padding-top:64px; text-align:center; }
+    .hero-inner { max-width:800px; margin:0 auto; }
+    .hero-photo-circle { width:120px; height:120px; border-radius:50%; border:2px solid rgba(255,255,255,0.1); overflow:hidden; margin:0 auto 24px; }
+    .hero-photo-circle img { width:100%; height:100%; object-fit:cover; }
+    .hero-pill { display:inline-block; padding:6px 18px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); border-radius:50px; font-size:12px; color:rgba(255,255,255,0.5); letter-spacing:1px; margin-bottom:24px; }
+    .hero-name { font-family:'Syne',sans-serif; font-size:clamp(3rem,7vw,6rem); font-weight:800; line-height:1.05; letter-spacing:-3px; margin-bottom:24px; }
+    .hero-name .gradient-text { background:linear-gradient(135deg,#fff 40%,${c.accent}); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+    .hero-bio { font-size:17px; color:rgba(255,255,255,0.45); line-height:1.75; margin-bottom:40px; }
+    .gradient-btn { padding:14px 32px; background:linear-gradient(135deg,${c.primary},${c.accent}); color:#fff; border-radius:50px; font-size:14px; font-weight:600; }
+    .gradient-btn:hover { opacity:0.9; transform:translateY(-2px); }
+    .section-label { font-size:11px; letter-spacing:3px; text-transform:uppercase; color:${c.accent}; text-align:center; margin-bottom:12px; }
+    .section-title { font-family:'Syne',sans-serif; font-size:clamp(1.8rem,3vw,2.8rem); font-weight:800; color:#fff; text-align:center; margin-bottom:48px; letter-spacing:-1px; }
+    .project-card { background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:20px; padding:28px; transition:all .3s; position:relative; overflow:hidden; }
+    .project-card::before { content:''; position:absolute; inset:0; background:linear-gradient(135deg,${c.accent}08,transparent); opacity:0; transition:opacity .3s; }
+    .project-card:hover { border-color:${c.accent}30; transform:translateY(-4px); }
+    .project-card:hover::before { opacity:1; }
+    .proj-name { font-family:'Syne',sans-serif; font-size:17px; font-weight:700; color:#fff; margin-bottom:8px; }
+    .proj-desc { font-size:13px; color:rgba(255,255,255,0.4); line-height:1.65; margin-bottom:16px; }
+    .proj-lang { font-size:11px; padding:3px 12px; border-radius:20px; background:${c.accent}12; color:${c.accent}; border:1px solid ${c.accent}22; }
+    .proj-link { font-size:13px; color:${c.accent}; font-weight:600; }
+    .skill-badge { display:inline-block; padding:8px 18px; border-radius:50px; font-size:13px; border:1px solid rgba(255,255,255,0.08); color:rgba(255,255,255,0.5); margin:4px; background:rgba(255,255,255,0.03); transition:all .3s; }
+    .skill-badge:hover { background:linear-gradient(135deg,${c.primary}15,${c.accent}15); border-color:${c.accent}30; color:${c.accent}; }
+    .reveal { opacity:0; transform:translateY(30px); }
+    .footer { position:relative; z-index:1; text-align:center; padding:40px; font-size:13px; color:#444; border-top:1px solid rgba(255,255,255,0.04); }
+    .footer a { color:${c.accent}; }
+    @media(max-width:768px){ .nav-links{display:none} .nav-cta{display:none} .nav-toggle{display:block} }
+  `
+  const projects = aiProjects && aiProjects.length > 0 ? aiProjects : repos.filter(r => !r.fork).slice(0, 7).map(r => ({ name: r.name, url: r.html_url, language: r.language, description: r.description?.trim() || smartRepoDescription(r.name, r.language), stars: r.stargazers_count, forks: r.forks_count }))
+
+  const body = `
+  <div class="aurora"><div class="aurora-band aurora-1"></div><div class="aurora-band aurora-2"></div><div class="aurora-band aurora-3"></div></div>
+  ${buildNav(name, config.sections, c.accent)}
+  <section id="home" class="hero">
+    <div class="container">
+      <div class="hero-inner">
+        <div class="hero-photo-circle hero-anim"><img src="${img}" alt="${e(name)}" crossorigin="anonymous"></div>
+        <div class="hero-pill hero-anim">${e(role)}</div>
+        <h1 class="hero-name hero-anim"><span class="gradient-text">${e(name)}</span></h1>
+        <p class="hero-bio hero-anim">${e(bio)}</p>
+        <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap" class="hero-anim">
+          <a href="#projects" class="gradient-btn">See My Work</a>
+          <a href="#contact" style="padding:14px 32px;border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.6);border-radius:50px;font-size:14px">Say Hello</a>
+        </div>
+      </div>
+    </div>
+  </section>
+  ${config.sections.includes("about") ? `<section id="about" class="section"><div class="container"><p class="section-label reveal">About</p><h2 class="section-title reveal">${e(name.split(" ")[0])}&rsquo;s story</h2><p style="font-size:15px;color:rgba(255,255,255,0.45);line-height:1.85;max-width:640px;margin:0 auto;text-align:center" class="reveal">${e(bio)}</p></div></section>` : ""}
+  ${config.sections.includes("skills") ? `<section id="skills" class="section"><div class="container"><p class="section-label reveal">Stack</p><h2 class="section-title reveal">Tools & Technologies</h2><div style="text-align:center" class="reveal">${[...langs,...topics].slice(0,16).map(s=>`<span class="skill-badge">${e(s)}</span>`).join("")}</div></div></section>` : ""}
+  ${config.sections.includes("projects") ? `<section id="projects" class="section"><div class="container"><p class="section-label reveal">Work</p><h2 class="section-title reveal">Featured Projects</h2><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px">${projects.map(p=>`<div class="project-card reveal"><p class="proj-name">${e(p.name)}</p><p class="proj-desc">${e(p.description)}</p><div style="display:flex;align-items:center;justify-content:space-between">${p.language?`<span class="proj-lang">${e(p.language)}</span>`:`<span></span>`}<a href="${p.url}" target="_blank" rel="noopener" class="proj-link">View &rarr;</a></div></div>`).join("")}</div></div></section>` : ""}
+  ${config.sections.includes("contact") ? buildContact(profile, c.accent, data.socialLinks) : ""}
+  <footer class="footer">Built with <a href="https://personaai.vercel.app">PersonaAI</a></footer>`
+
+  return shell(c.accent, extra, body, name, bio, img)
+}
+
 /* ========== MAIN EXPORT ========== */
 const TEMPLATE_BUILDERS: Record<string, (data: TemplateData) => string> = {
   "bold-portrait": buildBoldPortrait,
@@ -890,6 +1579,13 @@ const TEMPLATE_BUILDERS: Record<string, (data: TemplateData) => string> = {
   "minimal-clean": buildMinimalClean,
   "brutalist": buildBrutalist,
   "glassmorphism": buildGlassmorphism,
+  "terminal": buildTerminal,
+  "liquid-glass": buildLiquidGlass,
+  "cyberpunk-noir": buildCyberpunkNoir,
+  "bento-grid": buildBentoGrid,
+  "spotlight-dark": buildSpotlightDark,
+  "swiss-editorial": buildSwissEditorial,
+  "gradient-aurora": buildGradientAurora,
 }
 
 export function buildPortfolioHtml(data: TemplateData): string {
