@@ -48,6 +48,13 @@ export type TemplateStyle =
   | "minimal-clean"
   | "brutalist"
   | "glassmorphism"
+  | "terminal"
+  | "liquid-glass"
+  | "cyberpunk-noir"
+  | "bento-grid"
+  | "spotlight-dark"
+  | "swiss-editorial"
+  | "gradient-aurora"
 
 export type ColorScheme =
   | "ocean"
@@ -123,6 +130,48 @@ export const TEMPLATE_OPTIONS: {
     label: "Glassmorphism",
     description: "Frosted glass cards over vivid blurred gradients — sleek and futuristic",
     inspiration: "glass",
+  },
+  {
+    id: "terminal",
+    label: "Terminal",
+    description: "Command-line aesthetic with monospace fonts, dark background, and syntax-highlighted blocks",
+    inspiration: "terminal",
+  },
+  {
+    id: "liquid-glass",
+    label: "Liquid Glass",
+    description: "Animated floating orbs with ultra-refined backdrop-blur glass cards — polished and modern",
+    inspiration: "liquid-glass",
+  },
+  {
+    id: "cyberpunk-noir",
+    label: "Cyberpunk Noir",
+    description: "Glitch typography, scan lines, corner brackets and neon accents — dark and cinematic",
+    inspiration: "cyberpunk",
+  },
+  {
+    id: "bento-grid",
+    label: "Bento Grid",
+    description: "Mosaic of asymmetric cards — photo, bio, stats, and projects in one visual overview",
+    inspiration: "bento",
+  },
+  {
+    id: "spotlight-dark",
+    label: "Spotlight Dark",
+    description: "Cursor-following radial spotlight on deep black, with a numbered project list — focused and elegant",
+    inspiration: "spotlight",
+  },
+  {
+    id: "swiss-editorial",
+    label: "Swiss Editorial",
+    description: "Grid discipline, heavy typography, stark black-and-white with one bold accent color",
+    inspiration: "swiss",
+  },
+  {
+    id: "gradient-aurora",
+    label: "Gradient Aurora",
+    description: "Animated aurora light bands, centered layout with large gradient name and centered project grid",
+    inspiration: "aurora",
   },
 ]
 

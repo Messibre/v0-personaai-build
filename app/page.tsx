@@ -166,7 +166,6 @@ export default function Home() {
           <div className="hidden md:flex items-center gap-8 text-sm text-muted-foreground">
             <Link href="#how-it-works" className="hover:text-foreground transition-colors">How it works</Link>
             <Link href="#templates" className="hover:text-foreground transition-colors">Templates</Link>
-            <Link href="#examples" className="hover:text-foreground transition-colors">Examples</Link>
           </div>
 
           {/* Right side */}
@@ -200,13 +199,6 @@ export default function Home() {
                 onClick={() => setMobileMenuOpen(false)}
               >
                 Templates
-              </Link>
-              <Link
-                href="#examples"
-                className="py-3 px-4 rounded-lg hover:bg-secondary transition-colors"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Examples
               </Link>
             </div>
           </div>
@@ -251,6 +243,59 @@ export default function Home() {
         />
         <div className="relative z-10">
           <WizardShell />
+        </div>
+      </section>
+
+      {/* How It Works */}
+      <section id="how-it-works" className="px-4 py-16 sm:py-24 border-t border-border/50 scroll-mt-20">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-12 sm:mb-16">
+            <p className="text-xs sm:text-sm font-medium uppercase tracking-widest text-[var(--persona-accent)] mb-3">
+              Simple by design
+            </p>
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground mb-4 text-balance">
+              From zero to deployed in minutes
+            </h2>
+            <p className="text-muted-foreground text-sm sm:text-base max-w-xl mx-auto text-balance">
+              No design skills, no coding, no hosting headaches. Just connect your data and go.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 relative">
+            {/* Connector line — desktop only */}
+            <div className="hidden lg:block absolute top-8 left-[12.5%] right-[12.5%] h-px bg-gradient-to-r from-transparent via-[var(--persona-accent)]/30 to-transparent" />
+
+            {[
+              {
+                step: "01",
+                title: "Connect GitHub",
+                description: "Link your GitHub profile. We pull your repos, languages, and contribution data automatically.",
+              },
+              {
+                step: "02",
+                title: "Add context",
+                description: "Optionally import your resume, Notion notes, or personal links to give the AI more to work with.",
+              },
+              {
+                step: "03",
+                title: "Pick a template",
+                description: "Choose from 15 professionally designed templates. Each adapts to your data and color preferences.",
+              },
+              {
+                step: "04",
+                title: "Deploy instantly",
+                description: "One click and your portfolio is live on a public URL — no account, no server, nothing to maintain.",
+              },
+            ].map((item) => (
+              <div key={item.step} className="relative flex flex-col items-center text-center sm:items-start sm:text-left group">
+                <div className="flex items-center justify-center size-14 rounded-2xl bg-[var(--persona-accent)]/10 border border-[var(--persona-accent)]/20 mb-4 group-hover:bg-[var(--persona-accent)]/20 transition-colors relative z-10">
+                  <span className="text-lg font-bold text-[var(--persona-accent)]">{item.step}</span>
+                </div>
+                <h3 className="text-base font-semibold text-foreground mb-2">{item.title}</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">{item.description}</p>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -341,16 +386,19 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Examples Gallery */}
-      <section id="examples" className="px-4 pb-16 sm:pb-24 scroll-mt-8">
+      {/* Templates / Examples Gallery */}
+      <section id="templates" className="px-4 pb-16 sm:pb-24 scroll-mt-20 border-t border-border/50 pt-16 sm:pt-24">
         <div className="max-w-6xl mx-auto">
           {/* Section header */}
           <div className="text-center mb-10 sm:mb-14">
-            <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-3">
-              Design Inspiration
+            <p className="text-xs sm:text-sm font-medium uppercase tracking-widest text-[var(--persona-accent)] mb-3">
+              15 templates
+            </p>
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground mb-4 text-balance">
+              A template for every style
             </h2>
             <p className="text-muted-foreground text-sm sm:text-base max-w-lg mx-auto text-balance">
-              Our AI-powered templates are inspired by these stunning portfolio designs. Pick a style and make it yours.
+              From clean minimalist to bold editorial — each template is fully responsive, AI-populated, and instantly deployable.
             </p>
           </div>
 
