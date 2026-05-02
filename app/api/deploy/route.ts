@@ -75,7 +75,7 @@ export async function POST(request: Request) {
       { path: "index.html", content: html },
       {
         path: "vercel.json",
-        content: JSON.stringify({ cleanUrls: true, trailingSlash: false }),
+        content: JSON.stringify({ cleanUrls: true, trailingSlash: false, public: true }),
       },
     ]
 
@@ -121,6 +121,7 @@ export async function POST(request: Request) {
         files: fileInfos,
         projectSettings: { framework: null },
         target: "production",
+        public: true,
       }),
     })
 
