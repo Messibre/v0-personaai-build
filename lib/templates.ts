@@ -418,7 +418,7 @@ function buildBoldPortrait(data: TemplateData): string {
     <div class="hero-overlay"></div>
     <div class="hero-content">
       <h1 class="hero-anim">Hello<span>.</span></h1>
-      <p class="hero-bio hero-anim">${e(profile.bio || `I'm ${name}, a developer building exceptional digital experiences.`)}</p>
+      <p class="hero-bio hero-anim">${e(aiBio || profile.bio || `I'm ${name}, a developer building exceptional digital experiences.`)}</p>
       <div class="stats-row hero-anim">
         <div><div class="stat-num">+${profile.public_repos}</div><div class="stat-label">Projects</div></div>
         <div><div class="stat-num">+${profile.followers}</div><div class="stat-label">Followers</div></div>
@@ -508,7 +508,7 @@ function buildSplitEditorial(data: TemplateData): string {
     </div>
     <div class="hero-light">
       <h1 class="hero-anim">${e(name)}<br><span>Portfolio</span></h1>
-      <p class="hero-anim">${e(profile.bio || "Creating impactful digital experiences with code and design.")}</p>
+      <p class="hero-anim">${e(aiBio || profile.bio || "Creating impactful digital experiences with code and design.")}</p>
       <a href="#projects" class="cta hero-anim">View Projects &darr;</a>
     </div>
   </section>
@@ -560,7 +560,7 @@ function buildPastelCreative(data: TemplateData): string {
       <div class="hero-text">
         <span class="tag hero-anim">Available for hire</span>
         <h1 class="hero-anim">${e(name)}</h1>
-        <p class="hero-anim">${e(profile.bio || "A creative developer making beautiful, functional digital experiences.")}</p>
+        <p class="hero-anim">${e(aiBio || profile.bio || "A creative developer making beautiful, functional digital experiences.")}</p>
         <div class="hero-ctas hero-anim">
           <a href="#projects" class="primary">View Projects</a>
           <a href="#contact" class="secondary">Get in Touch</a>
@@ -659,7 +659,7 @@ function buildMinimalClean(data: TemplateData): string {
   <section id="home" class="hero">
     <img src="${img}" alt="${e(name)}" class="hero-photo hero-anim hero-photo-parallax" crossorigin="anonymous">
     <h1 class="hero-anim">${e(name)}</h1>
-    <p class="hero-anim">${e(profile.bio || "Developer & Creator")}</p>
+    <p class="hero-anim">${e(aiBio || profile.bio || "Developer & Creator")}</p>
     <a href="#projects" class="cta hero-anim">View Work</a>
   </section>
   <main>

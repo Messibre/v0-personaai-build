@@ -246,7 +246,6 @@ Return JSON in exactly this format:
     }
 
     // Parse AI response — strip markdown fences if Gemini wrapped the JSON
-    console.log("[v0] Raw Gemini response (first 200 chars):", aiResponse.substring(0, 200))
     let cleanedResponse = aiResponse.trim()
     if (cleanedResponse.startsWith("```")) {
       cleanedResponse = cleanedResponse.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim()
