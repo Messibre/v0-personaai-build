@@ -164,10 +164,39 @@ export function StepTargetRole({ state, dispatch, onNext, onBack }: StepTargetRo
   }, [targetRole, github, resume, notion, config.additionalPrompt, dispatch])
 
   const skipAIGeneration = useCallback(() => {
-    // Clear any AI content and proceed with default behavior
-    dispatch({ type: "CLEAR_AI_CONTENT" })
+    // Advance immediately — but still fire the AI content request in the background
+    // using whatever data we have (even without a target role), so the generate step
+    // gets real project descriptions and a bio rather than raw GitHub placeholders.
     onNext()
-  }, [dispatch, onNext])
+
+    if (github.profile) {
+      dispatch({ type: "SET_AI_CONTENT_LOADING", loading: true })
+      fetch("/api/ai-content", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          targetRole: targetRole.role || "",
+          externalLinks: targetRole.externalLinks,
+          github: { profile: github.profile, repos: github.repos },
+          resumeText: resume.text,
+          notionContent: notion.content,
+          additionalPrompt: config.additionalPrompt,
+        }),
+      })
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.projects) {
+            dispatch({
+              type: "SET_AI_CONTENT",
+              content: { projects: data.projects, aboutMe: data.aboutMe, heroTagline: data.heroTagline },
+            })
+          }
+        })
+        .catch(() => {
+          dispatch({ type: "CLEAR_AI_CONTENT" })
+        })
+    }
+  }, [dispatch, onNext, github, resume, notion, config.additionalPrompt, targetRole])
 
   const canGenerate = targetRole.role.trim().length > 2
 

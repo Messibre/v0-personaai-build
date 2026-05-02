@@ -52,13 +52,6 @@ export function StepPreview({ state, dispatch, onBack }: StepPreviewProps) {
   const generate = useCallback(async () => {
     if (!github.profile) return
 
-    console.log("[v0] generate() called — aiContent:", {
-      hasProjects: !!aiContent.projects,
-      projectCount: aiContent.projects?.length,
-      hasAboutMe: !!aiContent.aboutMe,
-      hasTagline: !!aiContent.heroTagline,
-    })
-
     setIsGenerating(true)
     dispatch({ type: "SET_PORTFOLIO_LOADING", loading: true })
 
