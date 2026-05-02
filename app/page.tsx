@@ -166,7 +166,6 @@ export default function Home() {
           <div className="hidden md:flex items-center gap-8 text-sm text-muted-foreground">
             <Link href="#how-it-works" className="hover:text-foreground transition-colors">How it works</Link>
             <Link href="#templates" className="hover:text-foreground transition-colors">Templates</Link>
-            <Link href="#templates" className="hover:text-foreground transition-colors">Templates</Link>
           </div>
 
           {/* Right side */}
@@ -193,13 +192,6 @@ export default function Home() {
                 onClick={() => setMobileMenuOpen(false)}
               >
                 How it works
-              </Link>
-              <Link
-                href="#templates"
-                className="py-3 px-4 rounded-lg hover:bg-secondary transition-colors"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Templates
               </Link>
               <Link
                 href="#templates"
