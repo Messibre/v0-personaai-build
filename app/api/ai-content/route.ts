@@ -245,9 +245,15 @@ Return JSON in exactly this format:
       })
     }
 
-    // Parse AI response
+    // Parse AI response — strip markdown fences if Gemini wrapped the JSON
+    console.log("[v0] Raw Gemini response (first 200 chars):", aiResponse.substring(0, 200))
+    let cleanedResponse = aiResponse.trim()
+    if (cleanedResponse.startsWith("```")) {
+      cleanedResponse = cleanedResponse.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim()
+    }
+
     try {
-      const parsed = JSON.parse(aiResponse) as AIGeneratedContent
+      const parsed = JSON.parse(cleanedResponse) as AIGeneratedContent
 
       // Validate and sanitize
       const projects: AIProject[] = (parsed.projects || []).slice(0, 7).map((p) => ({
