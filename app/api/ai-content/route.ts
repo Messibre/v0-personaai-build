@@ -192,9 +192,10 @@ export async function POST(request: Request) {
     // Step 3: Single Gemini call — personality-first approach
     // The scraped content is the PRIMARY signal for voice, tone, and personality.
     // Generic career bios are the failure mode we are explicitly avoiding.
-    const systemPrompt = `You are a ghostwriter who specializes in making developer portfolios sound like real humans, not LinkedIn templates.
-Your job is to extract WHO this person actually is from their writing, opinions, and projects — then write copy that sounds unmistakably like them.
-Output valid JSON only. No markdown. No code fences. No explanation outside the JSON.`
+    const systemPrompt = `You are a senior portfolio ghostwriter who writes sharp, specific, human developer bios and project summaries.
+  Your job is to turn raw evidence into a convincing personal narrative: what the person builds, how they think, what problems they care about, and why their work matters.
+  Avoid generic career copy, vague praise, filler, and recruiter language.
+  Output valid JSON only. No markdown. No code fences. No explanation outside the JSON.`
 
     const userPrompt = `You are building portfolio copy for ${name}, who is targeting the role: "${resolvedRole}".
 
@@ -205,6 +206,9 @@ Read the content below carefully. Extract:
 - Any strong opinions or stances they have
 - How they describe their own work
 - Their apparent values (speed, craft, open source, UX, etc.)
+- Specific problems they seem to like solving
+- The level of ambition in their work (small utilities, prototypes, production systems, research, infrastructure, etc.)
+- Any repeated phrases, vocabulary, or tone cues that should influence the copy
 
 Scraped from their links (LinkedIn, blog, Substack, etc.):
 ${scrapedContent || "None provided — rely on repos and resume instead."}
@@ -232,25 +236,46 @@ ${notionContent?.substring(0, 2000) || "None"}
 Additional instructions from the person:
 ${additionalPrompt || "None"}
 
+--- QUALITY BAR ---
+Write like you actually understand the person, not like you are filling a template.
+Use concrete nouns, specific technologies, and real project details whenever possible.
+Prefer phrasing that shows judgment, tradeoffs, or problem solving.
+If the evidence is thin, make careful, grounded inferences instead of generic statements.
+
 --- YOUR TASKS ---
 
 1. PROJECT SELECTION & DESCRIPTIONS
    Pick up to 7 repos most relevant to "${resolvedRole}".
-   For each, write a 1-2 sentence description that:
+  For each, write a 2-4 sentence description that:
    - Highlights its relevance to the target role
-   - Uses language and framing consistent with how THIS PERSON talks about their work
-   - Avoids generic phrases like "a full-stack app" or "built with React"
+  - Explains the problem it solves, the approach used, and why it matters
+  - Uses language and framing consistent with how THIS PERSON talks about their work
+  - Avoids generic phrases like "a full-stack app" or "built with React"
+  - Includes at least one concrete detail from the README, repo description, detected tech, or scraped writing
+  - If possible, mention scope, constraints, or impact (speed, reliability, simplicity, automation, maintainability, etc.)
 
 2. ABOUT ME (3-4 sentences, third person)
-   This is the most important field. Rules:
-   - Mirror their actual writing style and tone from the scraped content
-   - Include at least one specific, concrete detail (a real project name, a real technology they care about, a real opinion they hold)
-   - Do NOT use these banned phrases: "passionate about", "driven by", "dedicated to", "strong background in", "results-oriented", "leverages"
-   - Sound like a person wrote this at 11pm, not a recruiter at 9am
+  This is the most important field. Rules:
+  - Mirror their actual writing style and tone from the scraped content
+  - Make it feel grounded, intelligent, and human
+  - Include 2-3 specific details across projects, technologies, or opinions
+  - Show what problems they solve, not just what tools they use
+  - Mention their likely strengths: judgment, speed, clarity, systems thinking, or craft
+  - Do NOT use these banned phrases: "passionate about", "driven by", "dedicated to", "strong background in", "results-oriented", "leverages"
+  - Sound like a person wrote this at 11pm, not a recruiter at 9am
+  - It should read as a strong portfolio bio, not a placeholder summary
 
 3. HERO TAGLINE (max 10 words, first person or noun phrase)
-   Should feel like something this specific person would actually say.
-   Avoid: "Building the future", "Crafting experiences", "Turning ideas into reality"
+  Should feel like something this specific person would actually say.
+  It should be specific, grounded, and memorable.
+  Avoid: "Building the future", "Crafting experiences", "Turning ideas into reality", "Backend Developer — X"
+
+4. WRITING STYLE
+  Use simple English, but not childish English.
+  Prefer concise sentences with punch.
+  Vary sentence length so the copy feels natural.
+  Do not repeat the same adjective across multiple projects.
+  Make the descriptions feel like they were written by someone who built the thing, not someone summarizing it from a database.
 
 Return JSON in exactly this format:
 {
