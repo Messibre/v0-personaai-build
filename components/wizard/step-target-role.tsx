@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, type Dispatch } from "react"
+import { useState, useEffect, useCallback, type Dispatch } from "react"
 import type { WizardState, WizardAction } from "@/lib/types"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -103,6 +103,17 @@ export function StepTargetRole({ state, dispatch, onNext, onBack }: StepTargetRo
     [targetRole.externalLinks, dispatch]
   )
 
+  // Once AI content lands in state, advance to the next step.
+  // This runs in a useEffect so the state commit from dispatch() has already
+  // been applied before onNext() fires — avoiding the stale-state race.
+  const [pendingAdvance, setPendingAdvance] = useState(false)
+  useEffect(() => {
+    if (pendingAdvance && aiContent.projects !== null && !aiContent.loading) {
+      setPendingAdvance(false)
+      onNext()
+    }
+  }, [pendingAdvance, aiContent.projects, aiContent.loading, onNext])
+
   const generateAIContent = useCallback(async () => {
     if (!targetRole.role.trim()) return
 
@@ -141,8 +152,8 @@ export function StepTargetRole({ state, dispatch, onNext, onBack }: StepTargetRo
         },
       })
 
-      // Auto-advance to next step on success
-      onNext()
+      // Signal the useEffect above to advance once state has committed
+      setPendingAdvance(true)
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to generate AI content"
       dispatch({ type: "SET_AI_CONTENT_ERROR", error: message })
@@ -150,7 +161,7 @@ export function StepTargetRole({ state, dispatch, onNext, onBack }: StepTargetRo
       setIsGenerating(false)
       dispatch({ type: "SET_AI_CONTENT_LOADING", loading: false })
     }
-  }, [targetRole, github, resume, notion, config.additionalPrompt, dispatch, onNext])
+  }, [targetRole, github, resume, notion, config.additionalPrompt, dispatch])
 
   const skipAIGeneration = useCallback(() => {
     // Clear any AI content and proceed with default behavior
