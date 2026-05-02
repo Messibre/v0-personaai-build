@@ -157,6 +157,47 @@ async function callGemini(prompt: string, systemPrompt: string, expectJson = fal
   return null
 }
 
+function extractJsonObject(text: string): string | null {
+  const trimmed = text.trim()
+  const start = trimmed.indexOf("{")
+  if (start === -1) return null
+
+  let depth = 0
+  let inString = false
+  let escaped = false
+
+  for (let index = start; index < trimmed.length; index += 1) {
+    const char = trimmed[index]
+
+    if (inString) {
+      if (escaped) {
+        escaped = false
+      } else if (char === "\\") {
+        escaped = true
+      } else if (char === '"') {
+        inString = false
+      }
+      continue
+    }
+
+    if (char === '"') {
+      inString = true
+      continue
+    }
+
+    if (char === "{") {
+      depth += 1
+    } else if (char === "}") {
+      depth -= 1
+      if (depth === 0) {
+        return trimmed.slice(start, index + 1)
+      }
+    }
+  }
+
+  return null
+}
+
 export async function POST(request: Request) {
   try {
     const data: AIContentRequest = await request.json()
@@ -363,6 +404,11 @@ Return JSON in exactly this format:
       cleanedResponse = cleanedResponse.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim()
     }
 
+    const extractedJson = extractJsonObject(cleanedResponse)
+    if (extractedJson) {
+      cleanedResponse = extractedJson
+    }
+
     try {
       const parsed = JSON.parse(cleanedResponse) as AIGeneratedContent
 
@@ -391,7 +437,8 @@ Return JSON in exactly this format:
             scrapedContentLength: scrapedContent.length,
             reposCount: reposForAI.length,
             reposWithReadme: reposForAI.filter(r => (r as any).readmeText && (r as any).readmeText.length > 0).length,
-            aiRaw: aiResponse?.substring(0, 2000) || null
+            aiRaw: aiResponse?.substring(0, 2000) || null,
+            extractedJsonLength: extractedJson?.length || 0
           }
         })
       }
@@ -424,7 +471,8 @@ Return JSON in exactly this format:
             scrapedContentLength: scrapedContent.length,
             reposCount: reposForAI.length,
             reposWithReadme: reposForAI.filter(r => (r as any).readmeText && (r as any).readmeText.length > 0).length,
-            aiRaw: aiResponse?.substring(0, 2000) || null
+            aiRaw: aiResponse?.substring(0, 2000) || null,
+            extractedJsonLength: extractedJson?.length || 0
           }
         })
       }
