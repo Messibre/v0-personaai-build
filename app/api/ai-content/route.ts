@@ -38,6 +38,7 @@ const ALLOWED_DOMAINS = [
   "x.com",
   "blog.",
   "portfolio.",
+  "vercel.app",
 ]
 
 function isAllowedUrl(url: string): boolean {
@@ -348,6 +349,7 @@ Return JSON in exactly this format:
             scrapedContentLength: scrapedContent.length,
             reposCount: reposForAI.length,
             reposWithReadme: reposForAI.filter(r => (r as any).readmeText && (r as any).readmeText.length > 0).length,
+            aiRaw: null
           }
         })
       }
@@ -389,6 +391,7 @@ Return JSON in exactly this format:
             scrapedContentLength: scrapedContent.length,
             reposCount: reposForAI.length,
             reposWithReadme: reposForAI.filter(r => (r as any).readmeText && (r as any).readmeText.length > 0).length,
+            aiRaw: aiResponse?.substring(0, 2000) || null
           }
         })
       }
@@ -421,6 +424,7 @@ Return JSON in exactly this format:
             scrapedContentLength: scrapedContent.length,
             reposCount: reposForAI.length,
             reposWithReadme: reposForAI.filter(r => (r as any).readmeText && (r as any).readmeText.length > 0).length,
+            aiRaw: aiResponse?.substring(0, 2000) || null
           }
         })
       }
