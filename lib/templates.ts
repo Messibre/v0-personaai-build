@@ -240,12 +240,24 @@ function buildProjects(repos: GitHubRepo[], accent: string, aiProjects?: AIProje
       </div>
     </div>`).join("")
   }
+
+  function buildFallbackDescription(repo: GitHubRepo): string {
+    const desc = repo.description?.trim() || ""
+
+    if (desc && !(desc.includes("A ") && desc.includes(" project") && desc.split(/\s+/).length <= 4)) {
+      return desc
+    }
+
+    if (repo.topics?.length) {
+      return `A ${repo.language || "software"} project focused on ${repo.topics.slice(0, 3).join(", ")}.`
+    }
+
+    return `Open-source ${repo.language || "software"} project. View on GitHub for details.`
+  }
   
   // Fallback to repos
   return repos.filter(r => !r.fork).slice(0, 6).map(r => {
-    const desc = r.description && r.description.trim()
-      ? r.description
-      : smartRepoDescription(r.name, r.language)
+    const desc = buildFallbackDescription(r) || smartRepoDescription(r.name, r.language)
     return `
     <div class="project-card reveal" style="opacity:0;transform:translateY(40px)">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">

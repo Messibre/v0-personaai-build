@@ -30,8 +30,8 @@ Bio: ${profile.bio || "N/A"}
 ${profile.company ? `Role: ${profile.company}` : ""}
 Languages: ${langs.join(", ") || "Various"}
 Repos: ${profile.public_repos}
-${resumeText ? `Resume excerpt: ${resumeText.substring(0, 500)}` : ""}
-${notionContent ? `Additional context: ${notionContent.substring(0, 500)}` : ""}
+${resumeText ? `Resume excerpt: ${resumeText.substring(0, 3000)}` : ""}
+${notionContent ? `Additional context: ${notionContent.substring(0, 2000)}` : ""}
 ${additionalPrompt ? `User instructions: ${additionalPrompt}` : ""}
 
 Output ONLY the bio text, no quotes, no labels.`
@@ -92,7 +92,7 @@ export async function POST(request: Request) {
           description: r.description?.trim()
             || (r.topics?.length
               ? `A ${r.language || "software"} project focused on ${r.topics.slice(0, 2).join(" and ")}.`
-              : `A ${r.language || "software"} project.`),
+              : `A ${r.language || "software"} project — click to view on GitHub.`),
           stars: r.stargazers_count,
           forks: r.forks_count,
         }))

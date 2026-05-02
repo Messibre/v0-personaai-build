@@ -1,4 +1,4 @@
-import type { GitHubProfile, GitHubRepo } from "./types"
+import type { EnrichedGitHubRepo, GitHubProfile, GitHubRepo } from "./types"
 
 const GITHUB_API = "https://api.github.com"
 
@@ -70,4 +70,124 @@ export async function fetchGitHubRepos(username: string): Promise<GitHubRepo[]> 
       topics: repo.topics || [],
       homepage: repo.homepage,
     }))
+}
+
+async function fetchRepoRootContents(username: string, repo: string): Promise<unknown[]> {
+  const res = await fetch(
+    `${GITHUB_API}/repos/${encodeURIComponent(username)}/${encodeURIComponent(repo)}/contents`,
+    {
+      headers: {
+        Accept: "application/vnd.github.v3+json",
+        "User-Agent": "PersonaAI-Portfolio-Generator",
+      },
+    }
+  )
+
+  if (!res.ok) {
+    return []
+  }
+
+  const data = await res.json()
+  return Array.isArray(data) ? data : []
+}
+
+export async function fetchRepoReadme(username: string, repo: string): Promise<string> {
+  const res = await fetch(
+    `${GITHUB_API}/repos/${encodeURIComponent(username)}/${encodeURIComponent(repo)}/readme`,
+    {
+      headers: {
+        Accept: "application/vnd.github.raw",
+        "User-Agent": "PersonaAI-Portfolio-Generator",
+      },
+    }
+  )
+
+  if (res.status === 404) {
+    return ""
+  }
+
+  if (!res.ok) {
+    return ""
+  }
+
+  const text = await res.text()
+  return text.trim().substring(0, 1200)
+}
+
+export async function detectRepoTechnology(username: string, repo: string): Promise<string> {
+  const contents = await fetchRepoRootContents(username, repo)
+  if (contents.length === 0) return ""
+
+  const names = contents
+    .map((item) => {
+      if (!item || typeof item !== "object") return ""
+      const entry = item as { name?: unknown }
+      return typeof entry.name === "string" ? entry.name.toLowerCase() : ""
+    })
+    .filter(Boolean)
+
+  const detected = new Set<string>()
+  const has = (...patterns: string[]) => patterns.some((pattern) => names.some((name) => name === pattern || name.startsWith(pattern)))
+
+  if (has("package.json", "package-lock.json", "pnpm-lock.yaml", "yarn.lock", "bun.lockb")) {
+    detected.add("Node.js")
+    detected.add("TypeScript")
+  }
+
+  if (has("requirements.txt", "pyproject.toml", "poetry.lock", "pipfile", "setup.py")) {
+    detected.add("Python")
+  }
+
+  if (has("foundry.toml", "remappings.txt")) {
+    detected.add("Solidity")
+    detected.add("Foundry")
+  }
+
+  if (names.some((name) => name.startsWith("hardhat.config.")) || has("hardhat.config.js", "hardhat.config.ts")) {
+    detected.add("Solidity")
+    detected.add("Hardhat")
+  }
+
+  if (has("cargo.toml")) {
+    detected.add("Rust")
+  }
+
+  if (has("go.mod")) {
+    detected.add("Go")
+  }
+
+  if (has("composer.json")) {
+    detected.add("PHP")
+  }
+
+  if (has("pom.xml", "build.gradle", "build.gradle.kts")) {
+    detected.add("Java")
+  }
+
+  if (has("tsconfig.json")) {
+    detected.add("TypeScript")
+  }
+
+  if (has("vite.config.ts", "vite.config.js", "next.config.js", "next.config.mjs", "next.config.ts")) {
+    detected.add("Web App")
+  }
+
+  return [...detected].join(", ")
+}
+
+export async function enrichReposForAI(username: string, repos: GitHubRepo[]): Promise<EnrichedGitHubRepo[]> {
+  const limitedRepos = (repos || []).filter((repo) => !repo.fork).slice(0, 20)
+
+  return Promise.all(
+    limitedRepos.map(async (repo) => {
+      const readmeText = await fetchRepoReadme(username, repo.name)
+      const detectedTech = readmeText ? "" : await detectRepoTechnology(username, repo.name)
+
+      return {
+        ...repo,
+        readmeText,
+        detectedTech,
+      }
+    })
+  )
 }

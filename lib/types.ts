@@ -24,6 +24,11 @@ export interface GitHubRepo {
   homepage: string | null
 }
 
+export interface EnrichedGitHubRepo extends GitHubRepo {
+  readmeText: string
+  detectedTech: string
+}
+
 export interface ResumeData {
   raw_text: string
 }

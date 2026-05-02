@@ -1,4 +1,5 @@
-import type { GitHubProfile, GitHubRepo, AIProject, AIGeneratedContent } from "@/lib/types"
+import type { EnrichedGitHubRepo, GitHubProfile, GitHubRepo, AIProject, AIGeneratedContent } from "@/lib/types"
+import { enrichReposForAI } from "@/lib/github"
 import * as cheerio from "cheerio"
 
 const GEMINI_KEYS = [
@@ -16,6 +17,10 @@ interface AIContentRequest {
   resumeText: string | null
   notionContent: string | null
   additionalPrompt?: string
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
 // Allowed domains for scraping (security: avoid SSRF)
@@ -47,7 +52,7 @@ function isAllowedUrl(url: string): boolean {
 }
 
 // Scrape text content from a URL
-async function scrapeUrl(url: string): Promise<string> {
+async function scrapeUrlOnce(url: string): Promise<string> {
   if (!isAllowedUrl(url)) {
     return "" // Silently skip disallowed URLs
   }
@@ -98,6 +103,23 @@ async function scrapeUrl(url: string): Promise<string> {
   } catch {
     return ""
   }
+}
+
+async function scrapeUrl(url: string): Promise<string> {
+  const delays = [0, 1000, 2000, 4000]
+
+  for (let attempt = 0; attempt < delays.length; attempt += 1) {
+    if (delays[attempt] > 0) {
+      await sleep(delays[attempt])
+    }
+
+    const text = await scrapeUrlOnce(url)
+    if (text) {
+      return text
+    }
+  }
+
+  return ""
 }
 
 // Call Gemini API with retry across multiple keys
@@ -151,21 +173,19 @@ export async function POST(request: Request) {
     // Step 1: Scrape external links in parallel (max 5)
     const linksToScrape = externalLinks.slice(0, 5)
     const scrapedTexts = await Promise.all(linksToScrape.map(scrapeUrl))
-    const scrapedContent = scrapedTexts.filter(Boolean).join("\n\n").substring(0, 3000)
+    const scrapedContent = scrapedTexts.filter(Boolean).join("\n\n").substring(0, 4000)
 
     // Step 2: Prepare repo data for AI
-    const reposForAI = (github.repos || [])
-      .filter((r) => !r.fork)
-      .slice(0, 20)
-      .map((r) => ({
-        name: r.name,
-        description: r.description || "",
-        language: r.language || "",
-        topics: r.topics || [],
-        stars: r.stargazers_count,
-        forks: r.forks_count,
-        url: r.html_url,
-      }))
+    const reposForAI: EnrichedGitHubRepo[] = github.profile?.username
+      ? await enrichReposForAI(github.profile.username, github.repos || [])
+      : (github.repos || [])
+          .filter((r) => !r.fork)
+          .slice(0, 20)
+          .map((r) => ({
+            ...r,
+            readmeText: "",
+            detectedTech: "",
+          }))
 
     const name = github.profile?.name || github.profile?.username || "User"
 
@@ -191,13 +211,23 @@ ${scrapedContent || "None provided — rely on repos and resume instead."}
 
 --- SUPPORTING SIGNALS ---
 GitHub repos:
-${JSON.stringify(reposForAI, null, 2)}
+${JSON.stringify(reposForAI.map((r) => ({
+  name: r.name,
+  description: r.description || "",
+  language: r.language || "",
+  topics: r.topics || [],
+  readmeText: (r.readmeText || "").substring(0, 500),
+  detectedTech: r.detectedTech || "",
+  stars: r.stargazers_count,
+  forks: r.forks_count,
+  url: r.html_url,
+})), null, 2)}
 
 Resume excerpt:
-${resumeText?.substring(0, 1000) || "None"}
+${resumeText?.substring(0, 3000) || "None"}
 
 Notion content:
-${notionContent?.substring(0, 500) || "None"}
+${notionContent?.substring(0, 2000) || "None"}
 
 Additional instructions from the person:
 ${additionalPrompt || "None"}
@@ -237,14 +267,14 @@ Return JSON in exactly this format:
       // Fallback: return repos as-is with default content
       const fallbackProjects: AIProject[] = reposForAI.slice(0, 7).map((r) => ({
         name: r.name,
-        url: r.url,
+        url: r.html_url,
         language: r.language,
-        description: r.description || `A ${r.language || "software"} project.`,
-        stars: r.stars,
-        forks: r.forks,
+        description: r.description || (r.readmeText ? r.readmeText.substring(0, 120) : `A ${r.detectedTech || r.language || "software"} project.`),
+        stars: r.stargazers_count,
+        forks: r.forks_count,
       }))
 
-      const topLang = reposForAI[0]?.language || "software"
+      const topLang = reposForAI[0]?.language || reposForAI[0]?.detectedTech || "software"
       return Response.json({
         projects: fallbackProjects,
         aboutMe: github.profile?.bio || `${name} works on ${topLang} projects, currently targeting ${resolvedRole} roles.`,
@@ -266,28 +296,28 @@ Return JSON in exactly this format:
         name: p.name || "Project",
         url: p.url || "#",
         language: p.language || null,
-        description: p.description || "A software project.",
+        description: p.description || "Open-source project. View on GitHub for details.",
         stars: typeof p.stars === "number" ? p.stars : 0,
         forks: typeof p.forks === "number" ? p.forks : 0,
       }))
 
       return Response.json({
         projects,
-        aboutMe: parsed.aboutMe || `${name} is a ${targetRole} with diverse technical experience.`,
-        heroTagline: parsed.heroTagline || targetRole,
+        aboutMe: parsed.aboutMe || `${name} is a ${resolvedRole} with diverse technical experience.`,
+        heroTagline: parsed.heroTagline || resolvedRole,
       })
     } catch {
       // JSON parse failed, return fallback
       const fallbackProjects: AIProject[] = reposForAI.slice(0, 7).map((r) => ({
         name: r.name,
-        url: r.url,
+        url: r.html_url,
         language: r.language,
-        description: r.description || `A ${r.language || "software"} project.`,
-        stars: r.stars,
-        forks: r.forks,
+        description: r.description || (r.readmeText ? r.readmeText.substring(0, 120) : `A ${r.detectedTech || r.language || "software"} project.`),
+        stars: r.stargazers_count,
+        forks: r.forks_count,
       }))
 
-      const topLang2 = reposForAI[0]?.language || "software"
+      const topLang2 = reposForAI[0]?.language || reposForAI[0]?.detectedTech || "software"
       return Response.json({
         projects: fallbackProjects,
         aboutMe: github.profile?.bio || `${name} builds ${topLang2} projects, currently seeking ${resolvedRole} roles.`,
