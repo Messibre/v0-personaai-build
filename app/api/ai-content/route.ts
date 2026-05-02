@@ -17,6 +17,7 @@ interface AIContentRequest {
   resumeText: string | null
   notionContent: string | null
   additionalPrompt?: string
+  debug?: boolean
 }
 
 function sleep(ms: number): Promise<void> {
@@ -188,6 +189,7 @@ export async function POST(request: Request) {
           }))
 
     const name = github.profile?.name || github.profile?.username || "User"
+    const debugMode = Boolean((data as any)?.debug)
 
     // Step 3: Single Gemini call — personality-first approach
     // The scraped content is the PRIMARY signal for voice, tone, and personality.
@@ -331,11 +333,26 @@ Return JSON in exactly this format:
       }))
 
       const topLang = reposForAI[0]?.language || reposForAI[0]?.detectedTech || "software"
-      return Response.json({
+      const baseFallback = {
         projects: fallbackProjects,
         aboutMe: github.profile?.bio || `${name} works on ${topLang} projects, currently targeting ${resolvedRole} roles.`,
         heroTagline: `${resolvedRole} — ${topLang}`,
-      })
+      }
+
+      if (debugMode) {
+        return Response.json({
+          ...baseFallback,
+          debug: {
+            geminiConfigured: GEMINI_KEYS.length > 0,
+            reason: "aiResponse_missing_or_empty",
+            scrapedContentLength: scrapedContent.length,
+            reposCount: reposForAI.length,
+            reposWithReadme: reposForAI.filter(r => (r as any).readmeText && (r as any).readmeText.length > 0).length,
+          }
+        })
+      }
+
+      return Response.json(baseFallback)
     }
 
     // Parse AI response — strip markdown fences if Gemini wrapped the JSON
@@ -357,11 +374,26 @@ Return JSON in exactly this format:
         forks: typeof p.forks === "number" ? p.forks : 0,
       }))
 
-      return Response.json({
+      const base = {
         projects,
         aboutMe: parsed.aboutMe || `${name} is a ${resolvedRole} with diverse technical experience.`,
         heroTagline: parsed.heroTagline || resolvedRole,
-      })
+      }
+
+      if (debugMode) {
+        return Response.json({
+          ...base,
+          debug: {
+            geminiConfigured: GEMINI_KEYS.length > 0,
+            reason: "aiResponse_parsed",
+            scrapedContentLength: scrapedContent.length,
+            reposCount: reposForAI.length,
+            reposWithReadme: reposForAI.filter(r => (r as any).readmeText && (r as any).readmeText.length > 0).length,
+          }
+        })
+      }
+
+      return Response.json(base)
     } catch {
       // JSON parse failed, return fallback
       const fallbackProjects: AIProject[] = reposForAI.slice(0, 7).map((r) => ({
@@ -374,11 +406,26 @@ Return JSON in exactly this format:
       }))
 
       const topLang2 = reposForAI[0]?.language || reposForAI[0]?.detectedTech || "software"
-      return Response.json({
+      const base2 = {
         projects: fallbackProjects,
         aboutMe: github.profile?.bio || `${name} builds ${topLang2} projects, currently seeking ${resolvedRole} roles.`,
         heroTagline: `${resolvedRole} — ${topLang2}`,
-      })
+      }
+
+      if (debugMode) {
+        return Response.json({
+          ...base2,
+          debug: {
+            geminiConfigured: GEMINI_KEYS.length > 0,
+            reason: "aiResponse_parse_error",
+            scrapedContentLength: scrapedContent.length,
+            reposCount: reposForAI.length,
+            reposWithReadme: reposForAI.filter(r => (r as any).readmeText && (r as any).readmeText.length > 0).length,
+          }
+        })
+      }
+
+      return Response.json(base2)
     }
   } catch (err) {
     const message = err instanceof Error ? err.message : "Failed to generate AI content"
