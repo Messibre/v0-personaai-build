@@ -180,7 +180,8 @@ export const PORTFOLIO_SECTIONS = [
   { id: "skills", label: "Skills" },
   { id: "projects", label: "Projects" },
   { id: "experience", label: "Experience" },
-  { id: "education", label: "Education" },
+  { id: "github-stats", label: "GitHub Stats" },
+  { id: "testimonials", label: "Testimonials" },
   { id: "contact", label: "Contact" },
 ] as const
 

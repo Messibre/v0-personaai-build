@@ -442,6 +442,9 @@ function buildBoldPortrait(data: TemplateData): string {
   ${config.sections.includes("about") ? buildAbout(profile, aiBio, c.accent) : ""}
   ${config.sections.includes("skills") ? `<section id="skills" class="section"><div class="container"><p class="section-label reveal">Expertise</p><h2 class="section-title reveal">Skills & Technologies</h2><div style="display:flex;flex-wrap:wrap;gap:0">${buildSkills(langs, topics)}</div></div></section>` : ""}
   ${config.sections.includes("projects") ? `<section id="projects" class="section" style="background:rgba(255,255,255,0.01)"><div class="container"><p class="section-label reveal">Work</p><h2 class="section-title reveal">Featured Projects</h2><div class="projects-grid">${buildProjects(repos, c.accent, aiProjects)}</div></div></section>` : ""}
+  ${config.sections.includes("experience") ? buildExperience(data.resumeText, c.accent) : ""}
+  ${config.sections.includes("github-stats") ? buildGitHubStats(profile, c.accent, repos) : ""}
+  ${config.sections.includes("testimonials") ? buildTestimonials(c.accent) : ""}
   ${config.sections.includes("contact") ? buildContact(profile, c.accent, data.socialLinks) : ""}
   </main>
   ${buildFooter(name, c.accent)}`
@@ -479,6 +482,9 @@ function buildTypographic(data: TemplateData): string {
   ${config.sections.includes("about") ? buildAbout(profile, aiBio, c.accent) : ""}
   ${config.sections.includes("skills") ? `<section id="skills" class="section"><div class="container"><p class="section-label reveal">Skills</p><h2 class="section-title reveal">What I work with</h2><div style="display:flex;flex-wrap:wrap;gap:0">${buildSkills(langs, topics)}</div></div></section>` : ""}
   ${config.sections.includes("projects") ? `<section id="projects" class="section" style="background:rgba(255,255,255,0.01)"><div class="container"><p class="section-label reveal">Projects</p><h2 class="section-title reveal">Selected Work</h2><div class="projects-grid">${buildProjects(repos, c.accent, aiProjects)}</div></div></section>` : ""}
+  ${config.sections.includes("experience") ? buildExperience(data.resumeText, c.accent) : ""}
+  ${config.sections.includes("github-stats") ? buildGitHubStats(profile, c.accent, repos) : ""}
+  ${config.sections.includes("testimonials") ? buildTestimonials(c.accent) : ""}
   ${config.sections.includes("contact") ? buildContact(profile, c.accent, data.socialLinks) : ""}
   </main>
   ${buildFooter(name, c.accent)}`
@@ -528,6 +534,9 @@ function buildSplitEditorial(data: TemplateData): string {
   ${config.sections.includes("about") ? buildAbout(profile, aiBio, c.accent) : ""}
   ${config.sections.includes("skills") ? `<section id="skills" class="section"><div class="container"><p class="section-label reveal">Expertise</p><h2 class="section-title reveal">Technologies</h2><div style="display:flex;flex-wrap:wrap;gap:0">${buildSkills(langs, topics)}</div></div></section>` : ""}
   ${config.sections.includes("projects") ? `<section id="projects" class="section" style="background:rgba(255,255,255,0.01)"><div class="container"><p class="section-label reveal">Work</p><h2 class="section-title reveal">Projects</h2><div class="projects-grid">${buildProjects(repos, c.accent, aiProjects)}</div></div></section>` : ""}
+  ${config.sections.includes("experience") ? buildExperience(data.resumeText, c.accent) : ""}
+  ${config.sections.includes("github-stats") ? buildGitHubStats(profile, c.accent, repos) : ""}
+  ${config.sections.includes("testimonials") ? buildTestimonials(c.accent) : ""}
   ${config.sections.includes("contact") ? buildContact(profile, c.accent, data.socialLinks) : ""}
   </main>
   ${buildFooter(name, c.accent)}`
@@ -587,6 +596,9 @@ function buildPastelCreative(data: TemplateData): string {
   ${config.sections.includes("about") ? buildAbout(profile, aiBio, c.accent) : ""}
   ${config.sections.includes("skills") ? `<section id="skills" class="section"><div class="container"><p class="section-label reveal">Skills</p><h2 class="section-title reveal">My Toolkit</h2><div style="display:flex;flex-wrap:wrap;gap:0">${buildSkills(langs, topics)}</div></div></section>` : ""}
   ${config.sections.includes("projects") ? `<section id="projects" class="section" style="background:rgba(255,255,255,0.01)"><div class="container"><p class="section-label reveal">Portfolio</p><h2 class="section-title reveal">Recent Projects</h2><div class="projects-grid">${buildProjects(repos, c.accent, aiProjects)}</div></div></section>` : ""}
+  ${config.sections.includes("experience") ? buildExperience(data.resumeText, c.accent) : ""}
+  ${config.sections.includes("github-stats") ? buildGitHubStats(profile, c.accent, repos) : ""}
+  ${config.sections.includes("testimonials") ? buildTestimonials(c.accent) : ""}
   ${config.sections.includes("contact") ? buildContact(profile, c.accent, data.socialLinks) : ""}
   </main>
   ${buildFooter(name, c.accent)}`
@@ -636,6 +648,9 @@ function buildDesignerCoder(data: TemplateData): string {
   ${config.sections.includes("about") ? buildAbout(profile, aiBio, c.accent) : ""}
   ${config.sections.includes("skills") ? `<section id="skills" class="section"><div class="container"><p class="section-label reveal">Stack</p><h2 class="section-title reveal">Tech Stack</h2><div style="display:flex;flex-wrap:wrap;gap:0">${buildSkills(langs, topics)}</div></div></section>` : ""}
   ${config.sections.includes("projects") ? `<section id="projects" class="section" style="background:rgba(255,255,255,0.01)"><div class="container"><p class="section-label reveal">Work</p><h2 class="section-title reveal">Projects</h2><div class="projects-grid">${buildProjects(repos, c.accent, aiProjects)}</div></div></section>` : ""}
+  ${config.sections.includes("experience") ? buildExperience(data.resumeText, c.accent) : ""}
+  ${config.sections.includes("github-stats") ? buildGitHubStats(profile, c.accent, repos) : ""}
+  ${config.sections.includes("testimonials") ? buildTestimonials(c.accent) : ""}
   ${config.sections.includes("contact") ? buildContact(profile, c.accent, data.socialLinks) : ""}
   </main>
   ${buildFooter(name, c.accent)}`
@@ -695,6 +710,9 @@ function buildMinimalClean(data: TemplateData): string {
       </div>
     </div>
   </section>` : ""}
+  ${config.sections.includes("experience") ? buildExperience(data.resumeText, c.accent) : ""}
+  ${config.sections.includes("github-stats") ? buildGitHubStats(profile, c.accent, repos) : ""}
+  ${config.sections.includes("testimonials") ? buildTestimonials(c.accent) : ""}
   ${config.sections.includes("contact") ? buildContact(profile, c.accent, data.socialLinks) : ""}
   </main>
   ${buildFooter(name, c.accent)}`
@@ -768,6 +786,9 @@ function buildBrutalist(data: TemplateData): string {
   </section>` : ""}
   ${config.sections.includes("skills") ? `<section id="skills" class="section brut-section"><div class="container"><span class="section-label">Skills</span><h2 class="section-title reveal">Tech Stack</h2><div style="display:flex;flex-wrap:wrap;gap:0">${buildSkills(langs, topics)}</div></div></section>` : ""}
   ${config.sections.includes("projects") ? `<section id="projects" class="section brut-section"><div class="container"><span class="section-label">Work</span><h2 class="section-title reveal">Projects</h2><div class="projects-grid">${buildProjects(repos, c.accent, aiProjects)}</div></div></section>` : ""}
+  ${config.sections.includes("experience") ? buildExperience(data.resumeText, c.accent) : ""}
+  ${config.sections.includes("github-stats") ? buildGitHubStats(profile, c.accent, repos) : ""}
+  ${config.sections.includes("testimonials") ? buildTestimonials(c.accent) : ""}
   ${config.sections.includes("contact") ? buildContact(profile, c.accent, data.socialLinks) : ""}
   </main>
   ${buildFooter(name, c.accent)}`
@@ -885,6 +906,9 @@ function buildGlassmorphism(data: TemplateData): string {
       </div>
     </div>
   </section>` : ""}
+  ${config.sections.includes("experience") ? buildExperience(data.resumeText, c.accent) : ""}
+  ${config.sections.includes("github-stats") ? buildGitHubStats(profile, c.accent, repos) : ""}
+  ${config.sections.includes("testimonials") ? buildTestimonials(c.accent) : ""}
   ${config.sections.includes("contact") ? buildContact(profile, c.accent, data.socialLinks) : ""}
   </main>
   ${buildFooter(name, c.accent)}`
@@ -984,6 +1008,9 @@ function buildTerminal(data: TemplateData): string {
   ${config.sections.includes("about") ? `<section id="about" class="section"><p class="section-heading reveal">about_me</p><p style="font-size:13px;color:#888;line-height:1.9;max-width:640px" class="reveal">${e(bio)}</p></section>` : ""}
   ${config.sections.includes("skills") ? `<section id="skills" class="section"><p class="section-heading reveal">skills_and_tools</p><div class="reveal">${[...langs,...topics].slice(0,16).map(s=>`<span class="skill-badge">${e(s)}</span>`).join("")}</div></section>` : ""}
   ${config.sections.includes("projects") ? `<section id="projects" class="section"><p class="section-heading reveal">projects</p>${projects.map(p=>`<div class="project-card reveal"><div style="display:flex;justify-content:space-between;align-items:flex-start"><p class="project-name">${e(p.name)}</p>${p.stars>0?`<span style="font-size:11px;color:${c.accent}60">&#9733;${p.stars}</span>`:""}</div><p class="project-desc">${e(p.description)}</p><div class="project-meta">${p.language?`<span class="project-lang">${e(p.language)}</span>`:""}<a href="${p.url}" target="_blank" rel="noopener" class="project-link">open &rarr;</a></div></div>`).join("")}</section>` : ""}
+  ${config.sections.includes("experience") ? buildExperience(data.resumeText, c.accent) : ""}
+  ${config.sections.includes("github-stats") ? buildGitHubStats(profile, c.accent, repos) : ""}
+  ${config.sections.includes("testimonials") ? buildTestimonials(c.accent) : ""}
   ${config.sections.includes("contact") ? buildContact(profile, c.accent, data.socialLinks) : ""}
   <footer class="footer"><span>Built with <a href="https://personaai.vercel.app">PersonaAI</a></span></footer>`
 
@@ -1078,6 +1105,9 @@ function buildLiquidGlass(data: TemplateData): string {
   ${config.sections.includes("about") ? `<section id="about" class="section"><div class="container"><p class="section-label reveal">About</p><h2 class="section-title reveal">${e(name.split(" ")[0])}&rsquo;s story</h2><div class="glass-strong reveal" style="padding:32px;max-width:680px"><p style="color:rgba(255,255,255,0.65);font-size:15px;line-height:1.8">${e(bio)}</p></div></div></section>` : ""}
   ${config.sections.includes("skills") ? `<section id="skills" class="section"><div class="container"><p class="section-label reveal">Skills</p><h2 class="section-title reveal">Tech Stack</h2><div class="reveal">${[...langs,...topics].slice(0,16).map(s=>`<span class="skill-badge">${e(s)}</span>`).join("")}</div></div></section>` : ""}
   ${config.sections.includes("projects") ? `<section id="projects" class="section"><div class="container"><p class="section-label reveal">Work</p><h2 class="section-title reveal">Featured Projects</h2><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px">${projects.map(p=>`<div class="glass project-card reveal"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px"><h3 style="font-size:16px;font-weight:700;color:#fff">${e(p.name)}</h3>${p.stars>0?`<span style="font-size:12px;color:${c.accent};font-weight:600">&#9733;${p.stars}</span>`:""}</div><p style="font-size:13px;color:rgba(255,255,255,0.45);line-height:1.6;margin-bottom:16px">${e(p.description)}</p><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">${p.language?`<span style="font-size:11px;padding:3px 12px;border-radius:50px;background:${c.accent}12;color:${c.accent};border:1px solid ${c.accent}20">${e(p.language)}</span>`:""}<a href="${p.url}" target="_blank" rel="noopener" style="font-size:13px;color:${c.accent};font-weight:600;margin-left:auto">View &rarr;</a></div></div>`).join("")}</div></div></section>` : ""}
+  ${config.sections.includes("experience") ? buildExperience(data.resumeText, c.accent) : ""}
+  ${config.sections.includes("github-stats") ? buildGitHubStats(profile, c.accent, repos) : ""}
+  ${config.sections.includes("testimonials") ? buildTestimonials(c.accent) : ""}
   ${config.sections.includes("contact") ? buildContact(profile, c.accent, data.socialLinks) : ""}
   <footer class="footer">Built with <a href="https://personaai.vercel.app">PersonaAI</a></footer>`
 
@@ -1184,6 +1214,9 @@ function buildCyberpunkNoir(data: TemplateData): string {
   ${config.sections.includes("about") ? `<section id="about" class="section"><div class="container"><p class="section-label reveal">about</p><h2 class="section-title reveal">Who I Am</h2><p style="font-size:15px;color:#888;line-height:1.85;max-width:680px" class="reveal">${e(bio)}</p></div></section>` : ""}
   ${config.sections.includes("skills") ? `<section id="skills" class="section"><div class="container"><p class="section-label reveal">skills</p><h2 class="section-title reveal">Arsenal</h2><div class="reveal">${[...langs,...topics].slice(0,16).map(s=>`<span class="skill-badge">${e(s)}</span>`).join("")}</div></div></section>` : ""}
   ${config.sections.includes("projects") ? `<section id="projects" class="section"><div class="container"><p class="section-label reveal">projects</p><h2 class="section-title reveal">Missions Completed</h2>${projects.map(p=>`<div class="project-card reveal"><div style="display:flex;justify-content:space-between;align-items:flex-start"><p class="project-name">${e(p.name)}</p>${p.stars>0?`<span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:${c.accent}60">&#9733;${p.stars}</span>`:""}</div><p class="project-desc">${e(p.description)}</p><div class="project-meta">${p.language?`<span class="project-lang">${e(p.language)}</span>`:""}<a href="${p.url}" target="_blank" rel="noopener" class="project-link">access &rarr;</a></div></div>`).join("")}</div></section>` : ""}
+  ${config.sections.includes("experience") ? buildExperience(data.resumeText, c.accent) : ""}
+  ${config.sections.includes("github-stats") ? buildGitHubStats(profile, c.accent, repos) : ""}
+  ${config.sections.includes("testimonials") ? buildTestimonials(c.accent) : ""}
   ${config.sections.includes("contact") ? buildContact(profile, c.accent, data.socialLinks) : ""}
   <footer class="footer">Built with <a href="https://personaai.vercel.app">PersonaAI</a></footer>`
 
@@ -1279,6 +1312,9 @@ function buildBentoGrid(data: TemplateData): string {
       ${config.sections.includes("projects") ? projects.map(p=>`<div class="bento-cell bento-project reveal"><a href="${p.url}" target="_blank" rel="noopener"><p class="proj-name">${e(p.name)}</p></a><p class="proj-desc">${e(p.description)}</p><div style="display:flex;align-items:center;justify-content:space-between">${p.language?`<span class="proj-lang">${e(p.language)}</span>`:`<span></span>`}${p.stars>0?`<span style="font-size:11px;color:${c.accent}70">&#9733;${p.stars}</span>`:""}</div></div>`).join("") : ""}
     </div>
   </div>
+  ${config.sections.includes("experience") ? buildExperience(data.resumeText, c.accent) : ""}
+  ${config.sections.includes("github-stats") ? buildGitHubStats(profile, c.accent, repos) : ""}
+  ${config.sections.includes("testimonials") ? buildTestimonials(c.accent) : ""}
   ${config.sections.includes("contact") ? buildContact(profile, c.accent, data.socialLinks) : ""}
   <footer class="footer">Built with <a href="https://personaai.vercel.app">PersonaAI</a></footer>`
 
@@ -1376,6 +1412,9 @@ function buildSpotlightDark(data: TemplateData): string {
   ${config.sections.includes("about") ? `<section id="about" class="section"><div class="container"><p class="section-label reveal">About</p><h2 class="section-title reveal">${e(name.split(" ")[0])}</h2><p style="font-size:16px;color:#666;line-height:1.85;max-width:680px" class="reveal">${e(bio)}</p></div></section><div class="divider"></div>` : ""}
   ${config.sections.includes("skills") ? `<section id="skills" class="section"><div class="container"><p class="section-label reveal">Skills</p><h2 class="section-title reveal">What I work with</h2><div class="skill-wrap reveal">${[...langs,...topics].slice(0,16).map(s=>`<span class="skill-badge">${e(s)}</span>`).join("")}</div></div></section><div class="divider"></div>` : ""}
   ${config.sections.includes("projects") ? `<section id="projects" class="section"><div class="container"><p class="section-label reveal">Projects</p><h2 class="section-title reveal">Selected Work</h2><div>${projects.map((p,i)=>`<div class="project-row reveal"><span class="proj-num">${String(i+1).padStart(2,"0")}</span><div><p class="proj-name">${e(p.name)}</p><p class="proj-desc">${e(p.description)}</p>${p.language?`<span class="proj-lang">${e(p.language)}</span>`:""}</div><a href="${p.url}" target="_blank" rel="noopener" class="proj-link">View &rarr;</a></div>`).join("")}</div></div></section><div class="divider"></div>` : ""}
+  ${config.sections.includes("experience") ? buildExperience(data.resumeText, c.accent) : ""}
+  ${config.sections.includes("github-stats") ? buildGitHubStats(profile, c.accent, repos) : ""}
+  ${config.sections.includes("testimonials") ? buildTestimonials(c.accent) : ""}
   ${config.sections.includes("contact") ? buildContact(profile, c.accent, data.socialLinks) : ""}
   <footer class="footer">Built with <a href="https://personaai.vercel.app">PersonaAI</a></footer>
   <script>
@@ -1575,10 +1614,184 @@ function buildGradientAurora(data: TemplateData): string {
   ${config.sections.includes("about") ? `<section id="about" class="section"><div class="container"><p class="section-label reveal">About</p><h2 class="section-title reveal">${e(name.split(" ")[0])}&rsquo;s story</h2><p style="font-size:15px;color:rgba(255,255,255,0.45);line-height:1.85;max-width:640px;margin:0 auto;text-align:center" class="reveal">${e(bio)}</p></div></section>` : ""}
   ${config.sections.includes("skills") ? `<section id="skills" class="section"><div class="container"><p class="section-label reveal">Stack</p><h2 class="section-title reveal">Tools & Technologies</h2><div style="text-align:center" class="reveal">${[...langs,...topics].slice(0,16).map(s=>`<span class="skill-badge">${e(s)}</span>`).join("")}</div></div></section>` : ""}
   ${config.sections.includes("projects") ? `<section id="projects" class="section"><div class="container"><p class="section-label reveal">Work</p><h2 class="section-title reveal">Featured Projects</h2><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px">${projects.map(p=>`<div class="project-card reveal"><p class="proj-name">${e(p.name)}</p><p class="proj-desc">${e(p.description)}</p><div style="display:flex;align-items:center;justify-content:space-between">${p.language?`<span class="proj-lang">${e(p.language)}</span>`:`<span></span>`}<a href="${p.url}" target="_blank" rel="noopener" class="proj-link">View &rarr;</a></div></div>`).join("")}</div></div></section>` : ""}
+  ${config.sections.includes("experience") ? buildExperience(data.resumeText, c.accent) : ""}
+  ${config.sections.includes("github-stats") ? buildGitHubStats(profile, c.accent, repos) : ""}
+  ${config.sections.includes("testimonials") ? buildTestimonials(c.accent) : ""}
   ${config.sections.includes("contact") ? buildContact(profile, c.accent, data.socialLinks) : ""}
   <footer class="footer">Built with <a href="https://personaai.vercel.app">PersonaAI</a></footer>`
 
   return shell(c.accent, extra, body, name, bio, img)
+}
+
+/* ========== SHARED SECTION BUILDERS ========== */
+
+function buildGitHubStats(profile: GitHubProfile, accent: string, repos: GitHubRepo[]): string {
+  const username = profile.username
+  const langs = getLangs(repos)
+  const totalStars = repos.reduce((sum, r) => sum + (r.stargazers_count || 0), 0)
+  return `
+  <section id="github-stats" class="section" style="background:rgba(255,255,255,0.01)">
+    <div class="container">
+      <p class="section-label reveal">Activity</p>
+      <h2 class="section-title reveal">GitHub Stats</h2>
+      <div style="display:flex;flex-wrap:wrap;gap:24px;align-items:flex-start" class="reveal">
+        <img
+          src="https://github-readme-stats.vercel.app/api?username=${encodeURIComponent(username)}&show_icons=true&theme=transparent&title_color=${encodeURIComponent(accent)}&text_color=aaaaaa&icon_color=${encodeURIComponent(accent)}&border_color=ffffff15&bg_color=00000000&hide_border=false&ring_color=${encodeURIComponent(accent)}"
+          alt="${e(username)} GitHub stats"
+          loading="lazy"
+          style="border-radius:12px;max-width:100%;height:auto"
+          onerror="this.style.display='none'"
+        >
+        <img
+          src="https://github-readme-stats.vercel.app/api/top-langs/?username=${encodeURIComponent(username)}&layout=compact&theme=transparent&title_color=${encodeURIComponent(accent)}&text_color=aaaaaa&border_color=ffffff15&bg_color=00000000&langs_count=8"
+          alt="${e(username)} top languages"
+          loading="lazy"
+          style="border-radius:12px;max-width:100%;height:auto"
+          onerror="this.style.display='none'"
+        >
+      </div>
+      <div style="display:flex;gap:40px;flex-wrap:wrap;margin-top:40px" class="reveal">
+        <div style="text-align:center">
+          <div style="font-size:2.2rem;font-weight:800;color:${accent}">${profile.public_repos}</div>
+          <div style="font-size:12px;color:#666;letter-spacing:1px;text-transform:uppercase;margin-top:4px">Repositories</div>
+        </div>
+        <div style="text-align:center">
+          <div style="font-size:2.2rem;font-weight:800;color:${accent}">${totalStars}</div>
+          <div style="font-size:12px;color:#666;letter-spacing:1px;text-transform:uppercase;margin-top:4px">Total Stars</div>
+        </div>
+        <div style="text-align:center">
+          <div style="font-size:2.2rem;font-weight:800;color:${accent}">${profile.followers}</div>
+          <div style="font-size:12px;color:#666;letter-spacing:1px;text-transform:uppercase;margin-top:4px">Followers</div>
+        </div>
+        <div style="text-align:center">
+          <div style="font-size:2.2rem;font-weight:800;color:${accent}">${langs.length}</div>
+          <div style="font-size:12px;color:#666;letter-spacing:1px;text-transform:uppercase;margin-top:4px">Languages</div>
+        </div>
+      </div>
+    </div>
+  </section>`
+}
+
+function buildExperience(resumeText: string | null, accent: string): string {
+  // Parse bullet points from resume if available
+  const items: { title: string; org: string; period: string; bullets: string[] }[] = []
+
+  if (resumeText) {
+    // Try to extract experience blocks from resume text using common patterns
+    const lines = resumeText.split("\n").map(l => l.trim()).filter(Boolean)
+    let current: typeof items[0] | null = null
+    const expSectionRe = /^(experience|work history|employment|professional experience)/i
+    const roleRe = /^([A-Z][^|•\n]{4,60})\s*[|@–\-]\s*(.+)$/
+    const dateRe = /\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|\d{4})/i
+    let inExp = false
+
+    for (const line of lines) {
+      if (expSectionRe.test(line)) { inExp = true; continue }
+      if (/^(education|skills|projects|certifications|awards)/i.test(line)) { inExp = false }
+      if (!inExp) continue
+
+      const roleMatch = line.match(roleRe)
+      if (roleMatch && !dateRe.test(line.split("|")[0])) {
+        if (current) items.push(current)
+        current = { title: roleMatch[1].trim(), org: roleMatch[2].trim(), period: "", bullets: [] }
+      } else if (current && dateRe.test(line) && line.length < 60) {
+        current.period = line
+      } else if (current && /^[•\-*]/.test(line)) {
+        current.bullets.push(line.replace(/^[•\-*]\s*/, ""))
+      }
+      if (items.length >= 4) break
+    }
+    if (current && items.length < 4) items.push(current)
+  }
+
+  // Fallback: static placeholder if nothing parsed
+  const entries = items.length > 0 ? items : [
+    { title: "Senior Developer", org: "Your Company", period: "2022 – Present", bullets: ["Led development of key product features", "Mentored junior engineers", "Improved system performance by 40%"] },
+    { title: "Software Engineer", org: "Previous Company", period: "2020 – 2022", bullets: ["Built and shipped full-stack features", "Collaborated cross-functionally with design and product"] },
+  ]
+
+  return `
+  <section id="experience" class="section">
+    <div class="container">
+      <p class="section-label reveal">Career</p>
+      <h2 class="section-title reveal">Work Experience</h2>
+      <div style="position:relative;padding-left:32px;border-left:2px solid ${accent}20;margin-top:8px">
+        ${entries.map((entry, i) => `
+        <div class="reveal" style="position:relative;margin-bottom:40px">
+          <div style="position:absolute;left:-41px;top:4px;width:18px;height:18px;border-radius:50%;background:${accent};border:3px solid #0a0a0f;box-sizing:border-box"></div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:baseline;margin-bottom:6px">
+            <h3 style="font-size:17px;font-weight:700;color:#fff">${e(entry.title)}</h3>
+            <span style="font-size:14px;color:${accent};font-weight:500">${e(entry.org)}</span>
+            ${entry.period ? `<span style="font-size:12px;color:#555;margin-left:auto">${e(entry.period)}</span>` : ""}
+          </div>
+          <ul style="list-style:none;padding:0;margin:0">
+            ${entry.bullets.slice(0, 3).map(b => `<li style="font-size:14px;color:#888;line-height:1.65;margin-bottom:4px;padding-left:16px;position:relative"><span style="position:absolute;left:0;color:${accent}">›</span>${e(b)}</li>`).join("")}
+          </ul>
+        </div>`).join("")}
+      </div>
+    </div>
+  </section>`
+}
+
+function buildTestimonials(accent: string): string {
+  return `
+  <section id="testimonials" class="section" style="background:rgba(255,255,255,0.01)">
+    <div class="container">
+      <p class="section-label reveal">Social Proof</p>
+      <h2 class="section-title reveal">What people say</h2>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:20px">
+        ${[
+          { quote: "An exceptional developer who consistently delivers clean, well-architected solutions. Their attention to detail and communication made the whole project smooth.", name: "Team Lead", role: "Engineering Manager" },
+          { quote: "One of the most reliable engineers I have worked with. Always goes the extra mile to understand the problem deeply before writing a single line of code.", name: "Colleague", role: "Senior Engineer" },
+          { quote: "Their code reviews raised the bar for our whole team. Patient, thorough, and always focused on the bigger picture.", name: "Collaborator", role: "Product Engineer" },
+        ].map(t => `
+        <blockquote class="reveal" style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-left:3px solid ${accent};border-radius:12px;padding:24px;position:relative">
+          <p style="font-size:14px;color:#aaa;line-height:1.75;font-style:italic;margin-bottom:16px">&ldquo;${e(t.quote)}&rdquo;</p>
+          <div style="display:flex;align-items:center;gap:12px">
+            <div style="width:36px;height:36px;border-radius:50%;background:${accent}20;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:${accent}">${t.name.charAt(0)}</div>
+            <div>
+              <div style="font-size:13px;font-weight:600;color:#fff">${e(t.name)}</div>
+              <div style="font-size:12px;color:#555">${e(t.role)}</div>
+            </div>
+          </div>
+        </blockquote>`).join("")}
+      </div>
+      <p class="reveal" style="font-size:12px;color:#333;margin-top:16px;text-align:center">Replace these with your own testimonials from LinkedIn recommendations or colleagues.</p>
+    </div>
+  </section>`
+}
+
+function buildFeaturedProject(aiProjects: AIProject[] | null | undefined, repos: GitHubRepo[], accent: string): string {
+  const featured = aiProjects?.[0] || (repos.filter(r => !r.fork)[0] ? {
+    name: repos.filter(r => !r.fork)[0].name,
+    description: repos.filter(r => !r.fork)[0].description || smartRepoDescription(repos.filter(r => !r.fork)[0].name, repos.filter(r => !r.fork)[0].language),
+    url: repos.filter(r => !r.fork)[0].html_url,
+    language: repos.filter(r => !r.fork)[0].language,
+    stars: repos.filter(r => !r.fork)[0].stargazers_count,
+    forks: repos.filter(r => !r.fork)[0].forks_count,
+  } : null)
+
+  if (!featured) return ""
+
+  return `
+  <section id="featured" class="section">
+    <div class="container">
+      <p class="section-label reveal">Case Study</p>
+      <h2 class="section-title reveal">Featured Project</h2>
+      <div class="reveal" style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:20px;padding:40px;position:relative;overflow:hidden">
+        <div style="position:absolute;top:0;right:0;width:40%;height:100%;background:linear-gradient(135deg,${accent}06,transparent);pointer-events:none"></div>
+        <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:20px">
+          <h3 style="font-size:clamp(1.4rem,2.5vw,2rem);font-weight:800;color:#fff">${e(featured.name)}</h3>
+          ${featured.language ? `<span style="font-size:12px;padding:4px 14px;border-radius:20px;background:${accent}12;color:${accent};border:1px solid ${accent}20">${e(featured.language)}</span>` : ""}
+          ${featured.stars > 0 ? `<span style="font-size:13px;color:${accent};font-weight:600">&#9733; ${featured.stars} stars</span>` : ""}
+        </div>
+        <p style="font-size:16px;color:#888;line-height:1.8;max-width:700px;margin-bottom:28px">${e(featured.description)}</p>
+        <div style="display:flex;gap:12px;flex-wrap:wrap">
+          <a href="${featured.url}" target="_blank" rel="noopener" style="padding:12px 28px;background:${accent};color:#000;border-radius:10px;font-size:14px;font-weight:700">View on GitHub &rarr;</a>
+        </div>
+      </div>
+    </div>
+  </section>`
 }
 
 /* ========== MAIN EXPORT ========== */
