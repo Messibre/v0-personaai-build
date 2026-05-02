@@ -138,9 +138,8 @@ export async function POST(request: Request) {
     const data: AIContentRequest = await request.json()
     const { targetRole, externalLinks, github, resumeText, notionContent, additionalPrompt } = data
 
-    if (!targetRole?.trim()) {
-      return Response.json({ error: "Target role is required" }, { status: 400 })
-    }
+    // targetRole is optional — if missing, AI generates based on repos/links alone
+    const resolvedRole = targetRole?.trim() || "Software Developer"
 
     // Step 1: Scrape external links in parallel (max 5)
     const linksToScrape = externalLinks.slice(0, 5)
@@ -170,7 +169,7 @@ export async function POST(request: Request) {
 Your job is to extract WHO this person actually is from their writing, opinions, and projects — then write copy that sounds unmistakably like them.
 Output valid JSON only. No markdown. No code fences. No explanation outside the JSON.`
 
-    const userPrompt = `You are building portfolio copy for ${name}, who is targeting the role: "${targetRole}".
+    const userPrompt = `You are building portfolio copy for ${name}, who is targeting the role: "${resolvedRole}".
 
 --- PERSONALITY SIGNALS (most important) ---
 Read the content below carefully. Extract:
@@ -199,7 +198,7 @@ ${additionalPrompt || "None"}
 --- YOUR TASKS ---
 
 1. PROJECT SELECTION & DESCRIPTIONS
-   Pick up to 7 repos most relevant to "${targetRole}".
+   Pick up to 7 repos most relevant to "${resolvedRole}".
    For each, write a 1-2 sentence description that:
    - Highlights its relevance to the target role
    - Uses language and framing consistent with how THIS PERSON talks about their work
@@ -241,14 +240,19 @@ Return JSON in exactly this format:
       const topLang = reposForAI[0]?.language || "software"
       return Response.json({
         projects: fallbackProjects,
-        aboutMe: github.profile?.bio || `${name} works on ${topLang} projects, currently targeting ${targetRole} roles.`,
-        heroTagline: `${targetRole} — ${topLang}`,
+        aboutMe: github.profile?.bio || `${name} works on ${topLang} projects, currently targeting ${resolvedRole} roles.`,
+        heroTagline: `${resolvedRole} — ${topLang}`,
       })
     }
 
-    // Parse AI response
+    // Parse AI response — strip markdown fences if Gemini wrapped the JSON
+    let cleanedResponse = aiResponse.trim()
+    if (cleanedResponse.startsWith("```")) {
+      cleanedResponse = cleanedResponse.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim()
+    }
+
     try {
-      const parsed = JSON.parse(aiResponse) as AIGeneratedContent
+      const parsed = JSON.parse(cleanedResponse) as AIGeneratedContent
 
       // Validate and sanitize
       const projects: AIProject[] = (parsed.projects || []).slice(0, 7).map((p) => ({
@@ -279,8 +283,8 @@ Return JSON in exactly this format:
       const topLang2 = reposForAI[0]?.language || "software"
       return Response.json({
         projects: fallbackProjects,
-        aboutMe: github.profile?.bio || `${name} builds ${topLang2} projects, currently seeking ${targetRole} roles.`,
-        heroTagline: `${targetRole} — ${topLang2}`,
+        aboutMe: github.profile?.bio || `${name} builds ${topLang2} projects, currently seeking ${resolvedRole} roles.`,
+        heroTagline: `${resolvedRole} — ${topLang2}`,
       })
     }
   } catch (err) {

@@ -42,9 +42,9 @@ Output ONLY the bio text, no quotes, no labels.`
       const res = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+          body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.7, maxOutputTokens: 200 },
+          generationConfig: { temperature: 0.7, maxOutputTokens: 500 },
         }),
         signal: AbortSignal.timeout(8000),
       })
@@ -79,8 +79,23 @@ export async function POST(request: Request) {
       heroTagline = data.aiContent.heroTagline || null
       aiProjects = data.aiContent.projects || null
     } else {
-      // Fall back to existing bio generation
+      // Fall back to bio generation + build project descriptions from raw repo data
+      // so the template never renders "A TypeScript project." placeholders
       aiBio = await getAiBio(data.github.profile, data.github.repos || [], data.resumeText, data.notionContent, data.config.additionalPrompt)
+      aiProjects = (data.github.repos || [])
+        .filter((r) => !r.fork)
+        .slice(0, 7)
+        .map((r) => ({
+          name: r.name,
+          url: r.html_url,
+          language: r.language || null,
+          description: r.description?.trim()
+            || (r.topics?.length
+              ? `A ${r.language || "software"} project focused on ${r.topics.slice(0, 2).join(" and ")}.`
+              : `A ${r.language || "software"} project.`),
+          stars: r.stargazers_count,
+          forks: r.forks_count,
+        }))
     }
 
     const html = buildPortfolioHtml({
