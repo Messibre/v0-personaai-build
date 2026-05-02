@@ -19,6 +19,28 @@ function e(str: string): string {
   return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;")
 }
 
+/** Strip common markdown syntax so raw README text renders cleanly as plain text */
+function stripMd(text: string): string {
+  if (!text) return text
+  return text
+    .replace(/^#{1,6}\s+/gm, "")          // headings
+    .replace(/\*\*(.+?)\*\*/g, "$1")       // bold
+    .replace(/\*(.+?)\*/g, "$1")           // italic
+    .replace(/__(.+?)__/g, "$1")           // bold alt
+    .replace(/_(.+?)_/g, "$1")             // italic alt
+    .replace(/`{1,3}[^`]*`{1,3}/g, "")    // inline code / code blocks
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1") // links → label only
+    .replace(/!\[([^\]]*)\]\([^)]+\)/g, "") // images
+    .replace(/^[-*+]\s+/gm, "")           // unordered list bullets
+    .replace(/^\d+\.\s+/gm, "")           // ordered list numbers
+    .replace(/^>\s+/gm, "")               // blockquotes
+    .replace(/^-{3,}$/gm, "")             // horizontal rules
+    .replace(/\n{3,}/g, "\n\n")           // excess blank lines
+    .trim()
+    .split("\n")[0]                        // keep only the first meaningful line
+    .trim()
+}
+
 function getLangs(repos: GitHubRepo[]): string[] {
   return [...new Set(repos.map((r) => r.language).filter(Boolean))] as string[]
 }
@@ -107,6 +129,12 @@ function baseStyles(accent: string): string {
       .projects-grid { grid-template-columns: 1fr; }
       .stats-row { flex-direction: column; gap: 24px !important; }
       .section { padding: 60px 16px; }
+      /* Shared section builders */
+      #github-stats img { max-width: 100%; height: auto; }
+      #github-stats > .container > div[style*="display:flex"] { flex-direction: column; }
+      #experience .container > div[style*="padding-left:32px"] { padding-left: 24px; }
+      #testimonials > .container > div[style*="grid-template-columns"] { grid-template-columns: 1fr !important; }
+      #featured .container > div[style*="padding:40px"] { padding: 24px !important; }
     }
   `
 }
@@ -233,7 +261,7 @@ function buildProjects(repos: GitHubRepo[], accent: string, aiProjects?: AIProje
           ${p.forks > 0 ? `<span class="project-stars" style="color:#888">&#9334; ${p.forks}</span>` : ""}
         </div>
       </div>
-      <p class="project-desc">${e(p.description)}</p>
+      <p class="project-desc">${e(stripMd(p.description))}</p>
       <div class="project-meta">
         ${p.language ? `<span class="project-lang">${e(p.language)}</span>` : ""}
         <a href="${p.url}" target="_blank" rel="noopener" class="project-link">View Code &rarr;</a>
@@ -700,11 +728,11 @@ function buildMinimalClean(data: TemplateData): string {
       <div class="project-list">
         ${(aiProjects && aiProjects.length > 0 ? aiProjects.slice(0, 8).map(p => `
           <div class="project-item reveal">
-            <div><h3>${e(p.name)}</h3><p>${e(p.description)}</p></div>
+            <div><h3>${e(p.name)}</h3><p>${e(stripMd(p.description))}</p></div>
             <a href="${p.url}" target="_blank" rel="noopener">&rarr;</a>
           </div>`) : repos.filter(r => !r.fork).slice(0, 8).map(r => `
           <div class="project-item reveal">
-            <div><h3>${e(r.name)}</h3><p>${e(r.description || "A carefully crafted project.")}</p></div>
+            <div><h3>${e(r.name)}</h3><p>${e(stripMd(r.description || "A carefully crafted project."))}</p></div>
             <a href="${r.html_url}" target="_blank" rel="noopener">&rarr;</a>
           </div>`)).join("")}
       </div>
@@ -883,13 +911,13 @@ function buildGlassmorphism(data: TemplateData): string {
             <h3 style="font-size:17px;font-weight:700;color:#fff">${e(p.name)}</h3>
             ${p.stars > 0 ? `<span style="font-size:12px;color:${c.accent};font-weight:600">&#9733; ${p.stars}</span>` : ""}
           </div>
-          <p style="font-size:13px;color:rgba(255,255,255,0.5);line-height:1.6;margin-bottom:16px">${e(p.description)}</p>
+          <p style="font-size:13px;color:rgba(255,255,255,0.5);line-height:1.6;margin-bottom:16px">${e(stripMd(p.description))}</p>
           <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
             ${p.language ? `<span style="font-size:11px;padding:3px 12px;border-radius:20px;background:${c.accent}12;color:${c.accent};border:1px solid ${c.accent}25">${e(p.language)}</span>` : ""}
             <a href="${p.url}" target="_blank" rel="noopener" style="font-size:13px;color:${c.accent};font-weight:500;margin-left:auto">View &rarr;</a>
           </div>
         </div>`) : repos.filter(r => !r.fork).slice(0, 6).map(r => {
-          const desc = r.description && r.description.trim() ? r.description : smartRepoDescription(r.name, r.language)
+          const desc = r.description && r.description.trim() ? stripMd(r.description) : smartRepoDescription(r.name, r.language)
           return `
         <div class="glass-card reveal" style="opacity:0;transform:translateY(40px)">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
@@ -1007,7 +1035,7 @@ function buildTerminal(data: TemplateData): string {
   </section>
   ${config.sections.includes("about") ? `<section id="about" class="section"><p class="section-heading reveal">about_me</p><p style="font-size:13px;color:#888;line-height:1.9;max-width:640px" class="reveal">${e(bio)}</p></section>` : ""}
   ${config.sections.includes("skills") ? `<section id="skills" class="section"><p class="section-heading reveal">skills_and_tools</p><div class="reveal">${[...langs,...topics].slice(0,16).map(s=>`<span class="skill-badge">${e(s)}</span>`).join("")}</div></section>` : ""}
-  ${config.sections.includes("projects") ? `<section id="projects" class="section"><p class="section-heading reveal">projects</p>${projects.map(p=>`<div class="project-card reveal"><div style="display:flex;justify-content:space-between;align-items:flex-start"><p class="project-name">${e(p.name)}</p>${p.stars>0?`<span style="font-size:11px;color:${c.accent}60">&#9733;${p.stars}</span>`:""}</div><p class="project-desc">${e(p.description)}</p><div class="project-meta">${p.language?`<span class="project-lang">${e(p.language)}</span>`:""}<a href="${p.url}" target="_blank" rel="noopener" class="project-link">open &rarr;</a></div></div>`).join("")}</section>` : ""}
+  ${config.sections.includes("projects") ? `<section id="projects" class="section"><p class="section-heading reveal">projects</p>${projects.map(p=>`<div class="project-card reveal"><div style="display:flex;justify-content:space-between;align-items:flex-start"><p class="project-name">${e(p.name)}</p>${p.stars>0?`<span style="font-size:11px;color:${c.accent}60">&#9733;${p.stars}</span>`:""}</div><p class="project-desc">${e(stripMd(p.description))}</p><div class="project-meta">${p.language?`<span class="project-lang">${e(p.language)}</span>`:""}<a href="${p.url}" target="_blank" rel="noopener" class="project-link">open &rarr;</a></div></div>`).join("")}</section>` : ""}
   ${config.sections.includes("experience") ? buildExperience(data.resumeText, c.accent) : ""}
   ${config.sections.includes("github-stats") ? buildGitHubStats(profile, c.accent, repos) : ""}
   ${config.sections.includes("testimonials") ? buildTestimonials(c.accent) : ""}
@@ -1104,7 +1132,7 @@ function buildLiquidGlass(data: TemplateData): string {
   </section>
   ${config.sections.includes("about") ? `<section id="about" class="section"><div class="container"><p class="section-label reveal">About</p><h2 class="section-title reveal">${e(name.split(" ")[0])}&rsquo;s story</h2><div class="glass-strong reveal" style="padding:32px;max-width:680px"><p style="color:rgba(255,255,255,0.65);font-size:15px;line-height:1.8">${e(bio)}</p></div></div></section>` : ""}
   ${config.sections.includes("skills") ? `<section id="skills" class="section"><div class="container"><p class="section-label reveal">Skills</p><h2 class="section-title reveal">Tech Stack</h2><div class="reveal">${[...langs,...topics].slice(0,16).map(s=>`<span class="skill-badge">${e(s)}</span>`).join("")}</div></div></section>` : ""}
-  ${config.sections.includes("projects") ? `<section id="projects" class="section"><div class="container"><p class="section-label reveal">Work</p><h2 class="section-title reveal">Featured Projects</h2><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px">${projects.map(p=>`<div class="glass project-card reveal"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px"><h3 style="font-size:16px;font-weight:700;color:#fff">${e(p.name)}</h3>${p.stars>0?`<span style="font-size:12px;color:${c.accent};font-weight:600">&#9733;${p.stars}</span>`:""}</div><p style="font-size:13px;color:rgba(255,255,255,0.45);line-height:1.6;margin-bottom:16px">${e(p.description)}</p><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">${p.language?`<span style="font-size:11px;padding:3px 12px;border-radius:50px;background:${c.accent}12;color:${c.accent};border:1px solid ${c.accent}20">${e(p.language)}</span>`:""}<a href="${p.url}" target="_blank" rel="noopener" style="font-size:13px;color:${c.accent};font-weight:600;margin-left:auto">View &rarr;</a></div></div>`).join("")}</div></div></section>` : ""}
+  ${config.sections.includes("projects") ? `<section id="projects" class="section"><div class="container"><p class="section-label reveal">Work</p><h2 class="section-title reveal">Featured Projects</h2><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px">${projects.map(p=>`<div class="glass project-card reveal"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px"><h3 style="font-size:16px;font-weight:700;color:#fff">${e(p.name)}</h3>${p.stars>0?`<span style="font-size:12px;color:${c.accent};font-weight:600">&#9733;${p.stars}</span>`:""}</div><p style="font-size:13px;color:rgba(255,255,255,0.45);line-height:1.6;margin-bottom:16px">${e(stripMd(p.description))}</p><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">${p.language?`<span style="font-size:11px;padding:3px 12px;border-radius:50px;background:${c.accent}12;color:${c.accent};border:1px solid ${c.accent}20">${e(p.language)}</span>`:""}<a href="${p.url}" target="_blank" rel="noopener" style="font-size:13px;color:${c.accent};font-weight:600;margin-left:auto">View &rarr;</a></div></div>`).join("")}</div></div></section>` : ""}
   ${config.sections.includes("experience") ? buildExperience(data.resumeText, c.accent) : ""}
   ${config.sections.includes("github-stats") ? buildGitHubStats(profile, c.accent, repos) : ""}
   ${config.sections.includes("testimonials") ? buildTestimonials(c.accent) : ""}
@@ -1213,7 +1241,7 @@ function buildCyberpunkNoir(data: TemplateData): string {
   </section>
   ${config.sections.includes("about") ? `<section id="about" class="section"><div class="container"><p class="section-label reveal">about</p><h2 class="section-title reveal">Who I Am</h2><p style="font-size:15px;color:#888;line-height:1.85;max-width:680px" class="reveal">${e(bio)}</p></div></section>` : ""}
   ${config.sections.includes("skills") ? `<section id="skills" class="section"><div class="container"><p class="section-label reveal">skills</p><h2 class="section-title reveal">Arsenal</h2><div class="reveal">${[...langs,...topics].slice(0,16).map(s=>`<span class="skill-badge">${e(s)}</span>`).join("")}</div></div></section>` : ""}
-  ${config.sections.includes("projects") ? `<section id="projects" class="section"><div class="container"><p class="section-label reveal">projects</p><h2 class="section-title reveal">Missions Completed</h2>${projects.map(p=>`<div class="project-card reveal"><div style="display:flex;justify-content:space-between;align-items:flex-start"><p class="project-name">${e(p.name)}</p>${p.stars>0?`<span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:${c.accent}60">&#9733;${p.stars}</span>`:""}</div><p class="project-desc">${e(p.description)}</p><div class="project-meta">${p.language?`<span class="project-lang">${e(p.language)}</span>`:""}<a href="${p.url}" target="_blank" rel="noopener" class="project-link">access &rarr;</a></div></div>`).join("")}</div></section>` : ""}
+  ${config.sections.includes("projects") ? `<section id="projects" class="section"><div class="container"><p class="section-label reveal">projects</p><h2 class="section-title reveal">Missions Completed</h2>${projects.map(p=>`<div class="project-card reveal"><div style="display:flex;justify-content:space-between;align-items:flex-start"><p class="project-name">${e(p.name)}</p>${p.stars>0?`<span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:${c.accent}60">&#9733;${p.stars}</span>`:""}</div><p class="project-desc">${e(stripMd(p.description))}</p><div class="project-meta">${p.language?`<span class="project-lang">${e(p.language)}</span>`:""}<a href="${p.url}" target="_blank" rel="noopener" class="project-link">access &rarr;</a></div></div>`).join("")}</div></section>` : ""}
   ${config.sections.includes("experience") ? buildExperience(data.resumeText, c.accent) : ""}
   ${config.sections.includes("github-stats") ? buildGitHubStats(profile, c.accent, repos) : ""}
   ${config.sections.includes("testimonials") ? buildTestimonials(c.accent) : ""}
@@ -1309,7 +1337,7 @@ function buildBentoGrid(data: TemplateData): string {
         <div style="font-size:12px;color:#666;margin-top:4px">Followers</div>
       </div>
       ${config.sections.includes("skills") ? `<div class="bento-cell bento-skills hero-anim"><p class="section-label">Stack</p><div style="margin-top:8px">${[...langs,...topics].slice(0,14).map(s=>`<span class="skill-badge">${e(s)}</span>`).join("")}</div></div>` : ""}
-      ${config.sections.includes("projects") ? projects.map(p=>`<div class="bento-cell bento-project reveal"><a href="${p.url}" target="_blank" rel="noopener"><p class="proj-name">${e(p.name)}</p></a><p class="proj-desc">${e(p.description)}</p><div style="display:flex;align-items:center;justify-content:space-between">${p.language?`<span class="proj-lang">${e(p.language)}</span>`:`<span></span>`}${p.stars>0?`<span style="font-size:11px;color:${c.accent}70">&#9733;${p.stars}</span>`:""}</div></div>`).join("") : ""}
+      ${config.sections.includes("projects") ? projects.map(p=>`<div class="bento-cell bento-project reveal"><a href="${p.url}" target="_blank" rel="noopener"><p class="proj-name">${e(p.name)}</p></a><p class="proj-desc">${e(stripMd(p.description))}</p><div style="display:flex;align-items:center;justify-content:space-between">${p.language?`<span class="proj-lang">${e(p.language)}</span>`:`<span></span>`}${p.stars>0?`<span style="font-size:11px;color:${c.accent}70">&#9733;${p.stars}</span>`:""}</div></div>`).join("") : ""}
     </div>
   </div>
   ${config.sections.includes("experience") ? buildExperience(data.resumeText, c.accent) : ""}
@@ -1383,7 +1411,18 @@ function buildSpotlightDark(data: TemplateData): string {
     .reveal { opacity:0; transform:translateY(30px); }
     .footer { position:relative; z-index:1; padding:40px 32px; text-align:center; font-size:13px; color:#333; border-top:1px solid rgba(255,255,255,0.04); }
     .footer a { color:${c.accent}; }
-    @media(max-width:768px){ .hero-layout{grid-template-columns:1fr} .hero-photo-wrap{display:none} .project-row{grid-template-columns:1fr} .proj-num{display:none} .nav-links{display:none} .nav-cta{display:none} .nav-toggle{display:block} }
+    @media(max-width:768px){
+      .hero-layout { grid-template-columns:1fr; }
+      .hero-photo-wrap { display:none; }
+      .section { padding:60px 20px; }
+      .project-row { display:flex; flex-direction:column; gap:8px; padding:20px 0; }
+      .proj-num { display:none; }
+      .proj-link { text-align:left; }
+      .nav-links { display:none; }
+      .nav-cta { display:none; }
+      .nav-toggle { display:block; }
+      .divider { margin:0 20px; }
+    }
   `
   const projects = aiProjects && aiProjects.length > 0 ? aiProjects : repos.filter(r => !r.fork).slice(0, 7).map(r => ({ name: r.name, url: r.html_url, language: r.language, description: r.description?.trim() || smartRepoDescription(r.name, r.language), stars: r.stargazers_count, forks: r.forks_count }))
 
@@ -1411,7 +1450,7 @@ function buildSpotlightDark(data: TemplateData): string {
   <div class="divider"></div>
   ${config.sections.includes("about") ? `<section id="about" class="section"><div class="container"><p class="section-label reveal">About</p><h2 class="section-title reveal">${e(name.split(" ")[0])}</h2><p style="font-size:16px;color:#666;line-height:1.85;max-width:680px" class="reveal">${e(bio)}</p></div></section><div class="divider"></div>` : ""}
   ${config.sections.includes("skills") ? `<section id="skills" class="section"><div class="container"><p class="section-label reveal">Skills</p><h2 class="section-title reveal">What I work with</h2><div class="skill-wrap reveal">${[...langs,...topics].slice(0,16).map(s=>`<span class="skill-badge">${e(s)}</span>`).join("")}</div></div></section><div class="divider"></div>` : ""}
-  ${config.sections.includes("projects") ? `<section id="projects" class="section"><div class="container"><p class="section-label reveal">Projects</p><h2 class="section-title reveal">Selected Work</h2><div>${projects.map((p,i)=>`<div class="project-row reveal"><span class="proj-num">${String(i+1).padStart(2,"0")}</span><div><p class="proj-name">${e(p.name)}</p><p class="proj-desc">${e(p.description)}</p>${p.language?`<span class="proj-lang">${e(p.language)}</span>`:""}</div><a href="${p.url}" target="_blank" rel="noopener" class="proj-link">View &rarr;</a></div>`).join("")}</div></div></section><div class="divider"></div>` : ""}
+  ${config.sections.includes("projects") ? `<section id="projects" class="section"><div class="container"><p class="section-label reveal">Projects</p><h2 class="section-title reveal">Selected Work</h2><div>${projects.map((p,i)=>`<div class="project-row reveal"><span class="proj-num">${String(i+1).padStart(2,"0")}</span><div><p class="proj-name">${e(p.name)}</p><p class="proj-desc">${e(stripMd(p.description))}</p>${p.language?`<span class="proj-lang">${e(p.language)}</span>`:""}</div><a href="${p.url}" target="_blank" rel="noopener" class="proj-link">View &rarr;</a></div>`).join("")}</div></div></section><div class="divider"></div>` : ""}
   ${config.sections.includes("experience") ? buildExperience(data.resumeText, c.accent) : ""}
   ${config.sections.includes("github-stats") ? buildGitHubStats(profile, c.accent, repos) : ""}
   ${config.sections.includes("testimonials") ? buildTestimonials(c.accent) : ""}
@@ -1494,7 +1533,23 @@ function buildSwissEditorial(data: TemplateData): string {
     .footer { text-align:center; padding:40px; font-size:11px; font-weight:700; letter-spacing:2px; text-transform:uppercase; color:#bbb; border-top:2px solid #111; }
     .footer a { color:${c.accent}; }
     .reveal { opacity:0; transform:translateY(20px); }
-    @media(max-width:768px){ .hero{grid-template-columns:1fr;grid-template-rows:auto auto} .hero-left{border-right:none;border-bottom:2px solid #111;padding:60px 24px} .hero-right{padding:40px 24px} .nav-links{display:none} .nav-cta{display:none} .nav-toggle{display:block} .section{padding:60px 24px} }
+    @media(max-width:768px){
+      .hero { grid-template-columns:1fr; grid-template-rows:auto auto; min-height:auto; }
+      .hero-left { border-right:none; border-bottom:2px solid #111; padding:60px 24px 40px; }
+      .hero-left .big-initial { font-size:clamp(5rem,18vw,8rem); }
+      .hero-right { padding:40px 24px; }
+      .hero-photo-right { min-height:260px; max-height:340px; }
+      .nav { padding:0 16px; }
+      .nav-links { display:none; }
+      .nav-cta { display:none; }
+      .nav-toggle { display:block; }
+      .section { padding:60px 20px; }
+      .section-num { display:none; }
+      .project-item { flex-direction:column; gap:8px; padding:20px 0; }
+      .proj-num { display:none; }
+      .proj-link { align-self:flex-start; }
+      div[style*="grid-template-columns:1fr 3fr"] { display:block !important; }
+    }
   `
   const projects = aiProjects && aiProjects.length > 0 ? aiProjects : repos.filter(r => !r.fork).slice(0, 7).map(r => ({ name: r.name, url: r.html_url, language: r.language, description: r.description?.trim() || smartRepoDescription(r.name, r.language), stars: r.stargazers_count, forks: r.forks_count }))
 
@@ -1519,7 +1574,7 @@ function buildSwissEditorial(data: TemplateData): string {
   </section>
   ${config.sections.includes("about") ? `<section id="about" class="section border-top"><div class="container"><div style="display:grid;grid-template-columns:1fr 3fr;gap:60px;align-items:start"><div class="section-num">01</div><div><p class="section-label reveal">About</p><h2 class="section-title reveal">The human<br>behind the code</h2><p style="font-size:15px;color:#888;line-height:1.85;max-width:600px" class="reveal">${e(bio)}</p></div></div></div></section>` : ""}
   ${config.sections.includes("skills") ? `<section id="skills" class="section border-top"><div class="container"><div style="display:grid;grid-template-columns:1fr 3fr;gap:60px;align-items:start"><div class="section-num">02</div><div><p class="section-label reveal">Skills</p><h2 class="section-title reveal">Toolkit</h2><div class="reveal">${[...langs,...topics].slice(0,16).map(s=>`<span class="skill-badge">${e(s)}</span>`).join("")}</div></div></div></div></section>` : ""}
-  ${config.sections.includes("projects") ? `<section id="projects" class="section border-top"><div class="container"><div style="display:grid;grid-template-columns:1fr 3fr;gap:60px;align-items:start"><div class="section-num">03</div><div><p class="section-label reveal">Projects</p><h2 class="section-title reveal">Selected<br>Work</h2><div>${projects.map((p,i)=>`<div class="project-item reveal"><span class="proj-num">${String(i+1).padStart(2,"0")}</span><div style="flex:1"><p class="proj-name">${e(p.name)}</p><p class="proj-desc">${e(p.description)}</p>${p.language?`<span class="proj-lang">${e(p.language)}</span>`:""}</div><a href="${p.url}" target="_blank" rel="noopener" class="proj-link">Open &rarr;</a></div>`).join("")}</div></div></div></div></section>` : ""}
+  ${config.sections.includes("projects") ? `<section id="projects" class="section border-top"><div class="container"><div style="display:grid;grid-template-columns:1fr 3fr;gap:60px;align-items:start"><div class="section-num">03</div><div><p class="section-label reveal">Projects</p><h2 class="section-title reveal">Selected<br>Work</h2><div>${projects.map((p,i)=>`<div class="project-item reveal"><span class="proj-num">${String(i+1).padStart(2,"0")}</span><div style="flex:1"><p class="proj-name">${e(p.name)}</p><p class="proj-desc">${e(stripMd(p.description))}</p>${p.language?`<span class="proj-lang">${e(p.language)}</span>`:""}</div><a href="${p.url}" target="_blank" rel="noopener" class="proj-link">Open &rarr;</a></div>`).join("")}</div></div></div></div></section>` : ""}
   ${config.sections.includes("contact") ? `<section id="contact" class="section border-top"><div class="container"><div style="display:grid;grid-template-columns:1fr 3fr;gap:60px;align-items:start"><div class="section-num">04</div><div><p class="section-label reveal">Contact</p><h2 class="section-title reveal">Let&rsquo;s<br>build together</h2><div style="display:flex;gap:12px;flex-wrap:wrap" class="reveal"><a href="${profile.html_url}" target="_blank" style="padding:14px 28px;background:#111;color:#f5f5f0;font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase">GitHub</a>${data.socialLinks?.linkedin?`<a href="${data.socialLinks.linkedin}" target="_blank" style="padding:14px 28px;border:2px solid #111;color:#111;font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase">LinkedIn</a>`:""}</div></div></div></div></section>` : ""}
   <footer class="footer">Built with <a href="https://personaai.vercel.app">PersonaAI</a></footer>`
 
@@ -1613,7 +1668,7 @@ function buildGradientAurora(data: TemplateData): string {
   </section>
   ${config.sections.includes("about") ? `<section id="about" class="section"><div class="container"><p class="section-label reveal">About</p><h2 class="section-title reveal">${e(name.split(" ")[0])}&rsquo;s story</h2><p style="font-size:15px;color:rgba(255,255,255,0.45);line-height:1.85;max-width:640px;margin:0 auto;text-align:center" class="reveal">${e(bio)}</p></div></section>` : ""}
   ${config.sections.includes("skills") ? `<section id="skills" class="section"><div class="container"><p class="section-label reveal">Stack</p><h2 class="section-title reveal">Tools & Technologies</h2><div style="text-align:center" class="reveal">${[...langs,...topics].slice(0,16).map(s=>`<span class="skill-badge">${e(s)}</span>`).join("")}</div></div></section>` : ""}
-  ${config.sections.includes("projects") ? `<section id="projects" class="section"><div class="container"><p class="section-label reveal">Work</p><h2 class="section-title reveal">Featured Projects</h2><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px">${projects.map(p=>`<div class="project-card reveal"><p class="proj-name">${e(p.name)}</p><p class="proj-desc">${e(p.description)}</p><div style="display:flex;align-items:center;justify-content:space-between">${p.language?`<span class="proj-lang">${e(p.language)}</span>`:`<span></span>`}<a href="${p.url}" target="_blank" rel="noopener" class="proj-link">View &rarr;</a></div></div>`).join("")}</div></div></section>` : ""}
+  ${config.sections.includes("projects") ? `<section id="projects" class="section"><div class="container"><p class="section-label reveal">Work</p><h2 class="section-title reveal">Featured Projects</h2><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px">${projects.map(p=>`<div class="project-card reveal"><p class="proj-name">${e(p.name)}</p><p class="proj-desc">${e(stripMd(p.description))}</p><div style="display:flex;align-items:center;justify-content:space-between">${p.language?`<span class="proj-lang">${e(p.language)}</span>`:`<span></span>`}<a href="${p.url}" target="_blank" rel="noopener" class="proj-link">View &rarr;</a></div></div>`).join("")}</div></div></section>` : ""}
   ${config.sections.includes("experience") ? buildExperience(data.resumeText, c.accent) : ""}
   ${config.sections.includes("github-stats") ? buildGitHubStats(profile, c.accent, repos) : ""}
   ${config.sections.includes("testimonials") ? buildTestimonials(c.accent) : ""}
@@ -1634,23 +1689,23 @@ function buildGitHubStats(profile: GitHubProfile, accent: string, repos: GitHubR
     <div class="container">
       <p class="section-label reveal">Activity</p>
       <h2 class="section-title reveal">GitHub Stats</h2>
-      <div style="display:flex;flex-wrap:wrap;gap:24px;align-items:flex-start" class="reveal">
+      <div style="display:flex;flex-wrap:wrap;gap:20px;align-items:flex-start" class="reveal">
         <img
           src="https://github-readme-stats.vercel.app/api?username=${encodeURIComponent(username)}&show_icons=true&theme=transparent&title_color=${encodeURIComponent(accent)}&text_color=aaaaaa&icon_color=${encodeURIComponent(accent)}&border_color=ffffff15&bg_color=00000000&hide_border=false&ring_color=${encodeURIComponent(accent)}"
           alt="${e(username)} GitHub stats"
           loading="lazy"
-          style="border-radius:12px;max-width:100%;height:auto"
+          style="border-radius:12px;max-width:100%;width:auto;height:auto;flex-shrink:1;min-width:0"
           onerror="this.style.display='none'"
         >
         <img
           src="https://github-readme-stats.vercel.app/api/top-langs/?username=${encodeURIComponent(username)}&layout=compact&theme=transparent&title_color=${encodeURIComponent(accent)}&text_color=aaaaaa&border_color=ffffff15&bg_color=00000000&langs_count=8"
           alt="${e(username)} top languages"
           loading="lazy"
-          style="border-radius:12px;max-width:100%;height:auto"
+          style="border-radius:12px;max-width:100%;width:auto;height:auto;flex-shrink:1;min-width:0"
           onerror="this.style.display='none'"
         >
       </div>
-      <div style="display:flex;gap:40px;flex-wrap:wrap;margin-top:40px" class="reveal">
+      <div style="display:flex;gap:32px;flex-wrap:wrap;margin-top:40px" class="reveal">
         <div style="text-align:center">
           <div style="font-size:2.2rem;font-weight:800;color:${accent}">${profile.public_repos}</div>
           <div style="font-size:12px;color:#666;letter-spacing:1px;text-transform:uppercase;margin-top:4px">Repositories</div>
