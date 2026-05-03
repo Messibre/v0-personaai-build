@@ -36,7 +36,7 @@ async function callGemini(prompt: string): Promise<string | null> {
 
   for (const key of GEMINI_KEYS) {
     try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`
       const res = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -50,10 +50,10 @@ You output ONLY a valid JSON object. No markdown, no backticks, no explanation. 
           contents: [{ parts: [{ text: prompt }] }],
           generationConfig: {
             temperature: 0.7,
-            maxOutputTokens: 512, // Design config is tiny - just JSON
+            maxOutputTokens: 512,
           },
         }),
-        signal: AbortSignal.timeout(20000),
+        signal: AbortSignal.timeout(8000),
       })
 
       if (!res.ok) continue
