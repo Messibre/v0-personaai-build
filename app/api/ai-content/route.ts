@@ -127,7 +127,7 @@ async function callGemini(prompt: string, systemPrompt: string, expectJson = fal
           contents: [{ parts: [{ text: prompt }] }],
           generationConfig: {
             temperature: 0.7,
-            maxOutputTokens: 3000,
+            maxOutputTokens: 2000,
             ...(expectJson && { responseMimeType: "application/json" }),
           },
         }),
@@ -279,18 +279,17 @@ ${JSON.stringify(reposForAI.map((r) => ({
   description: r.description || "",
   language: r.language || "",
   topics: r.topics || [],
-  readmeText: (r.readmeText || "").substring(0, 500),
+  readmeText: (r.readmeText || "").substring(0, 250),
   detectedTech: r.detectedTech || "",
   stars: r.stargazers_count,
-  forks: r.forks_count,
   url: r.html_url,
 })), null, 2)}
 
 Resume excerpt:
-${resumeText?.substring(0, 3000) || "None"}
+${resumeText?.substring(0, 1500) || "None"}
 
 Notion content:
-${notionContent?.substring(0, 2000) || "None"}
+${notionContent?.substring(0, 1000) || "None"}
 
 Additional instructions from the person:
 ${additionalPrompt || "None"}
