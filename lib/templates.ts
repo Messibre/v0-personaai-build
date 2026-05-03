@@ -49,6 +49,20 @@ function getTopics(repos: GitHubRepo[]): string[] {
   return [...new Set(repos.flatMap((r) => r.topics).filter(Boolean))]
 }
 
+// Language → gradient color map for project thumbnails
+const LANG_COLORS: Record<string, string> = {
+  TypeScript: "#3178c6", JavaScript: "#f0db4f", Python: "#3572a5", Rust: "#dea584",
+  Go: "#00add8", Java: "#b07219", "C++": "#f34b7d", C: "#555555", "C#": "#178600",
+  Ruby: "#701516", Swift: "#f05138", Kotlin: "#a97bff", PHP: "#4f5d95",
+  Dart: "#00b4ab", Scala: "#c22d40", Elixir: "#6e4a7e", Haskell: "#5e5086",
+  HTML: "#e34c26", CSS: "#563d7c", Shell: "#89e051", Vue: "#41b883", Svelte: "#ff3e00",
+}
+
+function langColor(lang: string | null): string {
+  if (!lang) return "#7c5cfc"
+  return LANG_COLORS[lang] || "#7c5cfc"
+}
+
 // Shared base styles injected into every template
 function baseStyles(accent: string): string {
   return `
@@ -56,10 +70,30 @@ function baseStyles(accent: string): string {
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
     html { scroll-behavior: smooth; scroll-padding-top: 80px; }
     body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: #0a0a0f; color: #e8e8ef; overflow-x: hidden; -webkit-font-smoothing: antialiased; }
-    img { max-width: 100%; height: auto; }
+    img { max-width: 100%; height: auto; loading: lazy; }
     a { text-decoration: none; transition: all .3s; }
     a:hover { opacity: 0.85; }
     a:focus-visible, button:focus-visible { outline: 2px solid ${accent}; outline-offset: 2px; }
+
+    /* Dark/light theme variables */
+    :root { --bg: #0a0a0f; --surface: rgba(255,255,255,0.03); --border: rgba(255,255,255,0.06); --text: #e8e8ef; --muted: #888; --accent: ${accent}; }
+    [data-theme="light"] { --bg: #f8f8fc; --surface: rgba(0,0,0,0.03); --border: rgba(0,0,0,0.08); --text: #111; --muted: #555; }
+    [data-theme="light"] body { background: #f8f8fc; color: #111; }
+    [data-theme="light"] .nav { background: rgba(248,248,252,0.85); border-bottom-color: rgba(0,0,0,0.08); }
+    [data-theme="light"] .nav-brand { color: #111; }
+    [data-theme="light"] .nav-links a { color: #555; }
+    [data-theme="light"] .mobile-menu { background: rgba(248,248,252,0.97); }
+    [data-theme="light"] .project-card { background: #fff; border-color: rgba(0,0,0,0.08); box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+    [data-theme="light"] .project-name, [data-theme="light"] .section-title { color: #111; }
+    [data-theme="light"] .section-desc, [data-theme="light"] .project-desc { color: #555; }
+    [data-theme="light"] .footer { background: #f0f0f6; border-top-color: rgba(0,0,0,0.08); }
+    [data-theme="light"] .footer p { color: #888; }
+    [data-theme="light"] .grid-bg { opacity: 0; }
+
+    /* Theme toggle button */
+    .theme-toggle { background: none; border: 1px solid rgba(255,255,255,0.12); border-radius: 8px; color: #999; cursor: pointer; font-size: 14px; padding: 6px 10px; transition: all .2s; display: flex; align-items: center; gap: 4px; }
+    .theme-toggle:hover { border-color: ${accent}40; color: ${accent}; }
+    [data-theme="light"] .theme-toggle { border-color: rgba(0,0,0,0.12); color: #555; }
 
     /* Background grid */
     .grid-bg { position: fixed; inset: 0; pointer-events: none; z-index: 0; 
@@ -92,22 +126,48 @@ function baseStyles(accent: string): string {
     .mobile-menu a { font-size: 16px; color: #ccc; font-weight: 500; padding: 8px 0; }
     .mobile-menu a:hover { color: ${accent}; }
 
-    /* Project cards */
+    /* Project cards & filter chips */
+    .proj-filter { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 28px; }
+    .proj-chip { padding: 6px 16px; border-radius: 20px; font-size: 12px; font-weight: 600; border: 1px solid rgba(255,255,255,0.1); color: #999; cursor: pointer; transition: all .2s; background: transparent; letter-spacing: 0.5px; }
+    .proj-chip:hover, .proj-chip.active { background: ${accent}; color: #000; border-color: ${accent}; }
     .projects-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; }
     .project-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; padding: 28px; transition: all .4s cubic-bezier(.4,0,.2,1); position: relative; overflow: hidden; }
     .project-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, ${accent}40, transparent); opacity: 0; transition: opacity .4s; }
     .project-card:hover { border-color: ${accent}30; transform: translateY(-4px); box-shadow: 0 20px 60px rgba(0,0,0,0.3), 0 0 40px ${accent}08; }
     .project-card:hover::before { opacity: 1; }
+    .project-card[hidden] { display: none; }
+    .proj-thumb { width: 100%; height: 6px; border-radius: 4px; margin-bottom: 20px; opacity: 0.7; }
     .project-name { font-size: 18px; font-weight: 700; color: #fff; margin-bottom: 8px; }
     .project-desc { font-size: 14px; color: #888; line-height: 1.6; margin-bottom: 16px; }
-    .project-meta { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .project-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
     .project-lang { font-size: 12px; padding: 4px 12px; border-radius: 20px; background: ${accent}12; color: ${accent}; font-weight: 500; }
-    .project-link { font-size: 13px; color: ${accent}; font-weight: 500; margin-left: auto; }
+    .project-links { display: flex; gap: 8px; align-items: center; margin-left: auto; }
+    .project-link { font-size: 12px; padding: 5px 14px; border-radius: 8px; font-weight: 600; border: 1px solid ${accent}30; color: ${accent}; transition: all .2s; }
+    .project-link:hover { background: ${accent}; color: #000; border-color: ${accent}; opacity: 1; }
+    .project-link.gh { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.1); color: #aaa; }
+    .project-link.gh:hover { background: rgba(255,255,255,0.1); color: #fff; border-color: rgba(255,255,255,0.2); }
     .project-stars { font-size: 12px; color: ${accent}; font-weight: 600; }
+    .proj-now { font-size: 10px; padding: 3px 10px; border-radius: 12px; background: ${accent}18; border: 1px solid ${accent}30; color: ${accent}; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; }
 
     /* Skills */
     .skill-badge { display: inline-block; padding: 8px 18px; border-radius: 24px; font-size: 13px; font-weight: 500; border: 1px solid ${accent}20; color: ${accent}; margin: 4px; background: ${accent}08; transition: all .3s; }
     .skill-badge:hover { background: ${accent}18; border-color: ${accent}40; transform: translateY(-2px); }
+    .skill-category { margin-bottom: 28px; }
+    .skill-category-title { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: #555; font-weight: 600; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer; display: flex; align-items: center; justify-content: space-between; }
+    .skill-category-title:hover { color: ${accent}; }
+    .skill-category-badges { display: flex; flex-wrap: wrap; gap: 0; transition: all .3s; }
+    .skill-category-badges.collapsed { display: none; }
+
+    /* Copy-email toast */
+    .copy-toast { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(20px); background: ${accent}; color: #000; padding: 10px 24px; border-radius: 24px; font-size: 13px; font-weight: 700; opacity: 0; pointer-events: none; transition: all .3s; z-index: 9999; }
+    .copy-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* Social icon links */
+    .social-links { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-bottom: 32px; }
+    .social-link { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); color: #aaa; transition: all .2s; }
+    .social-link:hover { border-color: ${accent}; color: ${accent}; background: ${accent}10; opacity: 1; }
+    .email-copy { display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; color: #ccc; font-size: 14px; cursor: pointer; transition: all .2s; background: none; font-family: inherit; }
+    .email-copy:hover { border-color: ${accent}; color: ${accent}; background: ${accent}08; }
 
     /* Footer */
     .footer { position: relative; z-index: 1; padding: 40px 24px; text-align: center; border-top: 1px solid rgba(255,255,255,0.06); background: rgba(5,5,10,0.8); }
@@ -119,6 +179,13 @@ function baseStyles(accent: string): string {
     .reveal-left { opacity: 0; transform: translateX(-40px); }
     .reveal-right { opacity: 0; transform: translateX(40px); }
     .reveal-scale { opacity: 0; transform: scale(0.9); }
+
+    /* Reduced motion */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+      .reveal, .reveal-left, .reveal-right, .reveal-scale { opacity: 1 !important; transform: none !important; }
+      html { scroll-behavior: auto; }
+    }
 
     /* Responsive */
     @media (max-width: 768px) {
@@ -137,6 +204,19 @@ function baseStyles(accent: string): string {
       #testimonials > .container > div[style*="grid-template-columns"] { grid-template-columns: 1fr !important; }
       #featured .container > div[style*="padding:40px"] { padding: 24px !important; }
     }
+
+    /* Print stylesheet */
+    @media print {
+      .nav, .nav-toggle, .mobile-menu, .grid-bg, .theme-toggle, .proj-filter { display: none !important; }
+      body { background: #fff !important; color: #000 !important; font-size: 11pt; }
+      .section { padding: 24pt 0; break-inside: avoid; }
+      .project-card { border: 1pt solid #ddd !important; background: #fff !important; break-inside: avoid; }
+      .project-name, .section-title { color: #000 !important; }
+      .section-desc, .project-desc, .section-label { color: #444 !important; }
+      a[href]::after { content: " (" attr(href) ")"; font-size: 9pt; color: #666; }
+      .reveal, .reveal-left, .reveal-right, .reveal-scale { opacity: 1 !important; transform: none !important; }
+      .footer { border-top: 1pt solid #ddd; background: transparent !important; }
+    }
   `
 }
 
@@ -146,68 +226,148 @@ function gsapScript(): string {
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"><\/script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"><\/script>
   <script>
-    gsap.registerPlugin(ScrollTrigger);
-    
-    // Reveal animations
-    gsap.utils.toArray('.reveal').forEach(el => {
-      gsap.to(el, { opacity: 1, y: 0, duration: 0.8, ease: 'power3.out',
-        scrollTrigger: { trigger: el, start: 'top 85%', once: true }
-      });
-    });
-    gsap.utils.toArray('.reveal-left').forEach(el => {
-      gsap.to(el, { opacity: 1, x: 0, duration: 0.8, ease: 'power3.out',
-        scrollTrigger: { trigger: el, start: 'top 85%', once: true }
-      });
-    });
-    gsap.utils.toArray('.reveal-right').forEach(el => {
-      gsap.to(el, { opacity: 1, x: 0, duration: 0.8, ease: 'power3.out',
-        scrollTrigger: { trigger: el, start: 'top 85%', once: true }
-      });
-    });
-    gsap.utils.toArray('.reveal-scale').forEach(el => {
-      gsap.to(el, { opacity: 1, scale: 1, duration: 0.6, ease: 'back.out(1.7)',
-        scrollTrigger: { trigger: el, start: 'top 85%', once: true }
-      });
+    // ── Dark / light toggle ──────────────────────────────────────────────────
+    (function() {
+      var saved = localStorage.getItem('persona-theme') || 'dark';
+      if (saved === 'light') document.documentElement.setAttribute('data-theme', 'light');
+    })();
+
+    function toggleTheme() {
+      var isLight = document.documentElement.getAttribute('data-theme') === 'light';
+      document.documentElement.setAttribute('data-theme', isLight ? 'dark' : 'light');
+      localStorage.setItem('persona-theme', isLight ? 'dark' : 'light');
+      var btn = document.getElementById('theme-toggle');
+      if (btn) btn.innerHTML = isLight ? '&#9788;' : '&#9790;';
+    }
+
+    // ── Typewriter effect ────────────────────────────────────────────────────
+    function typewriter(el, delay) {
+      if (!el) return;
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      var text = el.textContent;
+      el.textContent = '';
+      el.style.opacity = '1';
+      var i = 0;
+      setTimeout(function tick() {
+        el.textContent = text.slice(0, ++i);
+        if (i < text.length) setTimeout(tick, 28);
+      }, delay || 400);
+    }
+    document.addEventListener('DOMContentLoaded', function() {
+      typewriter(document.querySelector('.typewriter'), 600);
     });
 
-    // Stagger project cards
-    ScrollTrigger.batch('.project-card', {
-      onEnter: batch => gsap.to(batch, { opacity: 1, y: 0, stagger: 0.1, duration: 0.6, ease: 'power3.out' }),
-      start: 'top 85%', once: true
-    });
-
-    // Stagger skill badges
-    ScrollTrigger.batch('.skill-badge', {
-      onEnter: batch => gsap.to(batch, { opacity: 1, y: 0, scale: 1, stagger: 0.04, duration: 0.4, ease: 'back.out(1.7)' }),
-      start: 'top 90%', once: true
-    });
-
-    // Hero elements animate on load
-    gsap.from('.hero-anim', { opacity: 0, y: 30, duration: 0.8, stagger: 0.15, ease: 'power3.out', delay: 0.2 });
-
-    // Parallax on hero photo
-    const heroPhoto = document.querySelector('.hero-photo-parallax');
-    if (heroPhoto) {
-      gsap.to(heroPhoto, {
-        y: -60,
-        scrollTrigger: { trigger: heroPhoto, start: 'top bottom', end: 'bottom top', scrub: 1 }
+    // ── Copy email to clipboard ──────────────────────────────────────────────
+    function copyEmail(email) {
+      navigator.clipboard.writeText(email).then(function() {
+        var t = document.getElementById('copy-toast');
+        if (!t) return;
+        t.classList.add('show');
+        setTimeout(function() { t.classList.remove('show'); }, 2200);
       });
     }
 
-    // Active nav link on scroll
-    const navLinks = document.querySelectorAll('.nav-links a[data-section]');
-    document.querySelectorAll('section[id]').forEach(sec => {
-      ScrollTrigger.create({
-        trigger: sec,
-        start: 'top center',
-        end: 'bottom center',
-        onEnter: () => setActiveNav(sec.id),
-        onEnterBack: () => setActiveNav(sec.id),
+    // ── Project filter chips ─────────────────────────────────────────────────
+    document.addEventListener('DOMContentLoaded', function() {
+      var chips = document.querySelectorAll('.proj-chip');
+      chips.forEach(function(chip) {
+        chip.addEventListener('click', function() {
+          var lang = chip.dataset.lang;
+          chips.forEach(function(c) { c.classList.remove('active'); });
+          chip.classList.add('active');
+          document.querySelectorAll('.project-card').forEach(function(card) {
+            if (lang === 'all' || card.dataset.lang === lang) {
+              card.removeAttribute('hidden');
+            } else {
+              card.setAttribute('hidden', '');
+            }
+          });
+        });
       });
     });
-    function setActiveNav(id) {
-      navLinks.forEach(a => {
-        a.classList.toggle('active', a.getAttribute('data-section') === id);
+
+    // ── Skill accordion ──────────────────────────────────────────────────────
+    document.addEventListener('DOMContentLoaded', function() {
+      document.querySelectorAll('.skill-category-title').forEach(function(title) {
+        title.addEventListener('click', function() {
+          var badges = title.nextElementSibling;
+          if (badges) badges.classList.toggle('collapsed');
+          var arrow = title.querySelector('.acc-arrow');
+          if (arrow) arrow.textContent = badges && badges.classList.contains('collapsed') ? '▸' : '▾';
+        });
+      });
+    });
+
+    // ── Mouse-tracked hero parallax ──────────────────────────────────────────
+    (function() {
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      var frame = null;
+      document.addEventListener('mousemove', function(e) {
+        if (frame) return;
+        frame = requestAnimationFrame(function() {
+          frame = null;
+          var el = document.querySelector('.hero-photo-parallax');
+          if (!el) return;
+          var cx = window.innerWidth / 2, cy = window.innerHeight / 2;
+          var dx = (e.clientX - cx) / cx, dy = (e.clientY - cy) / cy;
+          el.style.transform = 'translate(' + (-dx * 8) + 'px,' + (-dy * 8) + 'px)';
+        });
+      });
+    })();
+
+    // ── GSAP animations ──────────────────────────────────────────────────────
+    var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    if (!reduced) {
+      gsap.registerPlugin(ScrollTrigger);
+
+      gsap.utils.toArray('.reveal').forEach(function(el) {
+        gsap.to(el, { opacity: 1, y: 0, duration: 0.8, ease: 'power3.out',
+          scrollTrigger: { trigger: el, start: 'top 85%', once: true }
+        });
+      });
+      gsap.utils.toArray('.reveal-left').forEach(function(el) {
+        gsap.to(el, { opacity: 1, x: 0, duration: 0.8, ease: 'power3.out',
+          scrollTrigger: { trigger: el, start: 'top 85%', once: true }
+        });
+      });
+      gsap.utils.toArray('.reveal-right').forEach(function(el) {
+        gsap.to(el, { opacity: 1, x: 0, duration: 0.8, ease: 'power3.out',
+          scrollTrigger: { trigger: el, start: 'top 85%', once: true }
+        });
+      });
+      gsap.utils.toArray('.reveal-scale').forEach(function(el) {
+        gsap.to(el, { opacity: 1, scale: 1, duration: 0.6, ease: 'back.out(1.7)',
+          scrollTrigger: { trigger: el, start: 'top 85%', once: true }
+        });
+      });
+      ScrollTrigger.batch('.project-card:not([hidden])', {
+        onEnter: function(batch) { gsap.to(batch, { opacity: 1, y: 0, stagger: 0.1, duration: 0.6, ease: 'power3.out' }); },
+        start: 'top 85%', once: true
+      });
+      ScrollTrigger.batch('.skill-badge', {
+        onEnter: function(batch) { gsap.to(batch, { opacity: 1, y: 0, scale: 1, stagger: 0.04, duration: 0.4, ease: 'back.out(1.7)' }); },
+        start: 'top 90%', once: true
+      });
+      gsap.from('.hero-anim', { opacity: 0, y: 30, duration: 0.8, stagger: 0.15, ease: 'power3.out', delay: 0.2 });
+
+      // Active nav link on scroll
+      var navLinks = document.querySelectorAll('.nav-links a[data-section]');
+      document.querySelectorAll('section[id]').forEach(function(sec) {
+        ScrollTrigger.create({
+          trigger: sec, start: 'top center', end: 'bottom center',
+          onEnter: function() { setActiveNav(sec.id); },
+          onEnterBack: function() { setActiveNav(sec.id); },
+        });
+      });
+      function setActiveNav(id) {
+        navLinks.forEach(function(a) { a.classList.toggle('active', a.getAttribute('data-section') === id); });
+      }
+    } else {
+      // Reduced motion: make all animated elements immediately visible
+      document.querySelectorAll('.reveal,.reveal-left,.reveal-right,.reveal-scale,.hero-anim,.project-card,.skill-badge').forEach(function(el) {
+        el.style.opacity = '1';
+        el.style.transform = 'none';
       });
     }
   <\/script>`
@@ -231,7 +391,10 @@ function buildNav(name: string, sections: string[], accent: string): string {
       <div class="nav-links" role="list">
         ${navItems.map(s => `<a href="#${s}" data-section="${s}" role="listitem">${navLabel(s)}</a>`).join("")}
       </div>
-      ${hasContact ? `<a href="#contact" class="nav-cta">Contact Me</a>` : ""}
+      <div style="display:flex;align-items:center;gap:10px">
+        <button id="theme-toggle" class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle dark/light mode" title="Toggle theme">&#9788;</button>
+        ${hasContact ? `<a href="#contact" class="nav-cta">Contact Me</a>` : ""}
+      </div>
       <button class="nav-toggle" onclick="var m=document.getElementById('mobileMenu');var open=m.classList.toggle('open');this.setAttribute('aria-expanded',open)" aria-label="Toggle menu" aria-expanded="false" aria-controls="mobileMenu">
         <span aria-hidden="true"></span><span aria-hidden="true"></span><span aria-hidden="true"></span>
       </button>
@@ -260,142 +423,222 @@ function smartRepoDescription(name: string, language: string | null): string {
 
 // Build projects from either AI-enhanced projects or raw repos
 function buildProjects(repos: GitHubRepo[], accent: string, aiProjects?: AIProject[] | null): string {
-  // Use AI projects if available, otherwise fall back to repos
+  function buildFallbackDescription(repo: GitHubRepo): string {
+    const desc = repo.description?.trim() || ""
+    if (desc && !(desc.includes("A ") && desc.includes(" project") && desc.split(/\s+/).length <= 4)) return desc
+    if (repo.topics?.length) return `A ${repo.language || "software"} project focused on ${repo.topics.slice(0, 3).join(", ")}.`
+    return `Open-source ${repo.language || "software"} project. View on GitHub for details.`
+  }
+
+  // Determine the most recently pushed repo (first non-fork in the list, as GitHub API returns by updated_at)
+  const recentRepo = repos.filter(r => !r.fork)[0]?.name
+
   if (aiProjects && aiProjects.length > 0) {
-    return aiProjects.slice(0, 7).map(p => `
-    <div class="project-card reveal" style="opacity:0;transform:translateY(40px)">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+    const langs = [...new Set(aiProjects.map(p => p.language).filter(Boolean))] as string[]
+    const filterChips = langs.length > 1
+      ? `<div class="proj-filter" role="group" aria-label="Filter projects by language">
+          <button class="proj-chip active" data-lang="all">All</button>
+          ${langs.map(l => `<button class="proj-chip" data-lang="${e(l)}">${e(l)}</button>`).join("")}
+        </div>`
+      : ""
+    return filterChips + aiProjects.slice(0, 7).map((p, i) => {
+      const lc = langColor(p.language)
+      const isRecent = i === 0
+      return `
+    <div class="project-card reveal" data-lang="${e(p.language || "")}" style="opacity:0;transform:translateY(40px)">
+      <div class="proj-thumb" style="background:linear-gradient(90deg,${lc},${lc}80)" aria-hidden="true"></div>
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;gap:8px">
         <h3 class="project-name">${e(p.name)}</h3>
-        <div style="display:flex;gap:8px;align-items:center">
-          ${p.stars > 0 ? `<span class="project-stars">&#9733; ${p.stars}</span>` : ""}
-          ${p.forks > 0 ? `<span class="project-stars" style="color:#888">&#9334; ${p.forks}</span>` : ""}
+        <div style="display:flex;gap:6px;align-items:center;flex-shrink:0">
+          ${isRecent ? `<span class="proj-now">Active</span>` : ""}
+          ${p.stars > 0 ? `<span class="project-stars" aria-label="${p.stars} stars">&#9733; ${p.stars}</span>` : ""}
         </div>
       </div>
       <p class="project-desc">${e(stripMd(p.description))}</p>
       <div class="project-meta">
         ${p.language ? `<span class="project-lang">${e(p.language)}</span>` : ""}
-        <a href="${p.url}" target="_blank" rel="noopener" class="project-link">View Code &rarr;</a>
+        <div class="project-links">
+          <a href="${p.url}" target="_blank" rel="noopener" class="project-link gh" aria-label="View ${e(p.name)} on GitHub">GitHub</a>
+        </div>
       </div>
-    </div>`).join("")
-  }
-
-  function buildFallbackDescription(repo: GitHubRepo): string {
-    const desc = repo.description?.trim() || ""
-
-    if (desc && !(desc.includes("A ") && desc.includes(" project") && desc.split(/\s+/).length <= 4)) {
-      return desc
-    }
-
-    if (repo.topics?.length) {
-      return `A ${repo.language || "software"} project focused on ${repo.topics.slice(0, 3).join(", ")}.`
-    }
-
-    return `Open-source ${repo.language || "software"} project. View on GitHub for details.`
+    </div>`
+    }).join("")
   }
   
-  // Fallback to repos
-  return repos.filter(r => !r.fork).slice(0, 6).map(r => {
+  const filtered = repos.filter(r => !r.fork).slice(0, 6)
+  const langs = [...new Set(filtered.map(r => r.language).filter(Boolean))] as string[]
+  const filterChips = langs.length > 1
+    ? `<div class="proj-filter" role="group" aria-label="Filter projects by language">
+        <button class="proj-chip active" data-lang="all">All</button>
+        ${langs.map(l => `<button class="proj-chip" data-lang="${e(l)}">${e(l)}</button>`).join("")}
+      </div>`
+    : ""
+
+  return filterChips + filtered.map((r, i) => {
     const desc = buildFallbackDescription(r) || smartRepoDescription(r.name, r.language)
+    const lc = langColor(r.language)
+    const isRecent = r.name === recentRepo
     return `
-    <div class="project-card reveal" style="opacity:0;transform:translateY(40px)">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+    <div class="project-card reveal" data-lang="${e(r.language || "")}" style="opacity:0;transform:translateY(40px)">
+      <div class="proj-thumb" style="background:linear-gradient(90deg,${lc},${lc}80)" aria-hidden="true"></div>
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;gap:8px">
         <h3 class="project-name">${e(r.name)}</h3>
-        <div style="display:flex;gap:8px;align-items:center">
-          ${r.stargazers_count > 0 ? `<span class="project-stars">&#9733; ${r.stargazers_count}</span>` : ""}
-          ${r.forks_count && r.forks_count > 0 ? `<span class="project-stars" style="color:#888">&#9334; ${r.forks_count}</span>` : ""}
+        <div style="display:flex;gap:6px;align-items:center;flex-shrink:0">
+          ${isRecent ? `<span class="proj-now">Active</span>` : ""}
+          ${r.stargazers_count > 0 ? `<span class="project-stars" aria-label="${r.stargazers_count} stars">&#9733; ${r.stargazers_count}</span>` : ""}
         </div>
       </div>
       <p class="project-desc">${e(desc)}</p>
       <div class="project-meta">
         ${r.language ? `<span class="project-lang">${e(r.language)}</span>` : ""}
-        ${r.topics?.slice(0, 2).map(t => `<span class="project-lang" style="opacity:0.6">${e(t)}</span>`).join("") || ""}
-        <a href="${r.html_url}" target="_blank" rel="noopener" class="project-link">View Code &rarr;</a>
-        ${r.homepage ? `<a href="${r.homepage}" target="_blank" rel="noopener" class="project-link" style="color:#888">Live &rarr;</a>` : ""}
+        ${r.topics?.slice(0, 1).map(t => `<span class="project-lang" style="opacity:0.55">${e(t)}</span>`).join("") || ""}
+        <div class="project-links">
+          ${r.homepage ? `<a href="${r.homepage}" target="_blank" rel="noopener" class="project-link" aria-label="Live demo for ${e(r.name)}">Live</a>` : ""}
+          <a href="${r.html_url}" target="_blank" rel="noopener" class="project-link gh" aria-label="View ${e(r.name)} on GitHub">GitHub</a>
+        </div>
       </div>
     </div>`
   }).join("")
 }
 
-function buildSkills(langs: string[], topics: string[]): string {
-  return [...langs, ...topics].slice(0, 14).map(s => 
-    `<span class="skill-badge reveal-scale" style="opacity:0;transform:scale(0.9)">${e(s)}</span>`
-  ).join("")
+function buildSkills(langs: string[], topics: string[], resumeText?: string | null): string {
+  // Categorize languages
+  const webLangs = ["JavaScript","TypeScript","HTML","CSS","Svelte","Vue"]
+  const backLangs = ["Python","Go","Rust","Java","C#","C++","C","PHP","Ruby","Scala","Kotlin","Elixir","Swift","Haskell","Dart"]
+  const toolTopics = ["docker","kubernetes","aws","gcp","azure","git","ci/cd","postgres","mongodb","redis","graphql","rest","linux","nginx","terraform"]
+
+  const languages = langs.filter(l => [...webLangs,...backLangs].includes(l))
+  const frameworks = topics.filter(t => !toolTopics.includes(t.toLowerCase())).slice(0, 8)
+  const tools = topics.filter(t => toolTopics.includes(t.toLowerCase())).slice(0, 6)
+
+  // If no topics, just render flat badges
+  if (topics.length === 0) {
+    return langs.slice(0, 14).map(s =>
+      `<span class="skill-badge reveal-scale" style="opacity:0;transform:scale(0.9)">${e(s)}</span>`
+    ).join("")
+  }
+
+  const categories: { label: string; items: string[] }[] = []
+  if (languages.length) categories.push({ label: "Languages", items: languages })
+  if (frameworks.length) categories.push({ label: "Frameworks & Libraries", items: frameworks })
+  if (tools.length) categories.push({ label: "Tools & Platforms", items: tools })
+  // Fallback — if nothing fits, dump everything
+  if (!categories.length) {
+    categories.push({ label: "Technologies", items: [...langs, ...topics].slice(0, 14) })
+  }
+
+  return categories.map(cat => `
+    <div class="skill-category">
+      <div class="skill-category-title" role="button" tabindex="0" aria-expanded="true">
+        ${e(cat.label)} <span class="acc-arrow">&#9662;</span>
+      </div>
+      <div class="skill-category-badges">
+        ${cat.items.map(s => `<span class="skill-badge reveal-scale" style="opacity:0;transform:scale(0.9)">${e(s)}</span>`).join("")}
+      </div>
+    </div>`).join("")
 }
 
-function buildAbout(profile: GitHubProfile, aiBio: string | null, accent: string): string {
+function buildAbout(profile: GitHubProfile, aiBio: string | null, accent: string, repos?: GitHubRepo[]): string {
   const bio = aiBio || profile.bio || "A passionate developer dedicated to crafting exceptional digital experiences."
+  const totalStars = repos ? repos.reduce((s, r) => s + r.stargazers_count, 0) : 0
+
+  // Quick-fact pills
+  const facts: string[] = []
+  if (profile.location) facts.push(`&#128205; ${e(profile.location)}`)
+  if (profile.company) facts.push(`&#127970; ${e(profile.company)}`)
+  if (profile.public_repos > 0) facts.push(`&#128230; ${profile.public_repos} repos`)
+  if (totalStars > 0) facts.push(`&#9733; ${totalStars} total stars`)
+  if (profile.followers > 0) facts.push(`&#128101; ${profile.followers} followers`)
+
   return `
   <section id="about" class="section" style="background:rgba(255,255,255,0.01)">
     <div class="container">
       <p class="section-label reveal">About</p>
       <h2 class="section-title reveal">A little about me</h2>
-      <p class="section-desc reveal" style="max-width:700px">${e(bio)}</p>
-      <div style="display:flex;gap:32px;flex-wrap:wrap" class="reveal">
-        ${profile.location ? `<div style="display:flex;align-items:center;gap:8px"><span style="color:${accent}">&#9679;</span><span style="font-size:14px;color:#aaa">${e(profile.location)}</span></div>` : ""}
-        ${profile.company ? `<div style="display:flex;align-items:center;gap:8px"><span style="color:${accent}">&#9679;</span><span style="font-size:14px;color:#aaa">${e(profile.company)}</span></div>` : ""}
-        ${profile.blog ? `<div style="display:flex;align-items:center;gap:8px"><span style="color:${accent}">&#9679;</span><a href="${profile.blog.startsWith("http") ? profile.blog : "https://" + profile.blog}" target="_blank" style="font-size:14px;color:${accent}">${e(profile.blog)}</a></div>` : ""}
+      <p class="section-desc reveal" style="max-width:720px;font-size:17px;line-height:1.75">${e(bio)}</p>
+      ${facts.length ? `
+      <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:32px" class="reveal" role="list" aria-label="Quick facts">
+        ${facts.map(f => `<span role="listitem" style="display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border-radius:20px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);font-size:13px;color:#ccc">${f}</span>`).join("")}
+      </div>` : ""}
+      <div style="display:flex;gap:12px;flex-wrap:wrap" class="reveal">
+        ${profile.blog ? `<a href="${profile.blog.startsWith("http") ? profile.blog : "https://" + profile.blog}" target="_blank" rel="noopener" style="padding:10px 22px;border:1.5px solid ${accent}40;color:${accent};border-radius:10px;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px">&#127758; Website</a>` : ""}
+        <a href="${profile.html_url}" target="_blank" rel="noopener" style="padding:10px 22px;border:1.5px solid rgba(255,255,255,0.1);color:#ccc;border-radius:10px;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px">&#128196; GitHub Profile</a>
       </div>
     </div>
   </section>`
 }
 
+// Simple inline SVG icons for social links
+const SOCIAL_SVGS: Record<string, string> = {
+  github: `<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0 1 12 6.844a9.59 9.59 0 0 1 2.504.337c1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.02 10.02 0 0 0 22 12.017C22 6.484 17.522 2 12 2z"/></svg>`,
+  linkedin: `<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.064 2.064 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>`,
+  twitter: `<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>`,
+  substack: `<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M22.539 8.242H1.46V5.406h21.08v2.836zM1.46 10.812V24L12 18.11 22.54 24V10.812H1.46zM22.54 0H1.46v2.836h21.08V0z"/></svg>`,
+  blog: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>`,
+}
+
 function buildContact(profile: GitHubProfile, accent: string, socialLinks?: SocialLinks): string {
-  const links: string[] = []
-  
-  // GitHub (always present)
-  links.push(`<a href="${profile.html_url}" target="_blank" rel="noopener" style="padding:14px 32px;background:${accent};color:#000;border-radius:10px;font-weight:700;font-size:15px;display:inline-flex;align-items:center;gap:8px">GitHub &rarr;</a>`)
-  
-  // LinkedIn
-  if (socialLinks?.linkedin) {
-    links.push(`<a href="${socialLinks.linkedin}" target="_blank" rel="noopener" style="padding:14px 32px;border:2px solid ${accent};color:${accent};border-radius:10px;font-weight:700;font-size:15px">LinkedIn</a>`)
-  }
-  
-  // Twitter/X
-  if (socialLinks?.twitter) {
-    links.push(`<a href="${socialLinks.twitter}" target="_blank" rel="noopener" style="padding:14px 32px;border:2px solid ${accent};color:${accent};border-radius:10px;font-weight:700;font-size:15px">X / Twitter</a>`)
-  }
-  
-  // Substack
-  if (socialLinks?.substack) {
-    links.push(`<a href="${socialLinks.substack}" target="_blank" rel="noopener" style="padding:14px 32px;border:2px solid ${accent};color:${accent};border-radius:10px;font-weight:700;font-size:15px">Substack</a>`)
-  }
-  
-  // Blog / Personal website
-  if (socialLinks?.blog) {
-    links.push(`<a href="${socialLinks.blog.startsWith("http") ? socialLinks.blog : "https://" + socialLinks.blog}" target="_blank" rel="noopener" style="padding:14px 32px;border:2px solid ${accent};color:${accent};border-radius:10px;font-weight:700;font-size:15px">Website</a>`)
-  } else if (profile.blog) {
-    links.push(`<a href="${profile.blog.startsWith("http") ? profile.blog : "https://" + profile.blog}" target="_blank" rel="noopener" style="padding:14px 32px;border:2px solid ${accent};color:${accent};border-radius:10px;font-weight:700;font-size:15px">Website</a>`)
-  }
-  
+  // Build social icon row
+  const icons: string[] = []
+  icons.push(`<a href="${profile.html_url}" target="_blank" rel="noopener" class="social-link" aria-label="GitHub profile" title="GitHub">${SOCIAL_SVGS.github}</a>`)
+  if (socialLinks?.linkedin) icons.push(`<a href="${socialLinks.linkedin}" target="_blank" rel="noopener" class="social-link" aria-label="LinkedIn profile" title="LinkedIn">${SOCIAL_SVGS.linkedin}</a>`)
+  if (socialLinks?.twitter) icons.push(`<a href="${socialLinks.twitter}" target="_blank" rel="noopener" class="social-link" aria-label="X / Twitter" title="X / Twitter">${SOCIAL_SVGS.twitter}</a>`)
+  if (socialLinks?.substack) icons.push(`<a href="${socialLinks.substack}" target="_blank" rel="noopener" class="social-link" aria-label="Substack" title="Substack">${SOCIAL_SVGS.substack}</a>`)
+  const blogUrl = socialLinks?.blog || profile.blog
+  if (blogUrl) icons.push(`<a href="${blogUrl.startsWith("http") ? blogUrl : "https://" + blogUrl}" target="_blank" rel="noopener" class="social-link" aria-label="Personal website" title="Website">${SOCIAL_SVGS.blog}</a>`)
+
+  // Email from GitHub API isn't always available, so we fall back to mailto: pattern
+  const emailHint = `${profile.username}@users.noreply.github.com`
+
   return `
   <section id="contact" class="section" style="background:rgba(255,255,255,0.01)">
     <div class="container" style="text-align:center">
       <p class="section-label reveal">Contact</p>
       <h2 class="section-title reveal" style="margin-left:auto;margin-right:auto">Let&rsquo;s work together</h2>
-      <p class="section-desc reveal" style="margin-left:auto;margin-right:auto;text-align:center">Have a project in mind? I&rsquo;d love to hear about it.</p>
-      <div style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap" class="reveal">
-        ${links.join("\n        ")}
+      <p class="section-desc reveal" style="margin-left:auto;margin-right:auto;text-align:center">Have a project in mind or just want to say hello? My inbox is open.</p>
+      <div class="social-links reveal" aria-label="Social links">
+        ${icons.join("\n        ")}
+      </div>
+      <div class="reveal" style="display:flex;flex-direction:column;align-items:center;gap:12px">
+        <button class="email-copy" onclick="copyEmail('${e(emailHint)}')" aria-label="Copy email address to clipboard">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          Copy email to clipboard
+        </button>
+        <a href="${profile.html_url}" target="_blank" rel="noopener" style="padding:14px 36px;background:${accent};color:#000;border-radius:12px;font-weight:700;font-size:15px;display:inline-flex;align-items:center;gap:8px" aria-label="View GitHub profile">
+          ${SOCIAL_SVGS.github} View GitHub Profile
+        </a>
       </div>
     </div>
-  </section>`
+  </section>
+  <div id="copy-toast" class="copy-toast" role="status" aria-live="polite">Copied to clipboard!</div>`
 }
 
-function buildFooter(name: string, accent: string): string {
-  return `
-  <footer class="footer" role="contentinfo">
-    <div style="max-width:1100px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
-      <a href="#home" style="color:${accent};font-weight:600;font-size:13px">${e(name)}</a>
-      <span style="font-size:13px;color:#555">&copy; ${new Date().getFullYear()} ${e(name)}. Built with <a href="https://personaai.vercel.app" target="_blank" rel="noopener" style="color:${accent}">PersonaAI</a>.</span>
-    </div>
-  </footer>`
-}
 
-function shell(accent: string, extraStyles: string, bodyContent: string, name: string, bio?: string, photoUrl?: string): string {
+
+function shell(accent: string, extraStyles: string, bodyContent: string, name: string, bio?: string, photoUrl?: string, skills?: string[], socialLinks?: SocialLinks, profileUrl?: string): string {
   const description = bio 
     ? `${name} - ${bio.substring(0, 150)}${bio.length > 150 ? "..." : ""}`
     : `${name}'s personal portfolio showcasing projects, skills, and experience.`
   const safeDescription = e(description)
   const title = `${e(name)} - Portfolio`
+  const updatedDate = new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" })
+
+  // JSON-LD Person schema for ATS / AI scrapers
+  const jsonLd = JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "Person",
+    "name": name,
+    "description": bio || description,
+    "url": profileUrl || "",
+    "image": photoUrl || "",
+    "sameAs": [
+      profileUrl,
+      socialLinks?.linkedin,
+      socialLinks?.twitter,
+      socialLinks?.blog,
+    ].filter(Boolean),
+    "knowsAbout": skills || [],
+  })
   
   return `<!DOCTYPE html>
 <html lang="en">
@@ -426,9 +669,13 @@ ${photoUrl ? `<meta name="twitter:image" content="${photoUrl}">` : ""}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://github-readme-stats.vercel.app">
+<link rel="preconnect" href="https://github-readme-streak-stats.herokuapp.com">
 
 <!-- Favicon (generated from accent color) -->
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='${encodeURIComponent(accent)}'/><text y='.9em' x='50' text-anchor='middle' font-size='70' fill='white'>${e(name.charAt(0).toUpperCase())}</text></svg>">
+
+<!-- JSON-LD structured data -->
+<script type="application/ld+json">${jsonLd}<\/script>
 
 <style>
   .skip-link { position:absolute; top:-100px; left:16px; padding:8px 16px; background:${accent}; color:#000; font-weight:700; font-size:14px; border-radius:4px; z-index:9999; transition:top .2s; }
@@ -441,8 +688,21 @@ ${photoUrl ? `<meta name="twitter:image" content="${photoUrl}">` : ""}
 <div class="grid-bg" aria-hidden="true"></div>
 ${bodyContent}
 ${gsapScript()}
+<!-- updated:${updatedDate} -->
 </body>
 </html>`
+}
+
+function buildFooter(name: string, accent: string): string {
+  const updatedDate = new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" })
+  return `
+  <footer class="footer" role="contentinfo">
+    <div style="max-width:1100px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <a href="#home" style="color:${accent};font-weight:600;font-size:13px">${e(name)}</a>
+      <span style="font-size:12px;color:#444">Updated ${updatedDate}</span>
+      <span style="font-size:13px;color:#555">&copy; ${new Date().getFullYear()} ${e(name)}. Built with <a href="https://personaai.vercel.app" target="_blank" rel="noopener" style="color:${accent}">PersonaAI</a>.</span>
+    </div>
+  </footer>`
 }
 
 /* ===== TEMPLATE: BOLD PORTRAIT ===== */
@@ -488,17 +748,23 @@ function buildBoldPortrait(data: TemplateData): string {
     </div>
   </section>
   <main>
-  ${config.sections.includes("about") ? buildAbout(profile, aiBio, c.accent) : ""}
+  ${config.sections.includes("about") ? buildAbout(profile, aiBio, c.accent, repos) : ""}
   ${config.sections.includes("skills") ? `<section id="skills" class="section"><div class="container"><p class="section-label reveal">Expertise</p><h2 class="section-title reveal">Skills & Technologies</h2><div style="display:flex;flex-wrap:wrap;gap:0">${buildSkills(langs, topics)}</div></div></section>` : ""}
   ${config.sections.includes("projects") ? `<section id="projects" class="section" style="background:rgba(255,255,255,0.01)"><div class="container"><p class="section-label reveal">Work</p><h2 class="section-title reveal">Featured Projects</h2><div class="projects-grid">${buildProjects(repos, c.accent, aiProjects)}</div></div></section>` : ""}
   ${config.sections.includes("experience") ? buildExperience(data.resumeText, c.accent) : ""}
   ${config.sections.includes("github-stats") ? buildGitHubStats(profile, c.accent, repos) : ""}
   ${config.sections.includes("testimonials") ? buildTestimonials(c.accent) : ""}
+  ${config.sections.includes("now") ? buildNow(data.targetRole, c.accent) : ""}
+  ${config.sections.includes("education") ? buildEducation(data.resumeText, c.accent) : ""}
+  ${config.sections.includes("writing") ? buildWriting(data.socialLinks, c.accent) : ""}
+  ${config.sections.includes("now") ? buildNow(data.targetRole, c.accent) : ""}
+  ${config.sections.includes("education") ? buildEducation(data.resumeText, c.accent) : ""}
+  ${config.sections.includes("writing") ? buildWriting(data.socialLinks, c.accent) : ""}
   ${config.sections.includes("contact") ? buildContact(profile, c.accent, data.socialLinks) : ""}
   </main>
   ${buildFooter(name, c.accent)}`
 
-  return shell(c.accent, extra, body, name, aiBio || profile.bio || undefined, img)
+  return shell(c.accent, extra, body, name, aiBio || profile.bio || undefined, img, [...getLangs(repos), ...getTopics(repos)], data.socialLinks, profile.html_url)
 }
 
 /* ===== TEMPLATE: TYPOGRAPHIC ===== */
@@ -528,17 +794,20 @@ function buildTypographic(data: TemplateData): string {
     <div class="hero-role hero-anim">${e(profile.location || "Worldwide")}</div>
   </section>
   <main>
-  ${config.sections.includes("about") ? buildAbout(profile, aiBio, c.accent) : ""}
+  ${config.sections.includes("about") ? buildAbout(profile, aiBio, c.accent, repos) : ""}
   ${config.sections.includes("skills") ? `<section id="skills" class="section"><div class="container"><p class="section-label reveal">Skills</p><h2 class="section-title reveal">What I work with</h2><div style="display:flex;flex-wrap:wrap;gap:0">${buildSkills(langs, topics)}</div></div></section>` : ""}
   ${config.sections.includes("projects") ? `<section id="projects" class="section" style="background:rgba(255,255,255,0.01)"><div class="container"><p class="section-label reveal">Projects</p><h2 class="section-title reveal">Selected Work</h2><div class="projects-grid">${buildProjects(repos, c.accent, aiProjects)}</div></div></section>` : ""}
   ${config.sections.includes("experience") ? buildExperience(data.resumeText, c.accent) : ""}
   ${config.sections.includes("github-stats") ? buildGitHubStats(profile, c.accent, repos) : ""}
   ${config.sections.includes("testimonials") ? buildTestimonials(c.accent) : ""}
+  ${config.sections.includes("now") ? buildNow(data.targetRole, c.accent) : ""}
+  ${config.sections.includes("education") ? buildEducation(data.resumeText, c.accent) : ""}
+  ${config.sections.includes("writing") ? buildWriting(data.socialLinks, c.accent) : ""}
   ${config.sections.includes("contact") ? buildContact(profile, c.accent, data.socialLinks) : ""}
   </main>
   ${buildFooter(name, c.accent)}`
 
-  return shell(c.accent, extra, body, name, aiBio || profile.bio || undefined, img)
+  return shell(c.accent, extra, body, name, aiBio || profile.bio || undefined, img, [...getLangs(repos), ...getTopics(repos)], data.socialLinks, profile.html_url)
 }
 
 /* ===== TEMPLATE: SPLIT EDITORIAL ===== */
@@ -580,17 +849,20 @@ function buildSplitEditorial(data: TemplateData): string {
     </div>
   </section>
   <main>
-  ${config.sections.includes("about") ? buildAbout(profile, aiBio, c.accent) : ""}
+  ${config.sections.includes("about") ? buildAbout(profile, aiBio, c.accent, repos) : ""}
   ${config.sections.includes("skills") ? `<section id="skills" class="section"><div class="container"><p class="section-label reveal">Expertise</p><h2 class="section-title reveal">Technologies</h2><div style="display:flex;flex-wrap:wrap;gap:0">${buildSkills(langs, topics)}</div></div></section>` : ""}
   ${config.sections.includes("projects") ? `<section id="projects" class="section" style="background:rgba(255,255,255,0.01)"><div class="container"><p class="section-label reveal">Work</p><h2 class="section-title reveal">Projects</h2><div class="projects-grid">${buildProjects(repos, c.accent, aiProjects)}</div></div></section>` : ""}
   ${config.sections.includes("experience") ? buildExperience(data.resumeText, c.accent) : ""}
   ${config.sections.includes("github-stats") ? buildGitHubStats(profile, c.accent, repos) : ""}
   ${config.sections.includes("testimonials") ? buildTestimonials(c.accent) : ""}
+  ${config.sections.includes("now") ? buildNow(data.targetRole, c.accent) : ""}
+  ${config.sections.includes("education") ? buildEducation(data.resumeText, c.accent) : ""}
+  ${config.sections.includes("writing") ? buildWriting(data.socialLinks, c.accent) : ""}
   ${config.sections.includes("contact") ? buildContact(profile, c.accent, data.socialLinks) : ""}
   </main>
   ${buildFooter(name, c.accent)}`
 
-  return shell(c.accent, extra, body, name, aiBio || profile.bio || undefined, img)
+  return shell(c.accent, extra, body, name, aiBio || profile.bio || undefined, img, [...getLangs(repos), ...getTopics(repos)], data.socialLinks, profile.html_url)
 }
 
 /* ===== TEMPLATE: PASTEL CREATIVE (now dark premium) ===== */
@@ -642,17 +914,20 @@ function buildPastelCreative(data: TemplateData): string {
     </div>
   </section>
   <main>
-  ${config.sections.includes("about") ? buildAbout(profile, aiBio, c.accent) : ""}
+  ${config.sections.includes("about") ? buildAbout(profile, aiBio, c.accent, repos) : ""}
   ${config.sections.includes("skills") ? `<section id="skills" class="section"><div class="container"><p class="section-label reveal">Skills</p><h2 class="section-title reveal">My Toolkit</h2><div style="display:flex;flex-wrap:wrap;gap:0">${buildSkills(langs, topics)}</div></div></section>` : ""}
   ${config.sections.includes("projects") ? `<section id="projects" class="section" style="background:rgba(255,255,255,0.01)"><div class="container"><p class="section-label reveal">Portfolio</p><h2 class="section-title reveal">Recent Projects</h2><div class="projects-grid">${buildProjects(repos, c.accent, aiProjects)}</div></div></section>` : ""}
   ${config.sections.includes("experience") ? buildExperience(data.resumeText, c.accent) : ""}
   ${config.sections.includes("github-stats") ? buildGitHubStats(profile, c.accent, repos) : ""}
   ${config.sections.includes("testimonials") ? buildTestimonials(c.accent) : ""}
+  ${config.sections.includes("now") ? buildNow(data.targetRole, c.accent) : ""}
+  ${config.sections.includes("education") ? buildEducation(data.resumeText, c.accent) : ""}
+  ${config.sections.includes("writing") ? buildWriting(data.socialLinks, c.accent) : ""}
   ${config.sections.includes("contact") ? buildContact(profile, c.accent, data.socialLinks) : ""}
   </main>
   ${buildFooter(name, c.accent)}`
 
-  return shell(c.accent, extra, body, name, aiBio || profile.bio || undefined, img)
+  return shell(c.accent, extra, body, name, aiBio || profile.bio || undefined, img, [...getLangs(repos), ...getTopics(repos)], data.socialLinks, profile.html_url)
 }
 
 /* ===== TEMPLATE: DESIGNER CODER ===== */
@@ -694,17 +969,20 @@ function buildDesignerCoder(data: TemplateData): string {
     <img src="${img}" alt="${e(name)}" class="hero-center-photo hero-anim hero-photo-parallax" crossorigin="anonymous">
   </section>
   <main>
-  ${config.sections.includes("about") ? buildAbout(profile, aiBio, c.accent) : ""}
+  ${config.sections.includes("about") ? buildAbout(profile, aiBio, c.accent, repos) : ""}
   ${config.sections.includes("skills") ? `<section id="skills" class="section"><div class="container"><p class="section-label reveal">Stack</p><h2 class="section-title reveal">Tech Stack</h2><div style="display:flex;flex-wrap:wrap;gap:0">${buildSkills(langs, topics)}</div></div></section>` : ""}
   ${config.sections.includes("projects") ? `<section id="projects" class="section" style="background:rgba(255,255,255,0.01)"><div class="container"><p class="section-label reveal">Work</p><h2 class="section-title reveal">Projects</h2><div class="projects-grid">${buildProjects(repos, c.accent, aiProjects)}</div></div></section>` : ""}
   ${config.sections.includes("experience") ? buildExperience(data.resumeText, c.accent) : ""}
   ${config.sections.includes("github-stats") ? buildGitHubStats(profile, c.accent, repos) : ""}
   ${config.sections.includes("testimonials") ? buildTestimonials(c.accent) : ""}
+  ${config.sections.includes("now") ? buildNow(data.targetRole, c.accent) : ""}
+  ${config.sections.includes("education") ? buildEducation(data.resumeText, c.accent) : ""}
+  ${config.sections.includes("writing") ? buildWriting(data.socialLinks, c.accent) : ""}
   ${config.sections.includes("contact") ? buildContact(profile, c.accent, data.socialLinks) : ""}
   </main>
   ${buildFooter(name, c.accent)}`
 
-  return shell(c.accent, extra, body, name, aiBio || profile.bio || undefined, img)
+  return shell(c.accent, extra, body, name, aiBio || profile.bio || undefined, img, [...getLangs(repos), ...getTopics(repos)], data.socialLinks, profile.html_url)
 }
 
 /* ===== TEMPLATE: MINIMAL CLEAN (now premium dark minimal) ===== */
@@ -739,7 +1017,7 @@ function buildMinimalClean(data: TemplateData): string {
     <a href="#projects" class="cta hero-anim">View Work</a>
   </section>
   <main>
-  ${config.sections.includes("about") ? buildAbout(profile, aiBio, c.accent) : ""}
+  ${config.sections.includes("about") ? buildAbout(profile, aiBio, c.accent, repos) : ""}
   ${config.sections.includes("skills") ? `<section id="skills" class="section"><div class="container"><p class="section-label reveal">Skills</p><h2 class="section-title reveal">Technologies</h2><div style="display:flex;flex-wrap:wrap;gap:0">${buildSkills(langs, topics)}</div></div></section>` : ""}
   ${config.sections.includes("projects") ? `
   <section id="projects" class="section" style="background:rgba(255,255,255,0.01)">
@@ -762,11 +1040,14 @@ function buildMinimalClean(data: TemplateData): string {
   ${config.sections.includes("experience") ? buildExperience(data.resumeText, c.accent) : ""}
   ${config.sections.includes("github-stats") ? buildGitHubStats(profile, c.accent, repos) : ""}
   ${config.sections.includes("testimonials") ? buildTestimonials(c.accent) : ""}
+  ${config.sections.includes("now") ? buildNow(data.targetRole, c.accent) : ""}
+  ${config.sections.includes("education") ? buildEducation(data.resumeText, c.accent) : ""}
+  ${config.sections.includes("writing") ? buildWriting(data.socialLinks, c.accent) : ""}
   ${config.sections.includes("contact") ? buildContact(profile, c.accent, data.socialLinks) : ""}
   </main>
   ${buildFooter(name, c.accent)}`
 
-  return shell(c.accent, extra, body, name, aiBio || profile.bio || undefined, img)
+  return shell(c.accent, extra, body, name, aiBio || profile.bio || undefined, img, [...getLangs(repos), ...getTopics(repos)], data.socialLinks, profile.html_url)
 }
 
 /* ===== TEMPLATE: BRUTALIST ===== */
@@ -838,11 +1119,14 @@ function buildBrutalist(data: TemplateData): string {
   ${config.sections.includes("experience") ? buildExperience(data.resumeText, c.accent) : ""}
   ${config.sections.includes("github-stats") ? buildGitHubStats(profile, c.accent, repos) : ""}
   ${config.sections.includes("testimonials") ? buildTestimonials(c.accent) : ""}
+  ${config.sections.includes("now") ? buildNow(data.targetRole, c.accent) : ""}
+  ${config.sections.includes("education") ? buildEducation(data.resumeText, c.accent) : ""}
+  ${config.sections.includes("writing") ? buildWriting(data.socialLinks, c.accent) : ""}
   ${config.sections.includes("contact") ? buildContact(profile, c.accent, data.socialLinks) : ""}
   </main>
   ${buildFooter(name, c.accent)}`
 
-  return shell(c.accent, extra, body, name, aiBio || profile.bio || undefined, img)
+  return shell(c.accent, extra, body, name, aiBio || profile.bio || undefined, img, [...getLangs(repos), ...getTopics(repos)], data.socialLinks, profile.html_url)
 }
 
 /* ===== TEMPLATE: GLASSMORPHISM ===== */
@@ -958,11 +1242,14 @@ function buildGlassmorphism(data: TemplateData): string {
   ${config.sections.includes("experience") ? buildExperience(data.resumeText, c.accent) : ""}
   ${config.sections.includes("github-stats") ? buildGitHubStats(profile, c.accent, repos) : ""}
   ${config.sections.includes("testimonials") ? buildTestimonials(c.accent) : ""}
+  ${config.sections.includes("now") ? buildNow(data.targetRole, c.accent) : ""}
+  ${config.sections.includes("education") ? buildEducation(data.resumeText, c.accent) : ""}
+  ${config.sections.includes("writing") ? buildWriting(data.socialLinks, c.accent) : ""}
   ${config.sections.includes("contact") ? buildContact(profile, c.accent, data.socialLinks) : ""}
   </main>
   ${buildFooter(name, c.accent)}`
 
-  return shell(c.accent, extra, body, name, aiBio || profile.bio || undefined, img)
+  return shell(c.accent, extra, body, name, aiBio || profile.bio || undefined, img, [...getLangs(repos), ...getTopics(repos)], data.socialLinks, profile.html_url)
 }
 
 /* ========== TEMPLATE: TERMINAL / CLI ========== */
@@ -1061,11 +1348,14 @@ function buildTerminal(data: TemplateData): string {
   ${config.sections.includes("experience") ? buildExperience(data.resumeText, c.accent) : ""}
   ${config.sections.includes("github-stats") ? buildGitHubStats(profile, c.accent, repos) : ""}
   ${config.sections.includes("testimonials") ? buildTestimonials(c.accent) : ""}
+  ${config.sections.includes("now") ? buildNow(data.targetRole, c.accent) : ""}
+  ${config.sections.includes("education") ? buildEducation(data.resumeText, c.accent) : ""}
+  ${config.sections.includes("writing") ? buildWriting(data.socialLinks, c.accent) : ""}
   ${config.sections.includes("contact") ? buildContact(profile, c.accent, data.socialLinks) : ""}
   </main>
   ${buildFooter(name, c.accent)}`
 
-  return shell(c.accent, extra, body, name, bio, img)
+  return shell(c.accent, extra, body, name, bio, img, [...getLangs(repos), ...getTopics(repos)], data.socialLinks, profile.html_url)
 }
 
 /* ========== TEMPLATE: LIQUID GLASS ========== */
@@ -1160,11 +1450,14 @@ function buildLiquidGlass(data: TemplateData): string {
   ${config.sections.includes("experience") ? buildExperience(data.resumeText, c.accent) : ""}
   ${config.sections.includes("github-stats") ? buildGitHubStats(profile, c.accent, repos) : ""}
   ${config.sections.includes("testimonials") ? buildTestimonials(c.accent) : ""}
+  ${config.sections.includes("now") ? buildNow(data.targetRole, c.accent) : ""}
+  ${config.sections.includes("education") ? buildEducation(data.resumeText, c.accent) : ""}
+  ${config.sections.includes("writing") ? buildWriting(data.socialLinks, c.accent) : ""}
   ${config.sections.includes("contact") ? buildContact(profile, c.accent, data.socialLinks) : ""}
   </main>
   ${buildFooter(name, c.accent)}`
 
-  return shell(c.accent, extra, body, name, bio, img)
+  return shell(c.accent, extra, body, name, bio, img, [...getLangs(repos), ...getTopics(repos)], data.socialLinks, profile.html_url)
 }
 
 /* ========== TEMPLATE: CYBERPUNK NOIR ========== */
@@ -1271,11 +1564,14 @@ function buildCyberpunkNoir(data: TemplateData): string {
   ${config.sections.includes("experience") ? buildExperience(data.resumeText, c.accent) : ""}
   ${config.sections.includes("github-stats") ? buildGitHubStats(profile, c.accent, repos) : ""}
   ${config.sections.includes("testimonials") ? buildTestimonials(c.accent) : ""}
+  ${config.sections.includes("now") ? buildNow(data.targetRole, c.accent) : ""}
+  ${config.sections.includes("education") ? buildEducation(data.resumeText, c.accent) : ""}
+  ${config.sections.includes("writing") ? buildWriting(data.socialLinks, c.accent) : ""}
   ${config.sections.includes("contact") ? buildContact(profile, c.accent, data.socialLinks) : ""}
   </main>
   ${buildFooter(name, c.accent)}`
 
-  return shell(c.accent, extra, body, name, bio, img)
+  return shell(c.accent, extra, body, name, bio, img, [...getLangs(repos), ...getTopics(repos)], data.socialLinks, profile.html_url)
 }
 
 /* ========== TEMPLATE: BENTO GRID ========== */
@@ -1374,11 +1670,14 @@ function buildBentoGrid(data: TemplateData): string {
   ${config.sections.includes("experience") ? buildExperience(data.resumeText, c.accent) : ""}
   ${config.sections.includes("github-stats") ? buildGitHubStats(profile, c.accent, repos) : ""}
   ${config.sections.includes("testimonials") ? buildTestimonials(c.accent) : ""}
+  ${config.sections.includes("now") ? buildNow(data.targetRole, c.accent) : ""}
+  ${config.sections.includes("education") ? buildEducation(data.resumeText, c.accent) : ""}
+  ${config.sections.includes("writing") ? buildWriting(data.socialLinks, c.accent) : ""}
   ${config.sections.includes("contact") ? buildContact(profile, c.accent, data.socialLinks) : ""}
   </main>
   ${buildFooter(name, c.accent)}`
 
-  return shell(c.accent, extra, body, name, bio, img)
+  return shell(c.accent, extra, body, name, bio, img, [...getLangs(repos), ...getTopics(repos)], data.socialLinks, profile.html_url)
 }
 
 /* ========== TEMPLATE: SPOTLIGHT DARK ========== */
@@ -1487,6 +1786,9 @@ function buildSpotlightDark(data: TemplateData): string {
   ${config.sections.includes("experience") ? buildExperience(data.resumeText, c.accent) : ""}
   ${config.sections.includes("github-stats") ? buildGitHubStats(profile, c.accent, repos) : ""}
   ${config.sections.includes("testimonials") ? buildTestimonials(c.accent) : ""}
+  ${config.sections.includes("now") ? buildNow(data.targetRole, c.accent) : ""}
+  ${config.sections.includes("education") ? buildEducation(data.resumeText, c.accent) : ""}
+  ${config.sections.includes("writing") ? buildWriting(data.socialLinks, c.accent) : ""}
   ${config.sections.includes("contact") ? buildContact(profile, c.accent, data.socialLinks) : ""}
   </main>
   ${buildFooter(name, c.accent)}
@@ -1500,7 +1802,7 @@ function buildSpotlightDark(data: TemplateData): string {
     }
   <\/script>`
 
-  return shell(c.accent, extra, body, name, bio, img)
+  return shell(c.accent, extra, body, name, bio, img, [...getLangs(repos), ...getTopics(repos)], data.socialLinks, profile.html_url)
 }
 
 /* ========== TEMPLATE: SWISS EDITORIAL ========== */
@@ -1619,7 +1921,7 @@ function buildSwissEditorial(data: TemplateData): string {
   </main>
   <footer class="footer" role="contentinfo"><a href="#home" style="color:${c.accent};font-weight:700;letter-spacing:2px;text-transform:uppercase;font-size:11px">${e(name)}</a> &nbsp;|&nbsp; &copy; ${new Date().getFullYear()} &nbsp;|&nbsp; Built with <a href="https://personaai.vercel.app" target="_blank" rel="noopener" style="color:${c.accent}">PersonaAI</a></footer>`
 
-  return shell(c.accent, extra, body, name, bio, img)
+  return shell(c.accent, extra, body, name, bio, img, [...getLangs(repos), ...getTopics(repos)], data.socialLinks, profile.html_url)
 }
 
 /* ========== TEMPLATE: GRADIENT AURORA ========== */
@@ -1714,11 +2016,14 @@ function buildGradientAurora(data: TemplateData): string {
   ${config.sections.includes("experience") ? buildExperience(data.resumeText, c.accent) : ""}
   ${config.sections.includes("github-stats") ? buildGitHubStats(profile, c.accent, repos) : ""}
   ${config.sections.includes("testimonials") ? buildTestimonials(c.accent) : ""}
+  ${config.sections.includes("now") ? buildNow(data.targetRole, c.accent) : ""}
+  ${config.sections.includes("education") ? buildEducation(data.resumeText, c.accent) : ""}
+  ${config.sections.includes("writing") ? buildWriting(data.socialLinks, c.accent) : ""}
   ${config.sections.includes("contact") ? buildContact(profile, c.accent, data.socialLinks) : ""}
   </main>
   ${buildFooter(name, c.accent)}`
 
-  return shell(c.accent, extra, body, name, bio, img)
+  return shell(c.accent, extra, body, name, bio, img, [...getLangs(repos), ...getTopics(repos)], data.socialLinks, profile.html_url)
 }
 
 /* ========== SHARED SECTION BUILDERS ========== */
@@ -1727,44 +2032,33 @@ function buildGitHubStats(profile: GitHubProfile, accent: string, repos: GitHubR
   const username = profile.username
   const langs = getLangs(repos)
   const totalStars = repos.reduce((sum, r) => sum + (r.stargazers_count || 0), 0)
+  const accentEnc = encodeURIComponent(accent.replace("#",""))
+  const statsUrl = `https://github-readme-stats.vercel.app/api?username=${encodeURIComponent(username)}&show_icons=true&theme=transparent&title_color=${accentEnc}&text_color=aaaaaa&icon_color=${accentEnc}&border_color=ffffff15&bg_color=00000000&ring_color=${accentEnc}`
+  const langsUrl = `https://github-readme-stats.vercel.app/api/top-langs/?username=${encodeURIComponent(username)}&layout=compact&theme=transparent&title_color=${accentEnc}&text_color=aaaaaa&border_color=ffffff15&bg_color=00000000&langs_count=8`
+  const streakUrl = `https://github-readme-streak-stats.herokuapp.com/?user=${encodeURIComponent(username)}&theme=transparent&ring=${accentEnc}&fire=${accentEnc}&currStreakLabel=${accentEnc}&sideLabels=aaaaaa&dates=666666&border=ffffff15`
+
+  const statCard = (value: string | number, label: string) =>
+    `<div style="text-align:center;padding:20px 28px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:12px;min-width:110px">
+      <div style="font-size:2rem;font-weight:800;color:${accent};line-height:1">${value}</div>
+      <div style="font-size:11px;color:#555;letter-spacing:1.5px;text-transform:uppercase;margin-top:6px">${label}</div>
+    </div>`
+
   return `
   <section id="github-stats" class="section" style="background:rgba(255,255,255,0.01)">
     <div class="container">
-      <p class="section-label reveal">Activity</p>
-      <h2 class="section-title reveal">GitHub Stats</h2>
-      <div style="display:flex;flex-wrap:wrap;gap:20px;align-items:flex-start" class="reveal">
-        <img
-          src="https://github-readme-stats.vercel.app/api?username=${encodeURIComponent(username)}&show_icons=true&theme=transparent&title_color=${encodeURIComponent(accent)}&text_color=aaaaaa&icon_color=${encodeURIComponent(accent)}&border_color=ffffff15&bg_color=00000000&hide_border=false&ring_color=${encodeURIComponent(accent)}"
-          alt="${e(username)} GitHub stats"
-          loading="lazy"
-          style="border-radius:12px;max-width:100%;width:auto;height:auto;flex-shrink:1;min-width:0"
-          onerror="this.style.display='none'"
-        >
-        <img
-          src="https://github-readme-stats.vercel.app/api/top-langs/?username=${encodeURIComponent(username)}&layout=compact&theme=transparent&title_color=${encodeURIComponent(accent)}&text_color=aaaaaa&border_color=ffffff15&bg_color=00000000&langs_count=8"
-          alt="${e(username)} top languages"
-          loading="lazy"
-          style="border-radius:12px;max-width:100%;width:auto;height:auto;flex-shrink:1;min-width:0"
-          onerror="this.style.display='none'"
-        >
+      <p class="section-label reveal">Open Source</p>
+      <h2 class="section-title reveal">GitHub Activity</h2>
+      <div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start;margin-bottom:32px" class="reveal">
+        <img src="${statsUrl}" alt="${e(username)} GitHub stats" loading="lazy" style="border-radius:12px;max-width:100%;flex-shrink:1;min-width:0;height:auto" onerror="this.style.display='none'">
+        <img src="${langsUrl}" alt="${e(username)} top languages" loading="lazy" style="border-radius:12px;max-width:100%;flex-shrink:1;min-width:0;height:auto" onerror="this.style.display='none'">
+        <img src="${streakUrl}" alt="${e(username)} contribution streak" loading="lazy" style="border-radius:12px;max-width:100%;flex-shrink:1;min-width:0;height:auto" onerror="this.style.display='none'">
       </div>
-      <div style="display:flex;gap:32px;flex-wrap:wrap;margin-top:40px" class="reveal">
-        <div style="text-align:center">
-          <div style="font-size:2.2rem;font-weight:800;color:${accent}">${profile.public_repos}</div>
-          <div style="font-size:12px;color:#666;letter-spacing:1px;text-transform:uppercase;margin-top:4px">Repositories</div>
-        </div>
-        <div style="text-align:center">
-          <div style="font-size:2.2rem;font-weight:800;color:${accent}">${totalStars}</div>
-          <div style="font-size:12px;color:#666;letter-spacing:1px;text-transform:uppercase;margin-top:4px">Total Stars</div>
-        </div>
-        <div style="text-align:center">
-          <div style="font-size:2.2rem;font-weight:800;color:${accent}">${profile.followers}</div>
-          <div style="font-size:12px;color:#666;letter-spacing:1px;text-transform:uppercase;margin-top:4px">Followers</div>
-        </div>
-        <div style="text-align:center">
-          <div style="font-size:2.2rem;font-weight:800;color:${accent}">${langs.length}</div>
-          <div style="font-size:12px;color:#666;letter-spacing:1px;text-transform:uppercase;margin-top:4px">Languages</div>
-        </div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap" class="reveal" role="list" aria-label="GitHub statistics">
+        ${statCard(profile.public_repos, "Repositories")}
+        ${statCard(totalStars, "Stars Earned")}
+        ${statCard(profile.followers, "Followers")}
+        ${statCard(langs.length, "Languages")}
+        ${statCard(profile.following, "Following")}
       </div>
     </div>
   </section>`
@@ -1832,29 +2126,44 @@ function buildExperience(resumeText: string | null, accent: string): string {
 }
 
 function buildTestimonials(accent: string): string {
+  const testimonials = [
+    { quote: "An exceptional developer who consistently delivers clean, well-architected solutions. Their attention to detail and communication made the whole project smooth.", name: "Team Lead", role: "Engineering Manager", initials: "TL" },
+    { quote: "One of the most reliable engineers I have worked with. Always goes the extra mile to understand the problem deeply before writing a single line of code.", name: "Colleague", role: "Senior Engineer", initials: "C" },
+    { quote: "Their code reviews raised the bar for our whole team. Patient, thorough, and always focused on the bigger picture.", name: "Collaborator", role: "Product Engineer", initials: "CO" },
+    { quote: "Delivered a complex feature set two weeks ahead of schedule. Exceptional communicator and an absolute pleasure to work with.", name: "Project Lead", role: "Tech Lead", initials: "PL" },
+  ]
+  const card = (t: typeof testimonials[0]) => `
+    <blockquote style="min-width:300px;max-width:360px;flex-shrink:0;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-left:3px solid ${accent};border-radius:12px;padding:24px 28px;position:relative">
+      <p style="font-size:14px;color:#aaa;line-height:1.75;font-style:italic;margin-bottom:16px">&ldquo;${e(t.quote)}&rdquo;</p>
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="width:36px;height:36px;border-radius:50%;background:${accent}20;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:${accent};flex-shrink:0" aria-hidden="true">${t.initials}</div>
+        <div>
+          <div style="font-size:13px;font-weight:600;color:#fff">${e(t.name)}</div>
+          <div style="font-size:12px;color:#555">${e(t.role)}</div>
+        </div>
+      </div>
+    </blockquote>`
+
   return `
+  <style>
+    .marquee-wrap { overflow:hidden; mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent); }
+    .marquee-track { display:flex; gap:20px; width:max-content; animation:marquee-scroll 32s linear infinite; }
+    .marquee-track:hover { animation-play-state:paused; }
+    @keyframes marquee-scroll { from { transform:translateX(0); } to { transform:translateX(-50%); } }
+    @media (prefers-reduced-motion:reduce) { .marquee-track { animation:none; } }
+  </style>
   <section id="testimonials" class="section" style="background:rgba(255,255,255,0.01)">
     <div class="container">
       <p class="section-label reveal">Social Proof</p>
       <h2 class="section-title reveal">What people say</h2>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:20px">
-        ${[
-          { quote: "An exceptional developer who consistently delivers clean, well-architected solutions. Their attention to detail and communication made the whole project smooth.", name: "Team Lead", role: "Engineering Manager" },
-          { quote: "One of the most reliable engineers I have worked with. Always goes the extra mile to understand the problem deeply before writing a single line of code.", name: "Colleague", role: "Senior Engineer" },
-          { quote: "Their code reviews raised the bar for our whole team. Patient, thorough, and always focused on the bigger picture.", name: "Collaborator", role: "Product Engineer" },
-        ].map(t => `
-        <blockquote class="reveal" style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-left:3px solid ${accent};border-radius:12px;padding:24px;position:relative">
-          <p style="font-size:14px;color:#aaa;line-height:1.75;font-style:italic;margin-bottom:16px">&ldquo;${e(t.quote)}&rdquo;</p>
-          <div style="display:flex;align-items:center;gap:12px">
-            <div style="width:36px;height:36px;border-radius:50%;background:${accent}20;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:${accent}">${t.name.charAt(0)}</div>
-            <div>
-              <div style="font-size:13px;font-weight:600;color:#fff">${e(t.name)}</div>
-              <div style="font-size:12px;color:#555">${e(t.role)}</div>
-            </div>
-          </div>
-        </blockquote>`).join("")}
+    </div>
+    <div class="marquee-wrap reveal" style="padding:8px 0 16px">
+      <div class="marquee-track" aria-label="Testimonials carousel">
+        ${[...testimonials,...testimonials].map(card).join("")}
       </div>
-      <p class="reveal" style="font-size:12px;color:#333;margin-top:16px;text-align:center">Replace these with your own testimonials from LinkedIn recommendations or colleagues.</p>
+    </div>
+    <div class="container">
+      <p style="font-size:12px;color:#333;margin-top:12px;text-align:center">Replace these placeholder testimonials with real LinkedIn recommendations or colleague quotes.</p>
     </div>
   </section>`
 }
@@ -1892,6 +2201,114 @@ function buildFeaturedProject(aiProjects: AIProject[] | null | undefined, repos:
   </section>`
 }
 
+/* ========== NEW SECTION BUILDERS ========== */
+
+function buildNow(targetRole: string | null | undefined, accent: string): string {
+  const focus = targetRole || "building side projects and learning new technologies"
+  return `
+  <section id="now" class="section" style="background:rgba(255,255,255,0.01)">
+    <div class="container">
+      <p class="section-label reveal">Current Status</p>
+      <h2 class="section-title reveal">What I&rsquo;m doing now</h2>
+      <div class="reveal" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px">
+        <div style="padding:28px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-left:3px solid ${accent};border-radius:12px">
+          <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:${accent};font-weight:700;margin-bottom:12px">Focused on</div>
+          <p style="font-size:15px;color:#ccc;line-height:1.65">${e(focus)}</p>
+        </div>
+        <div style="padding:28px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:12px">
+          <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#555;font-weight:700;margin-bottom:12px">Open to</div>
+          <p style="font-size:15px;color:#ccc;line-height:1.65">Full-time roles, contract work, and interesting open-source collaborations.</p>
+        </div>
+        <div style="padding:28px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:12px">
+          <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#555;font-weight:700;margin-bottom:12px">Location</div>
+          <p style="font-size:15px;color:#ccc;line-height:1.65">Available for remote work globally. Open to relocation for the right opportunity.</p>
+        </div>
+      </div>
+      <p style="font-size:12px;color:#333;margin-top:16px">Inspired by <a href="https://nownownow.com" target="_blank" rel="noopener" style="color:${accent};opacity:0.6">nownownow.com</a>. Update this section after deploying.</p>
+    </div>
+  </section>`
+}
+
+function buildEducation(resumeText: string | null, accent: string): string {
+  const items: { degree: string; school: string; year: string }[] = []
+
+  if (resumeText) {
+    const lines = resumeText.split("\n").map(l => l.trim()).filter(Boolean)
+    let inEdu = false
+    const yearRe = /\b(19|20)\d{2}\b/
+    for (const line of lines) {
+      if (/^education/i.test(line)) { inEdu = true; continue }
+      if (/^(experience|skills|projects|certifications|awards|work)/i.test(line)) { inEdu = false }
+      if (!inEdu) continue
+      const yearMatch = line.match(yearRe)
+      if (yearMatch && line.length < 120) {
+        const parts = line.split(/[|,–\-@]/).map(p => p.trim()).filter(Boolean)
+        if (parts.length >= 2) {
+          items.push({ degree: parts[0], school: parts[1] || "", year: yearMatch[0] })
+        }
+      }
+      if (items.length >= 3) break
+    }
+  }
+
+  const entries = items.length > 0 ? items : [
+    { degree: "B.Sc. Computer Science", school: "Your University", year: "2022" },
+    { degree: "Full-Stack Development Bootcamp", school: "Online / Self-taught", year: "2021" },
+  ]
+
+  return `
+  <section id="education" class="section">
+    <div class="container">
+      <p class="section-label reveal">Background</p>
+      <h2 class="section-title reveal">Education & Certifications</h2>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px" class="reveal">
+        ${entries.map(ed => `
+        <div style="padding:28px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:12px">
+          <div style="font-size:12px;color:${accent};font-weight:700;letter-spacing:1px;margin-bottom:8px">${e(ed.year)}</div>
+          <h3 style="font-size:16px;font-weight:700;color:#fff;margin-bottom:4px">${e(ed.degree)}</h3>
+          <p style="font-size:14px;color:#666">${e(ed.school)}</p>
+        </div>`).join("")}
+      </div>
+    </div>
+  </section>`
+}
+
+function buildWriting(socialLinks: SocialLinks | undefined, accent: string): string {
+  const substackUrl = socialLinks?.substack
+  const blogUrl = socialLinks?.blog
+  const hasLink = substackUrl || blogUrl
+
+  return `
+  <section id="writing" class="section" style="background:rgba(255,255,255,0.01)">
+    <div class="container">
+      <p class="section-label reveal">Published</p>
+      <h2 class="section-title reveal">Featured Writing</h2>
+      ${hasLink ? `
+      <p class="section-desc reveal">Read more of my writing on ${substackUrl ? `<a href="${substackUrl}" target="_blank" rel="noopener" style="color:${accent}">Substack</a>` : ""}${blogUrl ? ` and my <a href="${blogUrl.startsWith("http") ? blogUrl : "https://" + blogUrl}" target="_blank" rel="noopener" style="color:${accent}">personal blog</a>` : ""}.</p>
+      ` : `<p class="section-desc reveal">Add your Substack or blog URL in the wizard to link your writing here.</p>`}
+      <div style="display:flex;flex-direction:column;gap:16px" class="reveal">
+        ${[
+          { title: "Building in Public: Lessons from Shipping 3 Side Projects", pub: "Personal Blog", date: "Apr 2026", read: "5 min read" },
+          { title: "Why I Switched from REST to GraphQL (and Back Again)", pub: "Dev.to", date: "Feb 2026", read: "8 min read" },
+          { title: "The Hidden Cost of Perfect Code", pub: "Medium", date: "Dec 2025", read: "4 min read" },
+        ].map(a => `
+        <article style="padding:20px 24px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:12px;display:flex;align-items:center;justify-content:space-between;gap:16px;transition:border-color .3s" onmouseenter="this.style.borderColor='${accent}30'" onmouseleave="this.style.borderColor='rgba(255,255,255,0.06)'">
+          <div>
+            <h3 style="font-size:15px;font-weight:600;color:#fff;margin-bottom:4px">${e(a.title)}</h3>
+            <div style="display:flex;gap:12px">
+              <span style="font-size:12px;color:#555">${e(a.pub)}</span>
+              <span style="font-size:12px;color:#555">${e(a.date)}</span>
+              <span style="font-size:12px;color:${accent}">${e(a.read)}</span>
+            </div>
+          </div>
+          <span style="font-size:18px;color:${accent};flex-shrink:0">&rarr;</span>
+        </article>`).join("")}
+      </div>
+      <p style="font-size:12px;color:#333;margin-top:16px">Replace these with links to your actual articles after deploying.</p>
+    </div>
+  </section>`
+}
+
 /* ========== MAIN EXPORT ========== */
 const TEMPLATE_BUILDERS: Record<string, (data: TemplateData) => string> = {
   "bold-portrait": buildBoldPortrait,
@@ -1913,7 +2330,19 @@ const TEMPLATE_BUILDERS: Record<string, (data: TemplateData) => string> = {
 
 export function buildPortfolioHtml(data: TemplateData): string {
   const builder = TEMPLATE_BUILDERS[data.config.template] || buildBoldPortrait
-  const html = builder(data)
+  let html = builder(data)
   // Ensure first <main> has id="main-content" for skip-to-main accessibility link
-  return html.replace(/<main(?![^>]*id=)/, '<main id="main-content"')
+  html = html.replace(/<main(?![^>]*id=)/, '<main id="main-content"')
+  // Add .typewriter class to hero taglines / hero-bio for the typewriter effect
+  // Applied to the first hero-anim heading or hero-bio if not already present
+  if (!html.includes('class="typewriter"') && !html.includes("class='typewriter'")) {
+    html = html.replace(/class="hero-bio hero-anim"/, 'class="hero-bio hero-anim typewriter"')
+    if (!html.includes("typewriter")) {
+      // Fallback: apply to first hero-anim paragraph
+      html = html.replace(/class="hero-anim"([^>]*>)([^<]{20,})/, 'class="hero-anim typewriter"$1$2')
+    }
+  }
+  // Add loading="lazy" to all img tags that don't already have it
+  html = html.replace(/<img(?![^>]*loading=)/g, '<img loading="lazy"')
+  return html
 }
