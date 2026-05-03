@@ -160,15 +160,28 @@ export function StepPreview({ state, dispatch, onBack }: StepPreviewProps) {
   }, [github, resume.text, notion.content, config, photo.dataUrl, dispatch, aiContent, targetRole])
 
   const hasGeneratedRef = useRef(false)
+
+  // Safety valve: if aiContent is still loading after 12 s (e.g. background
+  // fire-and-forget from the "Skip" path), unblock generation with whatever
+  // data we have rather than leaving the user stuck on the loading screen.
+  const [aiContentTimedOut, setAiContentTimedOut] = useState(false)
+  useEffect(() => {
+    if (!aiContent.loading) return
+    if (aiContentReady) return // already have data — no need for a timer
+    const id = setTimeout(() => setAiContentTimedOut(true), 12000)
+    return () => clearTimeout(id)
+  }, [aiContent.loading, aiContentReady])
+
   useEffect(() => {
     if (hasGeneratedRef.current) return
     if (portfolio.html || portfolio.loading || portfolio.error || isGenerating) return
-    // Wait until AI content has finished loading before generating so we only
-    // ever call generate() once with the richest possible data.
-    if (aiContent.loading) return
+    // Only hold off if aiContent is still loading AND we have no data yet AND
+    // we haven't timed out yet. If the user already has AI content, or the
+    // background fetch has been running too long, proceed immediately.
+    if (aiContent.loading && !aiContentReady && !aiContentTimedOut) return
     hasGeneratedRef.current = true
     generate()
-  }, [generate, portfolio.html, portfolio.loading, portfolio.error, isGenerating, aiContent.loading])
+  }, [generate, portfolio.html, portfolio.loading, portfolio.error, isGenerating, aiContent.loading, aiContentReady, aiContentTimedOut])
 
   const handleHtmlChange = useCallback(
     (newHtml: string) => {
