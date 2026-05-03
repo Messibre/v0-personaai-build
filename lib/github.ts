@@ -73,45 +73,43 @@ export async function fetchGitHubRepos(username: string): Promise<GitHubRepo[]> 
 }
 
 async function fetchRepoRootContents(username: string, repo: string): Promise<unknown[]> {
-  const res = await fetch(
-    `${GITHUB_API}/repos/${encodeURIComponent(username)}/${encodeURIComponent(repo)}/contents`,
-    {
-      headers: {
-        Accept: "application/vnd.github.v3+json",
-        "User-Agent": "PersonaAI-Portfolio-Generator",
-      },
-    }
-  )
-
-  if (!res.ok) {
+  try {
+    const res = await fetch(
+      `${GITHUB_API}/repos/${encodeURIComponent(username)}/${encodeURIComponent(repo)}/contents`,
+      {
+        headers: {
+          Accept: "application/vnd.github.v3+json",
+          "User-Agent": "PersonaAI-Portfolio-Generator",
+        },
+        signal: AbortSignal.timeout(2000),
+      }
+    )
+    if (!res.ok) return []
+    const data = await res.json()
+    return Array.isArray(data) ? data : []
+  } catch {
     return []
   }
-
-  const data = await res.json()
-  return Array.isArray(data) ? data : []
 }
 
 export async function fetchRepoReadme(username: string, repo: string): Promise<string> {
-  const res = await fetch(
-    `${GITHUB_API}/repos/${encodeURIComponent(username)}/${encodeURIComponent(repo)}/readme`,
-    {
-      headers: {
-        Accept: "application/vnd.github.raw",
-        "User-Agent": "PersonaAI-Portfolio-Generator",
-      },
-    }
-  )
-
-  if (res.status === 404) {
+  try {
+    const res = await fetch(
+      `${GITHUB_API}/repos/${encodeURIComponent(username)}/${encodeURIComponent(repo)}/readme`,
+      {
+        headers: {
+          Accept: "application/vnd.github.raw",
+          "User-Agent": "PersonaAI-Portfolio-Generator",
+        },
+        signal: AbortSignal.timeout(2000),
+      }
+    )
+    if (!res.ok) return ""
+    const text = await res.text()
+    return text.trim().substring(0, 1200)
+  } catch {
     return ""
   }
-
-  if (!res.ok) {
-    return ""
-  }
-
-  const text = await res.text()
-  return text.trim().substring(0, 1200)
 }
 
 export async function detectRepoTechnology(username: string, repo: string): Promise<string> {
@@ -176,7 +174,9 @@ export async function detectRepoTechnology(username: string, repo: string): Prom
 }
 
 export async function enrichReposForAI(username: string, repos: GitHubRepo[]): Promise<EnrichedGitHubRepo[]> {
-  const limitedRepos = (repos || []).filter((repo) => !repo.fork).slice(0, 20)
+  // Cap at 8 repos — top starred ones provide the most AI signal, and fetching
+  // more than that serially is the #1 source of generation latency.
+  const limitedRepos = (repos || []).filter((repo) => !repo.fork).slice(0, 8)
 
   return Promise.all(
     limitedRepos.map(async (repo) => {

@@ -61,7 +61,7 @@ async function scrapeUrlOnce(url: string): Promise<string> {
 
   try {
     const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 5000)
+    const timeoutId = setTimeout(() => controller.abort(), 3000)
 
     const res = await fetch(url, {
       headers: {
@@ -108,20 +108,8 @@ async function scrapeUrlOnce(url: string): Promise<string> {
 }
 
 async function scrapeUrl(url: string): Promise<string> {
-  const delays = [0, 1000, 2000, 4000]
-
-  for (let attempt = 0; attempt < delays.length; attempt += 1) {
-    if (delays[attempt] > 0) {
-      await sleep(delays[attempt])
-    }
-
-    const text = await scrapeUrlOnce(url)
-    if (text) {
-      return text
-    }
-  }
-
-  return ""
+  // Single attempt only — retries add too much latency for a best-effort signal
+  return scrapeUrlOnce(url)
 }
 
 // Call Gemini API with retry across multiple keys
@@ -139,11 +127,11 @@ async function callGemini(prompt: string, systemPrompt: string, expectJson = fal
           contents: [{ parts: [{ text: prompt }] }],
           generationConfig: {
             temperature: 0.7,
-            maxOutputTokens: 4096,
+            maxOutputTokens: 3000,
             ...(expectJson && { responseMimeType: "application/json" }),
           },
         }),
-        signal: AbortSignal.timeout(15000),
+        signal: AbortSignal.timeout(10000),
       })
 
       if (!res.ok) continue
@@ -213,8 +201,8 @@ export async function POST(request: Request) {
     // targetRole is optional — if missing, AI generates based on repos/links alone
     const resolvedRole = targetRole?.trim() || "Software Developer"
 
-    // Step 1: Scrape external links in parallel (max 5)
-    const linksToScrape = externalLinks.slice(0, 5)
+    // Step 1: Scrape external links in parallel (max 3 — keep total latency low)
+    const linksToScrape = externalLinks.slice(0, 3)
     const scrapedTexts = await Promise.all(linksToScrape.map(scrapeUrl))
     const scrapedContent = scrapedTexts.filter(Boolean).join("\n\n").substring(0, 4000)
 
