@@ -1,4 +1,4 @@
-import type { EnrichedGitHubRepo, GitHubProfile, GitHubRepo, AIProject, AIGeneratedContent } from "@/lib/types"
+import type { EnrichedGitHubRepo, GitHubProfile, GitHubRepo, AIProject, AIGeneratedContentWithResume } from "@/lib/types"
 import { enrichReposForAI } from "@/lib/github"
 import * as cheerio from "cheerio"
 
@@ -412,7 +412,7 @@ Return JSON in exactly this format:
     }
 
     try {
-      const parsed = JSON.parse(cleanedResponse) as AIGeneratedContent
+      const parsed = JSON.parse(cleanedResponse) as AIGeneratedContentWithResume
 
       // Validate and sanitize
       const projects: AIProject[] = (parsed.projects || []).slice(0, 7).map((p) => ({
@@ -430,9 +430,18 @@ Return JSON in exactly this format:
         heroTagline: parsed.heroTagline || resolvedRole,
       }
 
+      // If resume text was provided but AI did not return a resume section, synthesize a light summary
+      let final = { ...base } as any
+      if (resumeText && !parsed.resume) {
+        const synthSummary = synthesizeResumeSummary(resumeText)
+        final.resume = { summary: synthSummary.summary, highlights: synthSummary.highlights }
+      } else if (parsed.resume) {
+        final.resume = parsed.resume
+      }
+
       if (debugMode) {
         return Response.json({
-          ...base,
+          ...final,
           debug: {
             geminiConfigured: GEMINI_KEYS.length > 0,
             reason: "aiResponse_parsed",
@@ -445,7 +454,7 @@ Return JSON in exactly this format:
         })
       }
 
-      return Response.json(base)
+      return Response.json(final)
     } catch {
       // JSON parse failed, return fallback
       const fallbackProjects: AIProject[] = reposForAI.slice(0, 7).map((r) => ({
@@ -464,9 +473,12 @@ Return JSON in exactly this format:
         heroTagline: `${resolvedRole} — ${topLang2}`,
       }
 
+      // If parsing failed, but resume text exists, synthesize a small resume summary to include
       if (debugMode) {
+        const synth = resumeText ? synthesizeResumeSummary(resumeText) : null
         return Response.json({
           ...base2,
+          resume: synth || undefined,
           debug: {
             geminiConfigured: GEMINI_KEYS.length > 0,
             reason: "aiResponse_parse_error",
@@ -479,10 +491,21 @@ Return JSON in exactly this format:
         })
       }
 
-      return Response.json(base2)
+      const synth2 = resumeText ? synthesizeResumeSummary(resumeText) : null
+      return Response.json({ ...base2, resume: synth2 || undefined })
     }
   } catch (err) {
     const message = err instanceof Error ? err.message : "Failed to generate AI content"
     return Response.json({ error: message }, { status: 500 })
   }
+}
+
+// Lightweight resume summarizer (used when AI doesn't return a resume section)
+function synthesizeResumeSummary(resumeText: string) {
+  const lines = resumeText.split(/\r?\n/).map(l => l.trim()).filter(Boolean)
+  // Try to pick bullets if present
+  const bullets = lines.filter(l => /^[\-•*]\s+/.test(l)).slice(0, 6).map(l => l.replace(/^[\-•*]\s+/, ""))
+  const highlights = bullets.length >= 3 ? bullets.slice(0, 3) : lines.slice(0, 6).slice(0, 3)
+  const summary = lines.slice(0, 6).join(' ').substring(0, 600)
+  return { summary, highlights }
 }

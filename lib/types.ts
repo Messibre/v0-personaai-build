@@ -210,6 +210,16 @@ export interface AIGeneratedContent {
   heroTagline: string
 }
 
+export interface AIResume {
+  summary?: string
+  highlights?: string[]
+}
+
+// extend generated content with optional resume section
+export interface AIGeneratedContentWithResume extends AIGeneratedContent {
+  resume?: AIResume
+}
+
 export interface TargetRoleConfig {
   role: string
   externalLinks: string[] // URLs for LinkedIn, blog, etc.
@@ -262,6 +272,7 @@ export interface WizardState {
     projects: AIProject[] | null
     aboutMe: string | null
     heroTagline: string | null
+    resume?: AIResume | null
     loading: boolean
     error: string | null
   }
@@ -300,7 +311,7 @@ export type WizardAction =
   | { type: "SET_TARGET_ROLE"; role: string }
   | { type: "SET_EXTERNAL_LINKS"; links: string[] }
   | { type: "SET_AI_CONTENT_LOADING"; loading: boolean }
-  | { type: "SET_AI_CONTENT"; content: AIGeneratedContent }
+  | { type: "SET_AI_CONTENT"; content: AIGeneratedContent | AIGeneratedContentWithResume }
   | { type: "SET_AI_CONTENT_ERROR"; error: string }
   | { type: "CLEAR_AI_CONTENT" }
   | { type: "SET_PORTFOLIO_LOADING"; loading: boolean }

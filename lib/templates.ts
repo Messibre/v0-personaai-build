@@ -5,6 +5,7 @@ interface TemplateData {
   profile: GitHubProfile
   repos: GitHubRepo[]
   resumeText: string | null
+  aiResume?: { summary?: string; highlights?: string[] } | null
   notionContent: string | null
   config: PortfolioConfig
   photoUrl: string | null
@@ -491,7 +492,7 @@ function buildBoldPortrait(data: TemplateData): string {
   ${config.sections.includes("about") ? buildAbout(profile, aiBio, c.accent) : ""}
   ${config.sections.includes("skills") ? `<section id="skills" class="section"><div class="container"><p class="section-label reveal">Expertise</p><h2 class="section-title reveal">Skills & Technologies</h2><div style="display:flex;flex-wrap:wrap;gap:0">${buildSkills(langs, topics)}</div></div></section>` : ""}
   ${config.sections.includes("projects") ? `<section id="projects" class="section" style="background:rgba(255,255,255,0.01)"><div class="container"><p class="section-label reveal">Work</p><h2 class="section-title reveal">Featured Projects</h2><div class="projects-grid">${buildProjects(repos, c.accent, aiProjects)}</div></div></section>` : ""}
-  ${config.sections.includes("experience") ? buildExperience(data.resumeText, c.accent) : ""}
+  ${config.sections.includes("experience") ? buildExperience(data.aiResume, data.resumeText, c.accent) : ""}
   ${config.sections.includes("github-stats") ? buildGitHubStats(profile, c.accent, repos) : ""}
   ${config.sections.includes("testimonials") ? buildTestimonials(c.accent) : ""}
   ${config.sections.includes("contact") ? buildContact(profile, c.accent, data.socialLinks) : ""}
@@ -531,7 +532,7 @@ function buildTypographic(data: TemplateData): string {
   ${config.sections.includes("about") ? buildAbout(profile, aiBio, c.accent) : ""}
   ${config.sections.includes("skills") ? `<section id="skills" class="section"><div class="container"><p class="section-label reveal">Skills</p><h2 class="section-title reveal">What I work with</h2><div style="display:flex;flex-wrap:wrap;gap:0">${buildSkills(langs, topics)}</div></div></section>` : ""}
   ${config.sections.includes("projects") ? `<section id="projects" class="section" style="background:rgba(255,255,255,0.01)"><div class="container"><p class="section-label reveal">Projects</p><h2 class="section-title reveal">Selected Work</h2><div class="projects-grid">${buildProjects(repos, c.accent, aiProjects)}</div></div></section>` : ""}
-  ${config.sections.includes("experience") ? buildExperience(data.resumeText, c.accent) : ""}
+  ${config.sections.includes("experience") ? buildExperience(data.aiResume, data.resumeText, c.accent) : ""}
   ${config.sections.includes("github-stats") ? buildGitHubStats(profile, c.accent, repos) : ""}
   ${config.sections.includes("testimonials") ? buildTestimonials(c.accent) : ""}
   ${config.sections.includes("contact") ? buildContact(profile, c.accent, data.socialLinks) : ""}
@@ -583,7 +584,7 @@ function buildSplitEditorial(data: TemplateData): string {
   ${config.sections.includes("about") ? buildAbout(profile, aiBio, c.accent) : ""}
   ${config.sections.includes("skills") ? `<section id="skills" class="section"><div class="container"><p class="section-label reveal">Expertise</p><h2 class="section-title reveal">Technologies</h2><div style="display:flex;flex-wrap:wrap;gap:0">${buildSkills(langs, topics)}</div></div></section>` : ""}
   ${config.sections.includes("projects") ? `<section id="projects" class="section" style="background:rgba(255,255,255,0.01)"><div class="container"><p class="section-label reveal">Work</p><h2 class="section-title reveal">Projects</h2><div class="projects-grid">${buildProjects(repos, c.accent, aiProjects)}</div></div></section>` : ""}
-  ${config.sections.includes("experience") ? buildExperience(data.resumeText, c.accent) : ""}
+  ${config.sections.includes("experience") ? buildExperience(data.aiResume, data.resumeText, c.accent) : ""}
   ${config.sections.includes("github-stats") ? buildGitHubStats(profile, c.accent, repos) : ""}
   ${config.sections.includes("testimonials") ? buildTestimonials(c.accent) : ""}
   ${config.sections.includes("contact") ? buildContact(profile, c.accent, data.socialLinks) : ""}
@@ -645,7 +646,7 @@ function buildPastelCreative(data: TemplateData): string {
   ${config.sections.includes("about") ? buildAbout(profile, aiBio, c.accent) : ""}
   ${config.sections.includes("skills") ? `<section id="skills" class="section"><div class="container"><p class="section-label reveal">Skills</p><h2 class="section-title reveal">My Toolkit</h2><div style="display:flex;flex-wrap:wrap;gap:0">${buildSkills(langs, topics)}</div></div></section>` : ""}
   ${config.sections.includes("projects") ? `<section id="projects" class="section" style="background:rgba(255,255,255,0.01)"><div class="container"><p class="section-label reveal">Portfolio</p><h2 class="section-title reveal">Recent Projects</h2><div class="projects-grid">${buildProjects(repos, c.accent, aiProjects)}</div></div></section>` : ""}
-  ${config.sections.includes("experience") ? buildExperience(data.resumeText, c.accent) : ""}
+  ${config.sections.includes("experience") ? buildExperience(data.aiResume, data.resumeText, c.accent) : ""}
   ${config.sections.includes("github-stats") ? buildGitHubStats(profile, c.accent, repos) : ""}
   ${config.sections.includes("testimonials") ? buildTestimonials(c.accent) : ""}
   ${config.sections.includes("contact") ? buildContact(profile, c.accent, data.socialLinks) : ""}
@@ -697,7 +698,7 @@ function buildDesignerCoder(data: TemplateData): string {
   ${config.sections.includes("about") ? buildAbout(profile, aiBio, c.accent) : ""}
   ${config.sections.includes("skills") ? `<section id="skills" class="section"><div class="container"><p class="section-label reveal">Stack</p><h2 class="section-title reveal">Tech Stack</h2><div style="display:flex;flex-wrap:wrap;gap:0">${buildSkills(langs, topics)}</div></div></section>` : ""}
   ${config.sections.includes("projects") ? `<section id="projects" class="section" style="background:rgba(255,255,255,0.01)"><div class="container"><p class="section-label reveal">Work</p><h2 class="section-title reveal">Projects</h2><div class="projects-grid">${buildProjects(repos, c.accent, aiProjects)}</div></div></section>` : ""}
-  ${config.sections.includes("experience") ? buildExperience(data.resumeText, c.accent) : ""}
+  ${config.sections.includes("experience") ? buildExperience(data.aiResume, data.resumeText, c.accent) : ""}
   ${config.sections.includes("github-stats") ? buildGitHubStats(profile, c.accent, repos) : ""}
   ${config.sections.includes("testimonials") ? buildTestimonials(c.accent) : ""}
   ${config.sections.includes("contact") ? buildContact(profile, c.accent, data.socialLinks) : ""}
@@ -759,7 +760,7 @@ function buildMinimalClean(data: TemplateData): string {
       </div>
     </div>
   </section>` : ""}
-  ${config.sections.includes("experience") ? buildExperience(data.resumeText, c.accent) : ""}
+  ${config.sections.includes("experience") ? buildExperience(data.aiResume, data.resumeText, c.accent) : ""}
   ${config.sections.includes("github-stats") ? buildGitHubStats(profile, c.accent, repos) : ""}
   ${config.sections.includes("testimonials") ? buildTestimonials(c.accent) : ""}
   ${config.sections.includes("contact") ? buildContact(profile, c.accent, data.socialLinks) : ""}
@@ -835,7 +836,7 @@ function buildBrutalist(data: TemplateData): string {
   </section>` : ""}
   ${config.sections.includes("skills") ? `<section id="skills" class="section brut-section"><div class="container"><span class="section-label">Skills</span><h2 class="section-title reveal">Tech Stack</h2><div style="display:flex;flex-wrap:wrap;gap:0">${buildSkills(langs, topics)}</div></div></section>` : ""}
   ${config.sections.includes("projects") ? `<section id="projects" class="section brut-section"><div class="container"><span class="section-label">Work</span><h2 class="section-title reveal">Projects</h2><div class="projects-grid">${buildProjects(repos, c.accent, aiProjects)}</div></div></section>` : ""}
-  ${config.sections.includes("experience") ? buildExperience(data.resumeText, c.accent) : ""}
+  ${config.sections.includes("experience") ? buildExperience(data.aiResume, data.resumeText, c.accent) : ""}
   ${config.sections.includes("github-stats") ? buildGitHubStats(profile, c.accent, repos) : ""}
   ${config.sections.includes("testimonials") ? buildTestimonials(c.accent) : ""}
   ${config.sections.includes("contact") ? buildContact(profile, c.accent, data.socialLinks) : ""}
@@ -955,7 +956,7 @@ function buildGlassmorphism(data: TemplateData): string {
       </div>
     </div>
   </section>` : ""}
-  ${config.sections.includes("experience") ? buildExperience(data.resumeText, c.accent) : ""}
+  ${config.sections.includes("experience") ? buildExperience(data.aiResume, data.resumeText, c.accent) : ""}
   ${config.sections.includes("github-stats") ? buildGitHubStats(profile, c.accent, repos) : ""}
   ${config.sections.includes("testimonials") ? buildTestimonials(c.accent) : ""}
   ${config.sections.includes("contact") ? buildContact(profile, c.accent, data.socialLinks) : ""}
@@ -1058,7 +1059,7 @@ function buildTerminal(data: TemplateData): string {
   ${config.sections.includes("about") ? `<section id="about" class="section"><p class="section-heading reveal">about_me</p><p style="font-size:13px;color:#888;line-height:1.9;max-width:640px" class="reveal">${e(bio)}</p></section>` : ""}
   ${config.sections.includes("skills") ? `<section id="skills" class="section"><p class="section-heading reveal">skills_and_tools</p><div class="reveal">${[...langs,...topics].slice(0,16).map(s=>`<span class="skill-badge">${e(s)}</span>`).join("")}</div></section>` : ""}
   ${config.sections.includes("projects") ? `<section id="projects" class="section"><p class="section-heading reveal">projects</p>${projects.map(p=>`<div class="project-card reveal"><div style="display:flex;justify-content:space-between;align-items:flex-start"><p class="project-name">${e(p.name)}</p>${p.stars>0?`<span style="font-size:11px;color:${c.accent}60" aria-label="${p.stars} stars">&#9733;${p.stars}</span>`:""}</div><p class="project-desc">${e(stripMd(p.description))}</p><div class="project-meta">${p.language?`<span class="project-lang">${e(p.language)}</span>`:""}<a href="${p.url}" target="_blank" rel="noopener" class="project-link" aria-label="View ${e(p.name)} on GitHub">open &rarr;</a></div></div>`).join("")}</section>` : ""}
-  ${config.sections.includes("experience") ? buildExperience(data.resumeText, c.accent) : ""}
+  ${config.sections.includes("experience") ? buildExperience(data.aiResume, data.resumeText, c.accent) : ""}
   ${config.sections.includes("github-stats") ? buildGitHubStats(profile, c.accent, repos) : ""}
   ${config.sections.includes("testimonials") ? buildTestimonials(c.accent) : ""}
   ${config.sections.includes("contact") ? buildContact(profile, c.accent, data.socialLinks) : ""}
@@ -1157,7 +1158,7 @@ function buildLiquidGlass(data: TemplateData): string {
   ${config.sections.includes("about") ? `<section id="about" class="section"><div class="container"><p class="section-label reveal">About</p><h2 class="section-title reveal">${e(name.split(" ")[0])}&rsquo;s story</h2><div class="glass-strong reveal" style="padding:32px;max-width:680px"><p style="color:rgba(255,255,255,0.65);font-size:15px;line-height:1.8">${e(bio)}</p></div></div></section>` : ""}
   ${config.sections.includes("skills") ? `<section id="skills" class="section"><div class="container"><p class="section-label reveal">Skills</p><h2 class="section-title reveal">Tech Stack</h2><div class="reveal">${[...langs,...topics].slice(0,16).map(s=>`<span class="skill-badge">${e(s)}</span>`).join("")}</div></div></section>` : ""}
   ${config.sections.includes("projects") ? `<section id="projects" class="section"><div class="container"><p class="section-label reveal">Work</p><h2 class="section-title reveal">Featured Projects</h2><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px">${projects.map(p=>`<div class="glass project-card reveal"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px"><h3 style="font-size:16px;font-weight:700;color:#fff">${e(p.name)}</h3>${p.stars>0?`<span style="font-size:12px;color:${c.accent};font-weight:600" aria-label="${p.stars} stars">&#9733;${p.stars}</span>`:""}</div><p style="font-size:13px;color:rgba(255,255,255,0.45);line-height:1.6;margin-bottom:16px">${e(stripMd(p.description))}</p><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">${p.language?`<span style="font-size:11px;padding:3px 12px;border-radius:50px;background:${c.accent}12;color:${c.accent};border:1px solid ${c.accent}20">${e(p.language)}</span>`:""}<a href="${p.url}" target="_blank" rel="noopener" style="font-size:13px;color:${c.accent};font-weight:600;margin-left:auto" aria-label="View ${e(p.name)} on GitHub">View &rarr;</a></div></div>`).join("")}</div></div></section>` : ""}
-  ${config.sections.includes("experience") ? buildExperience(data.resumeText, c.accent) : ""}
+  ${config.sections.includes("experience") ? buildExperience(data.aiResume, data.resumeText, c.accent) : ""}
   ${config.sections.includes("github-stats") ? buildGitHubStats(profile, c.accent, repos) : ""}
   ${config.sections.includes("testimonials") ? buildTestimonials(c.accent) : ""}
   ${config.sections.includes("contact") ? buildContact(profile, c.accent, data.socialLinks) : ""}
@@ -1268,7 +1269,7 @@ function buildCyberpunkNoir(data: TemplateData): string {
   ${config.sections.includes("about") ? `<section id="about" class="section"><div class="container"><p class="section-label reveal">about</p><h2 class="section-title reveal">Who I Am</h2><p style="font-size:15px;color:#888;line-height:1.85;max-width:680px" class="reveal">${e(bio)}</p></div></section>` : ""}
   ${config.sections.includes("skills") ? `<section id="skills" class="section"><div class="container"><p class="section-label reveal">skills</p><h2 class="section-title reveal">Arsenal</h2><div class="reveal">${[...langs,...topics].slice(0,16).map(s=>`<span class="skill-badge">${e(s)}</span>`).join("")}</div></div></section>` : ""}
   ${config.sections.includes("projects") ? `<section id="projects" class="section"><div class="container"><p class="section-label reveal">projects</p><h2 class="section-title reveal">Missions Completed</h2>${projects.map(p=>`<div class="project-card reveal"><div style="display:flex;justify-content:space-between;align-items:flex-start"><p class="project-name">${e(p.name)}</p>${p.stars>0?`<span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:${c.accent}60" aria-label="${p.stars} stars">&#9733;${p.stars}</span>`:""}</div><p class="project-desc">${e(stripMd(p.description))}</p><div class="project-meta">${p.language?`<span class="project-lang">${e(p.language)}</span>`:""}<a href="${p.url}" target="_blank" rel="noopener" class="project-link" aria-label="Access ${e(p.name)}">access &rarr;</a></div></div>`).join("")}</div></section>` : ""}
-  ${config.sections.includes("experience") ? buildExperience(data.resumeText, c.accent) : ""}
+  ${config.sections.includes("experience") ? buildExperience(data.aiResume, data.resumeText, c.accent) : ""}
   ${config.sections.includes("github-stats") ? buildGitHubStats(profile, c.accent, repos) : ""}
   ${config.sections.includes("testimonials") ? buildTestimonials(c.accent) : ""}
   ${config.sections.includes("contact") ? buildContact(profile, c.accent, data.socialLinks) : ""}
@@ -1371,7 +1372,7 @@ function buildBentoGrid(data: TemplateData): string {
   </div>
   </section>
   ${config.sections.includes("about") ? "" : ""}
-  ${config.sections.includes("experience") ? buildExperience(data.resumeText, c.accent) : ""}
+  ${config.sections.includes("experience") ? buildExperience(data.aiResume, data.resumeText, c.accent) : ""}
   ${config.sections.includes("github-stats") ? buildGitHubStats(profile, c.accent, repos) : ""}
   ${config.sections.includes("testimonials") ? buildTestimonials(c.accent) : ""}
   ${config.sections.includes("contact") ? buildContact(profile, c.accent, data.socialLinks) : ""}
@@ -1770,7 +1771,22 @@ function buildGitHubStats(profile: GitHubProfile, accent: string, repos: GitHubR
   </section>`
 }
 
-function buildExperience(resumeText: string | null, accent: string): string {
+function buildExperience(aiResume: { summary?: string; highlights?: string[] } | null | undefined, resumeText: string | null, accent: string): string {
+  // If AI provided a resume summary/highlights, prefer that (simpler display)
+  if (aiResume && (aiResume.summary || (aiResume.highlights && aiResume.highlights.length > 0))) {
+    const summary = aiResume.summary ? e(aiResume.summary) : ""
+    const highlights = (aiResume.highlights || []).slice(0, 6)
+    return `
+    <section id="experience" class="section">
+      <div class="container">
+        <p class="section-label reveal">Career</p>
+        <h2 class="section-title reveal">Experience & Highlights</h2>
+        <p class="section-desc reveal">${summary}</p>
+        <ul style="list-style:none;padding:0;margin-top:12px">${highlights.map(h => `<li style="font-size:14px;color:#888;line-height:1.65;margin-bottom:8px">• ${e(h)}</li>`).join("")}</ul>
+      </div>
+    </section>`
+  }
+  // Otherwise fall back to parsing full resume text as before
   // Parse bullet points from resume if available
   const items: { title: string; org: string; period: string; bullets: string[] }[] = []
 
