@@ -1,4 +1,4 @@
-import type { EnrichedGitHubRepo, GitHubProfile, GitHubRepo, AIProject, AIGeneratedContent } from "@/lib/types"
+import type { EnrichedGitHubRepo, GitHubProfile, GitHubRepo, AIProject, AIGeneratedContentWithResume } from "@/lib/types"
 import { enrichReposForAI } from "@/lib/github"
 import * as cheerio from "cheerio"
 
@@ -139,7 +139,7 @@ async function callGemini(prompt: string, systemPrompt: string, expectJson = fal
           contents: [{ parts: [{ text: prompt }] }],
           generationConfig: {
             temperature: 0.7,
-            maxOutputTokens: 2000,
+            maxOutputTokens: 4096,
             ...(expectJson && { responseMimeType: "application/json" }),
           },
         }),
@@ -240,8 +240,9 @@ export async function POST(request: Request) {
 
   Write the following for a portfolio website:
 
-  1. About Me (3-4 sentences, third person):
+  1. About Me (3-4 sentences, first person):
     - Sound like a real person — warm, professional, and to the point.
+    - Speak as the candidate using "I" / "my" / "me".
     - Highlight specific skills, technologies, or projects that define the candidate.
     - Frame the story around the target role; explain why they’re a great fit, not just what they’ve done.
     - Use plain English. If a 14-year-old wouldn’t understand a term, rephrase it.
@@ -324,10 +325,11 @@ If the evidence is thin, make careful, grounded inferences instead of generic st
   - Includes at least one concrete detail from the README, repo description, detected tech, or scraped writing
   - If possible, mention scope, constraints, or impact (speed, reliability, simplicity, automation, maintainability, etc.)
 
-2. ABOUT ME (3-4 sentences, third person)
+2. ABOUT ME (3-4 sentences, first person)
   This is the most important field. Rules:
   - Mirror their actual writing style and tone from the scraped content
   - Make it feel grounded, intelligent, and human
+  - Write in first person with natural confidence
   - Include 2-3 specific details across projects, technologies, or opinions
   - Show what problems they solve, not just what tools they use
   - Mention their likely strengths: judgment, speed, clarity, systems thinking, or craft
@@ -377,7 +379,7 @@ Return JSON in exactly this format:
       const topLang = reposForAI[0]?.language || reposForAI[0]?.detectedTech || "software"
       const baseFallback = {
         projects: fallbackProjects,
-        aboutMe: github.profile?.bio || `${name} works on ${topLang} projects, currently targeting ${resolvedRole} roles.`,
+        aboutMe: github.profile?.bio || `I work on ${topLang} projects and I’m currently targeting ${resolvedRole} roles.`,
         heroTagline: `${resolvedRole} — ${topLang}`,
       }
 
@@ -410,7 +412,7 @@ Return JSON in exactly this format:
     }
 
     try {
-      const parsed = JSON.parse(cleanedResponse) as AIGeneratedContent
+      const parsed = JSON.parse(cleanedResponse) as AIGeneratedContentWithResume
 
       // Validate and sanitize
       const projects: AIProject[] = (parsed.projects || []).slice(0, 7).map((p) => ({
@@ -428,9 +430,18 @@ Return JSON in exactly this format:
         heroTagline: parsed.heroTagline || resolvedRole,
       }
 
+      // If resume text was provided but AI did not return a resume section, synthesize a light summary
+      let final = { ...base } as any
+      if (resumeText && !parsed.resume) {
+        const synthSummary = synthesizeResumeSummary(resumeText)
+        final.resume = { summary: synthSummary.summary, highlights: synthSummary.highlights }
+      } else if (parsed.resume) {
+        final.resume = parsed.resume
+      }
+
       if (debugMode) {
         return Response.json({
-          ...base,
+          ...final,
           debug: {
             geminiConfigured: GEMINI_KEYS.length > 0,
             reason: "aiResponse_parsed",
@@ -443,7 +454,7 @@ Return JSON in exactly this format:
         })
       }
 
-      return Response.json(base)
+      return Response.json(final)
     } catch {
       // JSON parse failed, return fallback
       const fallbackProjects: AIProject[] = reposForAI.slice(0, 7).map((r) => ({
@@ -458,13 +469,16 @@ Return JSON in exactly this format:
       const topLang2 = reposForAI[0]?.language || reposForAI[0]?.detectedTech || "software"
       const base2 = {
         projects: fallbackProjects,
-        aboutMe: github.profile?.bio || `${name} builds ${topLang2} projects, currently seeking ${resolvedRole} roles.`,
+        aboutMe: github.profile?.bio || `I build ${topLang2} projects and I’m currently seeking ${resolvedRole} roles.`,
         heroTagline: `${resolvedRole} — ${topLang2}`,
       }
 
+      // If parsing failed, but resume text exists, synthesize a small resume summary to include
       if (debugMode) {
+        const synth = resumeText ? synthesizeResumeSummary(resumeText) : null
         return Response.json({
           ...base2,
+          resume: synth || undefined,
           debug: {
             geminiConfigured: GEMINI_KEYS.length > 0,
             reason: "aiResponse_parse_error",
@@ -477,10 +491,21 @@ Return JSON in exactly this format:
         })
       }
 
-      return Response.json(base2)
+      const synth2 = resumeText ? synthesizeResumeSummary(resumeText) : null
+      return Response.json({ ...base2, resume: synth2 || undefined })
     }
   } catch (err) {
     const message = err instanceof Error ? err.message : "Failed to generate AI content"
     return Response.json({ error: message }, { status: 500 })
   }
+}
+
+// Lightweight resume summarizer (used when AI doesn't return a resume section)
+function synthesizeResumeSummary(resumeText: string) {
+  const lines = resumeText.split(/\r?\n/).map(l => l.trim()).filter(Boolean)
+  // Try to pick bullets if present
+  const bullets = lines.filter(l => /^[\-•*]\s+/.test(l)).slice(0, 6).map(l => l.replace(/^[\-•*]\s+/, ""))
+  const highlights = bullets.length >= 3 ? bullets.slice(0, 3) : lines.slice(0, 6).slice(0, 3)
+  const summary = lines.slice(0, 6).join(' ').substring(0, 600)
+  return { summary, highlights }
 }
