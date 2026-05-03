@@ -118,7 +118,7 @@ async function callGemini(prompt: string, systemPrompt: string, expectJson = fal
 
   for (const key of GEMINI_KEYS) {
     try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`
       const res = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
