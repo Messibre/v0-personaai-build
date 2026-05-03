@@ -192,71 +192,76 @@ export function WizardShell() {
 
   const progressPercent = (state.step / 4) * 100
 
+  // Preview step gets its own full-width full-page layout
+  const isPreviewStep = state.step === 4
+
   return (
-    <div className="w-full max-w-4xl mx-auto">
+    <div className={cn("w-full", !isPreviewStep && "max-w-4xl mx-auto")}>
       <div ref={wizardTopRef} className="scroll-mt-24" />
 
-      {/* Step Indicators */}
-      <div className="mb-10">
-        <div className="flex items-center justify-between mb-5 relative">
-          <div className="absolute top-5 left-[5%] right-[5%] h-px bg-[var(--persona-border)]" aria-hidden="true" />
-          <div
-            className="absolute top-5 left-[5%] h-px bg-[var(--persona-accent)] transition-all duration-700 ease-out"
-            style={{ width: `${progressPercent * 0.9}%` }}
-            aria-hidden="true"
-          />
-          {STEPS.map((step, i) => {
-            const Icon = step.icon
-            const isActive = i === state.step
-            const isCompleted = i < state.step
-            return (
-              <button
-                key={step.label}
-                onClick={() => goToStep(i)}
-                className={cn(
-                  "relative z-10 flex flex-col items-center gap-2 transition-all duration-300 group",
-                  isActive || isCompleted ? "cursor-pointer" : "cursor-default"
-                )}
-                disabled={i > state.step}
-                type="button"
-              >
-                <div
+      {/* Step Indicators — hidden on preview step */}
+      {!isPreviewStep && (
+        <div className="mb-10">
+          <div className="flex items-center justify-between mb-5 relative">
+            <div className="absolute top-5 left-[5%] right-[5%] h-px bg-[var(--persona-border)]" aria-hidden="true" />
+            <div
+              className="absolute top-5 left-[5%] h-px bg-[var(--persona-accent)] transition-all duration-700 ease-out"
+              style={{ width: `${progressPercent * 0.9}%` }}
+              aria-hidden="true"
+            />
+            {STEPS.map((step, i) => {
+              const Icon = step.icon
+              const isActive = i === state.step
+              const isCompleted = i < state.step
+              return (
+                <button
+                  key={step.label}
+                  onClick={() => goToStep(i)}
                   className={cn(
-                    "flex items-center justify-center size-10 rounded-full border-2 transition-all duration-400 bg-background",
-                    isActive
-                      ? "border-[var(--persona-accent)] text-[var(--persona-accent)] scale-110 shadow-[0_0_16px_-2px] shadow-[var(--persona-accent)]/30"
-                      : isCompleted
-                        ? "border-[var(--persona-accent)] bg-[var(--persona-accent)] text-[var(--persona-bg)]"
-                        : "border-[var(--persona-border)] text-muted-foreground/40"
+                    "relative z-10 flex flex-col items-center gap-2 transition-all duration-300 group",
+                    isActive || isCompleted ? "cursor-pointer" : "cursor-default"
                   )}
+                  disabled={i > state.step}
+                  type="button"
                 >
-                  {isCompleted ? (
-                    <Check className="size-4 animate-check-pop" />
-                  ) : (
-                    <Icon className="size-4" />
-                  )}
-                </div>
-                <span
-                  className={cn(
-                    "text-xs font-medium transition-colors duration-300 hidden sm:block",
-                    isActive
-                      ? "text-[var(--persona-accent)]"
-                      : isCompleted
-                        ? "text-foreground"
-                        : "text-muted-foreground/40"
-                  )}
-                >
-                  {step.label}
-                </span>
-              </button>
-            )
-          })}
+                  <div
+                    className={cn(
+                      "flex items-center justify-center size-10 rounded-full border-2 transition-all duration-400 bg-background",
+                      isActive
+                        ? "border-[var(--persona-accent)] text-[var(--persona-accent)] scale-110 shadow-[0_0_16px_-2px] shadow-[var(--persona-accent)]/30"
+                        : isCompleted
+                          ? "border-[var(--persona-accent)] bg-[var(--persona-accent)] text-[var(--persona-bg)]"
+                          : "border-[var(--persona-border)] text-muted-foreground/40"
+                    )}
+                  >
+                    {isCompleted ? (
+                      <Check className="size-4 animate-check-pop" />
+                    ) : (
+                      <Icon className="size-4" />
+                    )}
+                  </div>
+                  <span
+                    className={cn(
+                      "text-xs font-medium transition-colors duration-300 hidden sm:block",
+                      isActive
+                        ? "text-[var(--persona-accent)]"
+                        : isCompleted
+                          ? "text-foreground"
+                          : "text-muted-foreground/40"
+                    )}
+                  >
+                    {step.label}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Step Content */}
-      <div className="min-h-[420px]" key={state.step}>
-        <div className="animate-fade-in-up">
+      <div className={cn(!isPreviewStep && "min-h-[420px]")} key={state.step}>
+        <div className={cn(!isPreviewStep && "animate-fade-in-up")}>
           {state.step === 0 && (
             <StepStart state={state} dispatch={dispatch} onNext={goNext} />
           )}

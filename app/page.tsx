@@ -233,7 +233,7 @@ export default function Home() {
       </header>
 
       {/* Wizard Section */}
-      <section id="wizard" className="relative px-4 py-12 sm:py-16 lg:py-20 scroll-mt-8">
+      <section id="wizard" className="relative py-12 sm:py-16 lg:py-20 scroll-mt-8">
         <div
           className="absolute inset-0 pointer-events-none opacity-[0.03] dark:opacity-[0.05]"
           style={{
@@ -241,7 +241,7 @@ export default function Home() {
             backgroundSize: "60px 60px",
           }}
         />
-        <div className="relative z-10">
+        <div className="relative z-10 px-4 sm:px-6 lg:px-8">
           <WizardShell />
         </div>
       </section>

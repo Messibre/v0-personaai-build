@@ -77,7 +77,7 @@ export function PortfolioRenderer({ html }: PortfolioRendererProps) {
               title="Portfolio preview"
               className="w-full border-0 bg-white"
               style={{ height: "600px" }}
-              sandbox="allow-scripts"
+              sandbox="allow-scripts allow-same-origin"
             />
           </div>
         </div>
