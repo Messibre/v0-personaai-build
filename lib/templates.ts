@@ -52,13 +52,14 @@ function getTopics(repos: GitHubRepo[]): string[] {
 // Shared base styles injected into every template
 function baseStyles(accent: string): string {
   return `
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&family=Syne:wght@400;600;700;800&family=Rajdhani:wght@400;500;600;700&display=swap');
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
-    html { scroll-behavior: smooth; }
+    html { scroll-behavior: smooth; scroll-padding-top: 80px; }
     body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: #0a0a0f; color: #e8e8ef; overflow-x: hidden; -webkit-font-smoothing: antialiased; }
     img { max-width: 100%; height: auto; }
     a { text-decoration: none; transition: all .3s; }
     a:hover { opacity: 0.85; }
+    a:focus-visible, button:focus-visible { outline: 2px solid ${accent}; outline-offset: 2px; }
 
     /* Background grid */
     .grid-bg { position: fixed; inset: 0; pointer-events: none; z-index: 0; 
@@ -212,24 +213,33 @@ function gsapScript(): string {
   <\/script>`
 }
 
+function navLabel(s: string): string {
+  const labels: Record<string, string> = {
+    "home": "Home", "about": "About", "skills": "Skills", "projects": "Projects",
+    "experience": "Experience", "github-stats": "GitHub Stats", "testimonials": "Testimonials", "contact": "Contact"
+  }
+  return labels[s] || (s.charAt(0).toUpperCase() + s.slice(1))
+}
+
 function buildNav(name: string, sections: string[], accent: string): string {
   const navItems = ["home", ...sections.filter(s => s !== "home")]
+  const hasContact = sections.includes("contact")
   return `
-  <nav class="nav">
+  <nav class="nav" role="navigation" aria-label="Main navigation">
     <div class="nav-inner">
-      <a href="#home" class="nav-brand">${e(name.split(" ")[0])}<span>.</span></a>
-      <div class="nav-links">
-        ${navItems.map(s => `<a href="#${s}" data-section="${s}">${s.charAt(0).toUpperCase() + s.slice(1)}</a>`).join("")}
+      <a href="#home" class="nav-brand" aria-label="${e(name)} — Back to top">${e(name.split(" ")[0])}<span>.</span></a>
+      <div class="nav-links" role="list">
+        ${navItems.map(s => `<a href="#${s}" data-section="${s}" role="listitem">${navLabel(s)}</a>`).join("")}
       </div>
-      <a href="#contact" class="nav-cta">Contact Me</a>
-      <button class="nav-toggle" onclick="document.getElementById('mobileMenu').classList.toggle('open')" aria-label="Menu">
-        <span></span><span></span><span></span>
+      ${hasContact ? `<a href="#contact" class="nav-cta">Contact Me</a>` : ""}
+      <button class="nav-toggle" onclick="var m=document.getElementById('mobileMenu');var open=m.classList.toggle('open');this.setAttribute('aria-expanded',open)" aria-label="Toggle menu" aria-expanded="false" aria-controls="mobileMenu">
+        <span aria-hidden="true"></span><span aria-hidden="true"></span><span aria-hidden="true"></span>
       </button>
     </div>
   </nav>
-  <div id="mobileMenu" class="mobile-menu">
-    ${navItems.map(s => `<a href="#${s}" onclick="document.getElementById('mobileMenu').classList.remove('open')">${s.charAt(0).toUpperCase() + s.slice(1)}</a>`).join("")}
-    <a href="#contact" onclick="document.getElementById('mobileMenu').classList.remove('open')" style="color:${accent};font-weight:700">Contact Me</a>
+  <div id="mobileMenu" class="mobile-menu" role="dialog" aria-label="Mobile navigation">
+    ${navItems.map(s => `<a href="#${s}" onclick="document.getElementById('mobileMenu').classList.remove('open');document.querySelector('.nav-toggle').setAttribute('aria-expanded','false')">${navLabel(s)}</a>`).join("")}
+    ${hasContact ? `<a href="#contact" onclick="document.getElementById('mobileMenu').classList.remove('open');document.querySelector('.nav-toggle').setAttribute('aria-expanded','false')" style="color:${accent};font-weight:700">Contact Me</a>` : ""}
   </div>`
 }
 
@@ -372,10 +382,10 @@ function buildContact(profile: GitHubProfile, accent: string, socialLinks?: Soci
 
 function buildFooter(name: string, accent: string): string {
   return `
-  <footer class="footer">
+  <footer class="footer" role="contentinfo">
     <div style="max-width:1100px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
-      <span>Built with <a href="https://personaai.vercel.app" target="_blank" rel="noopener" style="color:${accent}">PersonaAI</a></span>
-      <span>&copy; ${new Date().getFullYear()} ${e(name)}. All rights reserved.</span>
+      <a href="#home" style="color:${accent};font-weight:600;font-size:13px">${e(name)}</a>
+      <span style="font-size:13px;color:#555">&copy; ${new Date().getFullYear()} ${e(name)}. Built with <a href="https://personaai.vercel.app" target="_blank" rel="noopener" style="color:${accent}">PersonaAI</a>.</span>
     </div>
   </footer>`
 }
@@ -395,6 +405,7 @@ function shell(accent: string, extraStyles: string, bodyContent: string, name: s
 <title>${title}</title>
 <meta name="description" content="${safeDescription}">
 <meta name="author" content="${e(name)}">
+<meta name="robots" content="index, follow">
 
 <!-- Open Graph / Facebook -->
 <meta property="og:type" content="website">
@@ -411,13 +422,23 @@ ${photoUrl ? `<meta name="twitter:image" content="${photoUrl}">` : ""}
 <!-- Theme Color -->
 <meta name="theme-color" content="${accent}">
 
+<!-- Preconnect for performance -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://github-readme-stats.vercel.app">
+
 <!-- Favicon (generated from accent color) -->
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='${encodeURIComponent(accent)}'/><text y='.9em' x='50' text-anchor='middle' font-size='70' fill='white'>${e(name.charAt(0).toUpperCase())}</text></svg>">
 
-<style>${baseStyles(accent)}${extraStyles}</style>
+<style>
+  .skip-link { position:absolute; top:-100px; left:16px; padding:8px 16px; background:${accent}; color:#000; font-weight:700; font-size:14px; border-radius:4px; z-index:9999; transition:top .2s; }
+  .skip-link:focus { top:8px; }
+  ${baseStyles(accent)}${extraStyles}
+</style>
 </head>
 <body>
-<div class="grid-bg"></div>
+<a href="#main-content" class="skip-link">Skip to main content</a>
+<div class="grid-bg" aria-hidden="true"></div>
 ${bodyContent}
 ${gsapScript()}
 </body>
@@ -1011,14 +1032,14 @@ function buildTerminal(data: TemplateData): string {
 
   const body = `
   ${buildNav(name, config.sections, c.accent)}
-  <section id="home" class="hero">
+  <section id="home" class="hero" aria-label="Introduction">
     <div class="section">
-      <div class="terminal-bar">
+      <div class="terminal-bar" aria-hidden="true">
         <div class="terminal-dot" style="background:#ff5f57"></div>
         <div class="terminal-dot" style="background:#febc2e"></div>
         <div class="terminal-dot" style="background:#28c840"></div>
       </div>
-      <div class="terminal-output hero-anim">
+      <div class="terminal-output hero-anim" role="region" aria-label="Terminal output">
         <div class="cmd-line">whoami</div>
         <div style="margin-bottom:16px"><span class="key">name</span>: <span class="val">"${e(name)}"</span> <span class="comment">// ${e(role)}</span></div>
         <div class="cmd-line">cat about.txt</div>
@@ -1029,18 +1050,20 @@ function buildTerminal(data: TemplateData): string {
           <a href="#projects" style="font-size:13px;color:${c.accent};border:1px solid ${c.accent}40;padding:8px 20px;border-radius:4px">./view-projects</a>
           <a href="#contact" style="font-size:13px;color:#666;border:1px solid #333;padding:8px 20px;border-radius:4px">./contact</a>
         </div>
-        <div style="margin-top:16px;font-size:13px;color:#555">_<span class="blink">|</span></div>
+        <div style="margin-top:16px;font-size:13px;color:#555" aria-hidden="true">_<span class="blink">|</span></div>
       </div>
     </div>
   </section>
+  <main>
   ${config.sections.includes("about") ? `<section id="about" class="section"><p class="section-heading reveal">about_me</p><p style="font-size:13px;color:#888;line-height:1.9;max-width:640px" class="reveal">${e(bio)}</p></section>` : ""}
   ${config.sections.includes("skills") ? `<section id="skills" class="section"><p class="section-heading reveal">skills_and_tools</p><div class="reveal">${[...langs,...topics].slice(0,16).map(s=>`<span class="skill-badge">${e(s)}</span>`).join("")}</div></section>` : ""}
-  ${config.sections.includes("projects") ? `<section id="projects" class="section"><p class="section-heading reveal">projects</p>${projects.map(p=>`<div class="project-card reveal"><div style="display:flex;justify-content:space-between;align-items:flex-start"><p class="project-name">${e(p.name)}</p>${p.stars>0?`<span style="font-size:11px;color:${c.accent}60">&#9733;${p.stars}</span>`:""}</div><p class="project-desc">${e(stripMd(p.description))}</p><div class="project-meta">${p.language?`<span class="project-lang">${e(p.language)}</span>`:""}<a href="${p.url}" target="_blank" rel="noopener" class="project-link">open &rarr;</a></div></div>`).join("")}</section>` : ""}
+  ${config.sections.includes("projects") ? `<section id="projects" class="section"><p class="section-heading reveal">projects</p>${projects.map(p=>`<div class="project-card reveal"><div style="display:flex;justify-content:space-between;align-items:flex-start"><p class="project-name">${e(p.name)}</p>${p.stars>0?`<span style="font-size:11px;color:${c.accent}60" aria-label="${p.stars} stars">&#9733;${p.stars}</span>`:""}</div><p class="project-desc">${e(stripMd(p.description))}</p><div class="project-meta">${p.language?`<span class="project-lang">${e(p.language)}</span>`:""}<a href="${p.url}" target="_blank" rel="noopener" class="project-link" aria-label="View ${e(p.name)} on GitHub">open &rarr;</a></div></div>`).join("")}</section>` : ""}
   ${config.sections.includes("experience") ? buildExperience(data.resumeText, c.accent) : ""}
   ${config.sections.includes("github-stats") ? buildGitHubStats(profile, c.accent, repos) : ""}
   ${config.sections.includes("testimonials") ? buildTestimonials(c.accent) : ""}
   ${config.sections.includes("contact") ? buildContact(profile, c.accent, data.socialLinks) : ""}
-  <footer class="footer"><span>Built with <a href="https://personaai.vercel.app">PersonaAI</a></span></footer>`
+  </main>
+  ${buildFooter(name, c.accent)}`
 
   return shell(c.accent, extra, body, name, bio, img)
 }
@@ -1130,14 +1153,16 @@ function buildLiquidGlass(data: TemplateData): string {
       </div>
     </div>
   </section>
+  <main>
   ${config.sections.includes("about") ? `<section id="about" class="section"><div class="container"><p class="section-label reveal">About</p><h2 class="section-title reveal">${e(name.split(" ")[0])}&rsquo;s story</h2><div class="glass-strong reveal" style="padding:32px;max-width:680px"><p style="color:rgba(255,255,255,0.65);font-size:15px;line-height:1.8">${e(bio)}</p></div></div></section>` : ""}
   ${config.sections.includes("skills") ? `<section id="skills" class="section"><div class="container"><p class="section-label reveal">Skills</p><h2 class="section-title reveal">Tech Stack</h2><div class="reveal">${[...langs,...topics].slice(0,16).map(s=>`<span class="skill-badge">${e(s)}</span>`).join("")}</div></div></section>` : ""}
-  ${config.sections.includes("projects") ? `<section id="projects" class="section"><div class="container"><p class="section-label reveal">Work</p><h2 class="section-title reveal">Featured Projects</h2><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px">${projects.map(p=>`<div class="glass project-card reveal"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px"><h3 style="font-size:16px;font-weight:700;color:#fff">${e(p.name)}</h3>${p.stars>0?`<span style="font-size:12px;color:${c.accent};font-weight:600">&#9733;${p.stars}</span>`:""}</div><p style="font-size:13px;color:rgba(255,255,255,0.45);line-height:1.6;margin-bottom:16px">${e(stripMd(p.description))}</p><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">${p.language?`<span style="font-size:11px;padding:3px 12px;border-radius:50px;background:${c.accent}12;color:${c.accent};border:1px solid ${c.accent}20">${e(p.language)}</span>`:""}<a href="${p.url}" target="_blank" rel="noopener" style="font-size:13px;color:${c.accent};font-weight:600;margin-left:auto">View &rarr;</a></div></div>`).join("")}</div></div></section>` : ""}
+  ${config.sections.includes("projects") ? `<section id="projects" class="section"><div class="container"><p class="section-label reveal">Work</p><h2 class="section-title reveal">Featured Projects</h2><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px">${projects.map(p=>`<div class="glass project-card reveal"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px"><h3 style="font-size:16px;font-weight:700;color:#fff">${e(p.name)}</h3>${p.stars>0?`<span style="font-size:12px;color:${c.accent};font-weight:600" aria-label="${p.stars} stars">&#9733;${p.stars}</span>`:""}</div><p style="font-size:13px;color:rgba(255,255,255,0.45);line-height:1.6;margin-bottom:16px">${e(stripMd(p.description))}</p><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">${p.language?`<span style="font-size:11px;padding:3px 12px;border-radius:50px;background:${c.accent}12;color:${c.accent};border:1px solid ${c.accent}20">${e(p.language)}</span>`:""}<a href="${p.url}" target="_blank" rel="noopener" style="font-size:13px;color:${c.accent};font-weight:600;margin-left:auto" aria-label="View ${e(p.name)} on GitHub">View &rarr;</a></div></div>`).join("")}</div></div></section>` : ""}
   ${config.sections.includes("experience") ? buildExperience(data.resumeText, c.accent) : ""}
   ${config.sections.includes("github-stats") ? buildGitHubStats(profile, c.accent, repos) : ""}
   ${config.sections.includes("testimonials") ? buildTestimonials(c.accent) : ""}
   ${config.sections.includes("contact") ? buildContact(profile, c.accent, data.socialLinks) : ""}
-  <footer class="footer">Built with <a href="https://personaai.vercel.app">PersonaAI</a></footer>`
+  </main>
+  ${buildFooter(name, c.accent)}`
 
   return shell(c.accent, extra, body, name, bio, img)
 }
@@ -1239,14 +1264,16 @@ function buildCyberpunkNoir(data: TemplateData): string {
       </div>
     </div>
   </section>
+  <main>
   ${config.sections.includes("about") ? `<section id="about" class="section"><div class="container"><p class="section-label reveal">about</p><h2 class="section-title reveal">Who I Am</h2><p style="font-size:15px;color:#888;line-height:1.85;max-width:680px" class="reveal">${e(bio)}</p></div></section>` : ""}
   ${config.sections.includes("skills") ? `<section id="skills" class="section"><div class="container"><p class="section-label reveal">skills</p><h2 class="section-title reveal">Arsenal</h2><div class="reveal">${[...langs,...topics].slice(0,16).map(s=>`<span class="skill-badge">${e(s)}</span>`).join("")}</div></div></section>` : ""}
-  ${config.sections.includes("projects") ? `<section id="projects" class="section"><div class="container"><p class="section-label reveal">projects</p><h2 class="section-title reveal">Missions Completed</h2>${projects.map(p=>`<div class="project-card reveal"><div style="display:flex;justify-content:space-between;align-items:flex-start"><p class="project-name">${e(p.name)}</p>${p.stars>0?`<span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:${c.accent}60">&#9733;${p.stars}</span>`:""}</div><p class="project-desc">${e(stripMd(p.description))}</p><div class="project-meta">${p.language?`<span class="project-lang">${e(p.language)}</span>`:""}<a href="${p.url}" target="_blank" rel="noopener" class="project-link">access &rarr;</a></div></div>`).join("")}</div></section>` : ""}
+  ${config.sections.includes("projects") ? `<section id="projects" class="section"><div class="container"><p class="section-label reveal">projects</p><h2 class="section-title reveal">Missions Completed</h2>${projects.map(p=>`<div class="project-card reveal"><div style="display:flex;justify-content:space-between;align-items:flex-start"><p class="project-name">${e(p.name)}</p>${p.stars>0?`<span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:${c.accent}60" aria-label="${p.stars} stars">&#9733;${p.stars}</span>`:""}</div><p class="project-desc">${e(stripMd(p.description))}</p><div class="project-meta">${p.language?`<span class="project-lang">${e(p.language)}</span>`:""}<a href="${p.url}" target="_blank" rel="noopener" class="project-link" aria-label="Access ${e(p.name)}">access &rarr;</a></div></div>`).join("")}</div></section>` : ""}
   ${config.sections.includes("experience") ? buildExperience(data.resumeText, c.accent) : ""}
   ${config.sections.includes("github-stats") ? buildGitHubStats(profile, c.accent, repos) : ""}
   ${config.sections.includes("testimonials") ? buildTestimonials(c.accent) : ""}
   ${config.sections.includes("contact") ? buildContact(profile, c.accent, data.socialLinks) : ""}
-  <footer class="footer">Built with <a href="https://personaai.vercel.app">PersonaAI</a></footer>`
+  </main>
+  ${buildFooter(name, c.accent)}`
 
   return shell(c.accent, extra, body, name, bio, img)
 }
@@ -1313,6 +1340,8 @@ function buildBentoGrid(data: TemplateData): string {
   const body = `
   ${buildNav(name, config.sections, c.accent)}
   <div style="padding-top:60px"></div>
+  <main>
+  <section id="home" aria-label="Introduction">
   <div class="container section">
     <div class="bento">
       <div class="bento-cell bento-name hero-anim">
@@ -1337,14 +1366,17 @@ function buildBentoGrid(data: TemplateData): string {
         <div style="font-size:12px;color:#666;margin-top:4px">Followers</div>
       </div>
       ${config.sections.includes("skills") ? `<div class="bento-cell bento-skills hero-anim"><p class="section-label">Stack</p><div style="margin-top:8px">${[...langs,...topics].slice(0,14).map(s=>`<span class="skill-badge">${e(s)}</span>`).join("")}</div></div>` : ""}
-      ${config.sections.includes("projects") ? projects.map(p=>`<div class="bento-cell bento-project reveal"><a href="${p.url}" target="_blank" rel="noopener"><p class="proj-name">${e(p.name)}</p></a><p class="proj-desc">${e(stripMd(p.description))}</p><div style="display:flex;align-items:center;justify-content:space-between">${p.language?`<span class="proj-lang">${e(p.language)}</span>`:`<span></span>`}${p.stars>0?`<span style="font-size:11px;color:${c.accent}70">&#9733;${p.stars}</span>`:""}</div></div>`).join("") : ""}
+      ${config.sections.includes("projects") ? projects.map(p=>`<div class="bento-cell bento-project reveal"><a href="${p.url}" target="_blank" rel="noopener" aria-label="View ${e(p.name)}"><p class="proj-name">${e(p.name)}</p></a><p class="proj-desc">${e(stripMd(p.description))}</p><div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px">${p.language?`<span class="proj-lang">${e(p.language)}</span>`:`<span></span>`}${p.stars>0?`<span style="font-size:11px;color:${c.accent}70" aria-label="${p.stars} stars">&#9733;${p.stars}</span>`:""}</div></div>`).join("") : ""}
     </div>
   </div>
+  </section>
+  ${config.sections.includes("about") ? "" : ""}
   ${config.sections.includes("experience") ? buildExperience(data.resumeText, c.accent) : ""}
   ${config.sections.includes("github-stats") ? buildGitHubStats(profile, c.accent, repos) : ""}
   ${config.sections.includes("testimonials") ? buildTestimonials(c.accent) : ""}
   ${config.sections.includes("contact") ? buildContact(profile, c.accent, data.socialLinks) : ""}
-  <footer class="footer">Built with <a href="https://personaai.vercel.app">PersonaAI</a></footer>`
+  </main>
+  ${buildFooter(name, c.accent)}`
 
   return shell(c.accent, extra, body, name, bio, img)
 }
@@ -1447,21 +1479,25 @@ function buildSpotlightDark(data: TemplateData): string {
       </div>
     </div>
   </section>
+  <main>
   <div class="divider"></div>
   ${config.sections.includes("about") ? `<section id="about" class="section"><div class="container"><p class="section-label reveal">About</p><h2 class="section-title reveal">${e(name.split(" ")[0])}</h2><p style="font-size:16px;color:#666;line-height:1.85;max-width:680px" class="reveal">${e(bio)}</p></div></section><div class="divider"></div>` : ""}
   ${config.sections.includes("skills") ? `<section id="skills" class="section"><div class="container"><p class="section-label reveal">Skills</p><h2 class="section-title reveal">What I work with</h2><div class="skill-wrap reveal">${[...langs,...topics].slice(0,16).map(s=>`<span class="skill-badge">${e(s)}</span>`).join("")}</div></div></section><div class="divider"></div>` : ""}
-  ${config.sections.includes("projects") ? `<section id="projects" class="section"><div class="container"><p class="section-label reveal">Projects</p><h2 class="section-title reveal">Selected Work</h2><div>${projects.map((p,i)=>`<div class="project-row reveal"><span class="proj-num">${String(i+1).padStart(2,"0")}</span><div><p class="proj-name">${e(p.name)}</p><p class="proj-desc">${e(stripMd(p.description))}</p>${p.language?`<span class="proj-lang">${e(p.language)}</span>`:""}</div><a href="${p.url}" target="_blank" rel="noopener" class="proj-link">View &rarr;</a></div>`).join("")}</div></div></section><div class="divider"></div>` : ""}
+  ${config.sections.includes("projects") ? `<section id="projects" class="section"><div class="container"><p class="section-label reveal">Projects</p><h2 class="section-title reveal">Selected Work</h2><div role="list">${projects.map((p,i)=>`<div class="project-row reveal" role="listitem"><span class="proj-num" aria-hidden="true">${String(i+1).padStart(2,"0")}</span><div><p class="proj-name">${e(p.name)}</p><p class="proj-desc">${e(stripMd(p.description))}</p>${p.language?`<span class="proj-lang">${e(p.language)}</span>`:""}</div><a href="${p.url}" target="_blank" rel="noopener" class="proj-link" aria-label="View ${e(p.name)}">View &rarr;</a></div>`).join("")}</div></div></section><div class="divider"></div>` : ""}
   ${config.sections.includes("experience") ? buildExperience(data.resumeText, c.accent) : ""}
   ${config.sections.includes("github-stats") ? buildGitHubStats(profile, c.accent, repos) : ""}
   ${config.sections.includes("testimonials") ? buildTestimonials(c.accent) : ""}
   ${config.sections.includes("contact") ? buildContact(profile, c.accent, data.socialLinks) : ""}
-  <footer class="footer">Built with <a href="https://personaai.vercel.app">PersonaAI</a></footer>
+  </main>
+  ${buildFooter(name, c.accent)}
   <script>
     const spotlight = document.getElementById('spotlight');
-    document.addEventListener('mousemove', e => {
-      spotlight.style.left = e.clientX + 'px';
-      spotlight.style.top = e.clientY + 'px';
-    });
+    if (spotlight) {
+      document.addEventListener('mousemove', function(ev) {
+        spotlight.style.left = ev.clientX + 'px';
+        spotlight.style.top = ev.clientY + 'px';
+      });
+    }
   <\/script>`
 
   return shell(c.accent, extra, body, name, bio, img)
@@ -1572,11 +1608,16 @@ function buildSwissEditorial(data: TemplateData): string {
       <a href="#projects" class="hero-cta hero-anim">View Projects</a>
     </div>
   </section>
-  ${config.sections.includes("about") ? `<section id="about" class="section border-top"><div class="container"><div style="display:grid;grid-template-columns:1fr 3fr;gap:60px;align-items:start"><div class="section-num">01</div><div><p class="section-label reveal">About</p><h2 class="section-title reveal">The human<br>behind the code</h2><p style="font-size:15px;color:#888;line-height:1.85;max-width:600px" class="reveal">${e(bio)}</p></div></div></div></section>` : ""}
-  ${config.sections.includes("skills") ? `<section id="skills" class="section border-top"><div class="container"><div style="display:grid;grid-template-columns:1fr 3fr;gap:60px;align-items:start"><div class="section-num">02</div><div><p class="section-label reveal">Skills</p><h2 class="section-title reveal">Toolkit</h2><div class="reveal">${[...langs,...topics].slice(0,16).map(s=>`<span class="skill-badge">${e(s)}</span>`).join("")}</div></div></div></div></section>` : ""}
-  ${config.sections.includes("projects") ? `<section id="projects" class="section border-top"><div class="container"><div style="display:grid;grid-template-columns:1fr 3fr;gap:60px;align-items:start"><div class="section-num">03</div><div><p class="section-label reveal">Projects</p><h2 class="section-title reveal">Selected<br>Work</h2><div>${projects.map((p,i)=>`<div class="project-item reveal"><span class="proj-num">${String(i+1).padStart(2,"0")}</span><div style="flex:1"><p class="proj-name">${e(p.name)}</p><p class="proj-desc">${e(stripMd(p.description))}</p>${p.language?`<span class="proj-lang">${e(p.language)}</span>`:""}</div><a href="${p.url}" target="_blank" rel="noopener" class="proj-link">Open &rarr;</a></div>`).join("")}</div></div></div></div></section>` : ""}
-  ${config.sections.includes("contact") ? `<section id="contact" class="section border-top"><div class="container"><div style="display:grid;grid-template-columns:1fr 3fr;gap:60px;align-items:start"><div class="section-num">04</div><div><p class="section-label reveal">Contact</p><h2 class="section-title reveal">Let&rsquo;s<br>build together</h2><div style="display:flex;gap:12px;flex-wrap:wrap" class="reveal"><a href="${profile.html_url}" target="_blank" style="padding:14px 28px;background:#111;color:#f5f5f0;font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase">GitHub</a>${data.socialLinks?.linkedin?`<a href="${data.socialLinks.linkedin}" target="_blank" style="padding:14px 28px;border:2px solid #111;color:#111;font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase">LinkedIn</a>`:""}</div></div></div></div></section>` : ""}
-  <footer class="footer">Built with <a href="https://personaai.vercel.app">PersonaAI</a></footer>`
+  <main>
+  ${config.sections.includes("about") ? `<section id="about" class="section border-top"><div class="container"><div style="display:grid;grid-template-columns:1fr 3fr;gap:60px;align-items:start"><div class="section-num" aria-hidden="true">01</div><div><p class="section-label reveal">About</p><h2 class="section-title reveal">The human<br>behind the code</h2><p style="font-size:15px;color:#888;line-height:1.85;max-width:600px" class="reveal">${e(bio)}</p></div></div></div></section>` : ""}
+  ${config.sections.includes("skills") ? `<section id="skills" class="section border-top"><div class="container"><div style="display:grid;grid-template-columns:1fr 3fr;gap:60px;align-items:start"><div class="section-num" aria-hidden="true">02</div><div><p class="section-label reveal">Skills</p><h2 class="section-title reveal">Toolkit</h2><div class="reveal">${[...langs,...topics].slice(0,16).map(s=>`<span class="skill-badge">${e(s)}</span>`).join("")}</div></div></div></div></section>` : ""}
+  ${config.sections.includes("projects") ? `<section id="projects" class="section border-top"><div class="container"><div style="display:grid;grid-template-columns:1fr 3fr;gap:60px;align-items:start"><div class="section-num" aria-hidden="true">03</div><div><p class="section-label reveal">Projects</p><h2 class="section-title reveal">Selected<br>Work</h2><div role="list">${projects.map((p,i)=>`<div class="project-item reveal" role="listitem"><span class="proj-num" aria-hidden="true">${String(i+1).padStart(2,"0")}</span><div style="flex:1"><p class="proj-name">${e(p.name)}</p><p class="proj-desc">${e(stripMd(p.description))}</p>${p.language?`<span class="proj-lang">${e(p.language)}</span>`:""}</div><a href="${p.url}" target="_blank" rel="noopener" class="proj-link" aria-label="Open ${e(p.name)}">Open &rarr;</a></div>`).join("")}</div></div></div></div></section>` : ""}
+  ${config.sections.includes("experience") ? buildExperience(data.resumeText, c.accent) : ""}
+  ${config.sections.includes("github-stats") ? buildGitHubStats(profile, c.accent, repos) : ""}
+  ${config.sections.includes("testimonials") ? buildTestimonials(c.accent) : ""}
+  ${config.sections.includes("contact") ? `<section id="contact" class="section border-top"><div class="container"><div style="display:grid;grid-template-columns:1fr 3fr;gap:60px;align-items:start"><div class="section-num" aria-hidden="true">04</div><div><p class="section-label reveal">Contact</p><h2 class="section-title reveal">Let&rsquo;s<br>build together</h2><div style="display:flex;gap:12px;flex-wrap:wrap" class="reveal"><a href="${profile.html_url}" target="_blank" rel="noopener" style="padding:14px 28px;background:#111;color:#f5f5f0;font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase" aria-label="GitHub profile">GitHub</a>${data.socialLinks?.linkedin?`<a href="${data.socialLinks.linkedin}" target="_blank" rel="noopener" style="padding:14px 28px;border:2px solid #111;color:#111;font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase" aria-label="LinkedIn profile">LinkedIn</a>`:""}</div></div></div></div></section>` : ""}
+  </main>
+  <footer class="footer" role="contentinfo"><a href="#home" style="color:${c.accent};font-weight:700;letter-spacing:2px;text-transform:uppercase;font-size:11px">${e(name)}</a> &nbsp;|&nbsp; &copy; ${new Date().getFullYear()} &nbsp;|&nbsp; Built with <a href="https://personaai.vercel.app" target="_blank" rel="noopener" style="color:${c.accent}">PersonaAI</a></footer>`
 
   return shell(c.accent, extra, body, name, bio, img)
 }
@@ -1666,14 +1707,16 @@ function buildGradientAurora(data: TemplateData): string {
       </div>
     </div>
   </section>
+  <main>
   ${config.sections.includes("about") ? `<section id="about" class="section"><div class="container"><p class="section-label reveal">About</p><h2 class="section-title reveal">${e(name.split(" ")[0])}&rsquo;s story</h2><p style="font-size:15px;color:rgba(255,255,255,0.45);line-height:1.85;max-width:640px;margin:0 auto;text-align:center" class="reveal">${e(bio)}</p></div></section>` : ""}
-  ${config.sections.includes("skills") ? `<section id="skills" class="section"><div class="container"><p class="section-label reveal">Stack</p><h2 class="section-title reveal">Tools & Technologies</h2><div style="text-align:center" class="reveal">${[...langs,...topics].slice(0,16).map(s=>`<span class="skill-badge">${e(s)}</span>`).join("")}</div></div></section>` : ""}
-  ${config.sections.includes("projects") ? `<section id="projects" class="section"><div class="container"><p class="section-label reveal">Work</p><h2 class="section-title reveal">Featured Projects</h2><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px">${projects.map(p=>`<div class="project-card reveal"><p class="proj-name">${e(p.name)}</p><p class="proj-desc">${e(stripMd(p.description))}</p><div style="display:flex;align-items:center;justify-content:space-between">${p.language?`<span class="proj-lang">${e(p.language)}</span>`:`<span></span>`}<a href="${p.url}" target="_blank" rel="noopener" class="proj-link">View &rarr;</a></div></div>`).join("")}</div></div></section>` : ""}
+  ${config.sections.includes("skills") ? `<section id="skills" class="section"><div class="container"><p class="section-label reveal">Stack</p><h2 class="section-title reveal">Tools &amp; Technologies</h2><div style="text-align:center" class="reveal">${[...langs,...topics].slice(0,16).map(s=>`<span class="skill-badge">${e(s)}</span>`).join("")}</div></div></section>` : ""}
+  ${config.sections.includes("projects") ? `<section id="projects" class="section"><div class="container"><p class="section-label reveal">Work</p><h2 class="section-title reveal">Featured Projects</h2><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px">${projects.map(p=>`<div class="project-card reveal"><p class="proj-name">${e(p.name)}</p><p class="proj-desc">${e(stripMd(p.description))}</p><div style="display:flex;align-items:center;justify-content:space-between">${p.language?`<span class="proj-lang">${e(p.language)}</span>`:`<span></span>`}<a href="${p.url}" target="_blank" rel="noopener" class="proj-link" aria-label="View ${e(p.name)}">View &rarr;</a></div></div>`).join("")}</div></div></section>` : ""}
   ${config.sections.includes("experience") ? buildExperience(data.resumeText, c.accent) : ""}
   ${config.sections.includes("github-stats") ? buildGitHubStats(profile, c.accent, repos) : ""}
   ${config.sections.includes("testimonials") ? buildTestimonials(c.accent) : ""}
   ${config.sections.includes("contact") ? buildContact(profile, c.accent, data.socialLinks) : ""}
-  <footer class="footer">Built with <a href="https://personaai.vercel.app">PersonaAI</a></footer>`
+  </main>
+  ${buildFooter(name, c.accent)}`
 
   return shell(c.accent, extra, body, name, bio, img)
 }
@@ -1870,5 +1913,7 @@ const TEMPLATE_BUILDERS: Record<string, (data: TemplateData) => string> = {
 
 export function buildPortfolioHtml(data: TemplateData): string {
   const builder = TEMPLATE_BUILDERS[data.config.template] || buildBoldPortrait
-  return builder(data)
+  const html = builder(data)
+  // Ensure first <main> has id="main-content" for skip-to-main accessibility link
+  return html.replace(/<main(?![^>]*id=)/, '<main id="main-content"')
 }
