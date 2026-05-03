@@ -108,7 +108,7 @@ export async function POST(request: Request) {
       aiBio,
       socialLinks: data.config.socialLinks,
       aiProjects,
-      aiResume: data.aiContent?.resume || undefined,
+      aiResume: (data.aiContent as { resume?: { summary?: string; highlights?: string[] } } | null)?.resume || undefined,
       heroTagline,
       targetRole: data.targetRole,
     })
