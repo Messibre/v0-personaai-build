@@ -27,20 +27,34 @@ export async function POST(request: Request) {
       )
     }
 
-    const buffer = Buffer.from(await file.arrayBuffer())
+    const arrayBuffer = await file.arrayBuffer()
 
-    // Dynamic import to avoid Next.js bundling issues
-    const pdfParse = (await import("pdf-parse/lib/pdf-parse.js")).default
-    const parsed = await pdfParse(buffer)
+    // Use pdfjs-dist to parse PDF without relying on Buffer() constructor.
+    // Dynamic import keeps the package out of the main bundle when not needed.
+    const pdfjs = await import('pdfjs-dist/legacy/build/pdf.js')
+    // Node/Server needs worker disabled; use getDocument with data as ArrayBuffer
+    const loadingTask = pdfjs.getDocument({ data: arrayBuffer })
+    const pdf = await loadingTask.promise
 
-    if (!parsed.text || parsed.text.trim().length === 0) {
+    let fullText = ''
+    for (let i = 1; i <= pdf.numPages; i++) {
+      // eslint-disable-next-line no-await-in-loop
+      const page = await pdf.getPage(i)
+      // eslint-disable-next-line no-await-in-loop
+      const content = await page.getTextContent()
+      const pageText = content.items.map((it: any) => it.str).join(' ')
+      fullText += pageText + '\n'
+    }
+
+    const trimmed = fullText.trim()
+    if (!trimmed) {
       return NextResponse.json(
-        { error: "Could not extract text from PDF. The file may be image-based." },
+        { error: 'Could not extract text from PDF. The file may be image-based.' },
         { status: 422 }
       )
     }
 
-    return NextResponse.json({ text: parsed.text.trim() })
+    return NextResponse.json({ text: trimmed })
   } catch (err) {
     const message = err instanceof Error ? err.message : "Failed to parse resume"
     return NextResponse.json({ error: message }, { status: 500 })
