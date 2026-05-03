@@ -24,6 +24,7 @@ import {
   X,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { getFriendlyErrorMessage, getFriendlyServerStatusMessage } from "@/lib/user-friendly-error"
 
 interface StepPreviewProps {
   state: WizardState
@@ -112,12 +113,12 @@ export function StepPreview({ state, dispatch, onBack }: StepPreviewProps) {
         })
         const data = await res.json()
         if (!res.ok) {
-          dispatch({ type: "SET_PORTFOLIO_ERROR", error: data.error || `Server error (${res.status})` })
+          dispatch({ type: "SET_PORTFOLIO_ERROR", error: getFriendlyServerStatusMessage(res.status, "template") || getFriendlyErrorMessage(data.error, "template") })
           setIsGenerating(false)
           return
         }
         if (!data.html || data.html.length < 100) {
-          dispatch({ type: "SET_PORTFOLIO_ERROR", error: "AI template generation failed. Please try again." })
+          dispatch({ type: "SET_PORTFOLIO_ERROR", error: "We couldn’t build the AI template just now. Please try again in a few minutes." })
           setIsGenerating(false)
           return
         }
@@ -145,20 +146,19 @@ export function StepPreview({ state, dispatch, onBack }: StepPreviewProps) {
       })
       const data = await res.json()
       if (!res.ok) {
-        dispatch({ type: "SET_PORTFOLIO_ERROR", error: data.error || `Server error (${res.status})` })
+        dispatch({ type: "SET_PORTFOLIO_ERROR", error: getFriendlyServerStatusMessage(res.status, "portfolio") || getFriendlyErrorMessage(data.error, "portfolio") })
         setIsGenerating(false)
         return
       }
       if (!data.html || data.html.length < 100) {
-        dispatch({ type: "SET_PORTFOLIO_ERROR", error: "Generated portfolio was too short. Please try again." })
+        dispatch({ type: "SET_PORTFOLIO_ERROR", error: "We couldn’t generate the portfolio just now. Please try again in a few minutes." })
         setIsGenerating(false)
         return
       }
       dispatch({ type: "SET_PORTFOLIO", html: data.html, title: data.title })
       setIsGenerating(false)
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Network error. Please try again."
-      dispatch({ type: "SET_PORTFOLIO_ERROR", error: message })
+      dispatch({ type: "SET_PORTFOLIO_ERROR", error: getFriendlyErrorMessage(err, "portfolio") })
       setIsGenerating(false)
     }
   }, [github, resume.text, notion.content, config, photo.dataUrl, dispatch, targetRole])
@@ -248,12 +248,11 @@ export function StepPreview({ state, dispatch, onBack }: StepPreviewProps) {
         body: JSON.stringify({ html: portfolio.html, projectName: sanitizedName }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || "Deployment failed")
+      if (!res.ok) throw new Error(getFriendlyServerStatusMessage(res.status, "deploy") || getFriendlyErrorMessage(data.error, "deploy"))
       setDeployUrl(data.url)
       setDeployStatus("ready")
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Deployment failed"
-      setDeployError(message)
+      setDeployError(getFriendlyErrorMessage(err, "deploy"))
       setDeployStatus("error")
     } finally {
       setDeploying(false)
@@ -304,7 +303,7 @@ export function StepPreview({ state, dispatch, onBack }: StepPreviewProps) {
       })
       const data = await res.json()
       if (!res.ok) {
-        dispatch({ type: "SET_PORTFOLIO_ERROR", error: data.error || "Failed to refine template" })
+        dispatch({ type: "SET_PORTFOLIO_ERROR", error: getFriendlyServerStatusMessage(res.status, "template") || getFriendlyErrorMessage(data.error, "template") })
         setIsRefining(false)
         return
       }
@@ -313,8 +312,7 @@ export function StepPreview({ state, dispatch, onBack }: StepPreviewProps) {
       dispatch({ type: "SET_PORTFOLIO", html: data.html, title: portfolio.title || "Portfolio" })
       setRefinementPrompt("")
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to refine template"
-      dispatch({ type: "SET_PORTFOLIO_ERROR", error: message })
+      dispatch({ type: "SET_PORTFOLIO_ERROR", error: getFriendlyErrorMessage(err, "template") })
     } finally {
       setIsRefining(false)
     }

@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Spinner } from "@/components/ui/spinner"
 import { Github, Star, GitFork, Users, ArrowRight, AlertCircle, X } from "lucide-react"
+import { getFriendlyErrorMessage, getFriendlyServerStatusMessage } from "@/lib/user-friendly-error"
 
 interface StepGithubProps {
   state: WizardState
@@ -34,13 +35,13 @@ export function StepGithub({ state, dispatch, onNext }: StepGithubProps) {
       const data = await res.json()
 
       if (!res.ok) {
-        dispatch({ type: "SET_GITHUB_ERROR", error: data.error || "Failed to fetch" })
+        dispatch({ type: "SET_GITHUB_ERROR", error: getFriendlyServerStatusMessage(res.status, "github") || getFriendlyErrorMessage(data.error, "github") })
         return
       }
 
       dispatch({ type: "SET_GITHUB_DATA", profile: data.profile, repos: data.repos })
-    } catch {
-      dispatch({ type: "SET_GITHUB_ERROR", error: "Network error. Please try again." })
+    } catch (err) {
+      dispatch({ type: "SET_GITHUB_ERROR", error: getFriendlyErrorMessage(err, "github") })
     }
   }, [github.username, dispatch])
 
