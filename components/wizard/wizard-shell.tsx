@@ -196,11 +196,12 @@ export function WizardShell() {
   const isPreviewStep = state.step === 4
 
   return (
-    <div className={cn("w-full", !isPreviewStep && "max-w-4xl mx-auto")}>
+    <div className="w-full">
       <div ref={wizardTopRef} className="scroll-mt-24" />
 
       {/* Step Indicators — hidden on preview step */}
       {!isPreviewStep && (
+        <div className="px-4 sm:px-6 lg:px-8 pt-12 sm:pt-16 lg:pt-20 pb-10 max-w-4xl mx-auto">
         <div className="mb-10">
           <div className="flex items-center justify-between mb-5 relative">
             <div className="absolute top-5 left-[5%] right-[5%] h-px bg-[var(--persona-border)]" aria-hidden="true" />
@@ -257,27 +258,29 @@ export function WizardShell() {
             })}
           </div>
         </div>
+        </div>
       )}
 
       {/* Step Content */}
-      <div className={cn(!isPreviewStep && "min-h-[420px]")} key={state.step}>
-        <div className={cn(!isPreviewStep && "animate-fade-in-up")}>
-          {state.step === 0 && (
-            <StepStart state={state} dispatch={dispatch} onNext={goNext} />
-          )}
-          {state.step === 1 && (
-            <StepResume state={state} dispatch={dispatch} onNext={goNext} onBack={goBack} />
-          )}
-          {state.step === 2 && (
-            <StepTargetRole state={state} dispatch={dispatch} onNext={goNext} onBack={goBack} />
-          )}
-          {state.step === 3 && (
-            <StepCustomize state={state} dispatch={dispatch} onNext={goNext} onBack={goBack} />
-          )}
-          {state.step === 4 && (
-            <StepPreview state={state} dispatch={dispatch} onBack={goBack} />
-          )}
-        </div>
+      <div key={state.step}>
+        {!isPreviewStep ? (
+          <div className="px-4 sm:px-6 lg:px-8 pb-16 sm:pb-20 max-w-4xl mx-auto min-h-[420px] animate-fade-in-up">
+            {state.step === 0 && (
+              <StepStart state={state} dispatch={dispatch} onNext={goNext} />
+            )}
+            {state.step === 1 && (
+              <StepResume state={state} dispatch={dispatch} onNext={goNext} onBack={goBack} />
+            )}
+            {state.step === 2 && (
+              <StepTargetRole state={state} dispatch={dispatch} onNext={goNext} onBack={goBack} />
+            )}
+            {state.step === 3 && (
+              <StepCustomize state={state} dispatch={dispatch} onNext={goNext} onBack={goBack} />
+            )}
+          </div>
+        ) : (
+          <StepPreview state={state} dispatch={dispatch} onBack={goBack} />
+        )}
       </div>
     </div>
   )

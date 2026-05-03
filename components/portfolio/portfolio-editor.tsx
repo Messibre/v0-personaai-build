@@ -180,10 +180,10 @@ export function PortfolioEditor({ html, onHtmlChange, templateName }: PortfolioE
   useEffect(() => {
     function updateHeight() {
       if (isFullscreen) {
-        setIframeHeight(window.innerHeight - 96) // leave room for toolbar
+        setIframeHeight(window.innerHeight - 56) // toolbar is 56px
       } else {
-        // Responsive: taller on large screens
-        const h = Math.max(560, Math.min(window.innerHeight * 0.72, 820))
+        // Fill most of the viewport — sticky header (56px) + preview toolbar (~52px) + body padding (~40px) + url banner (~0)
+        const h = Math.max(600, window.innerHeight - 160)
         setIframeHeight(h)
       }
     }
@@ -342,22 +342,34 @@ export function PortfolioEditor({ html, onHtmlChange, templateName }: PortfolioE
             {editMode ? "Done Editing" : "Edit Portfolio"}
           </Button>
           {editMode && (
-            <div className="flex items-center gap-1.5">
-              <span className="flex items-center gap-1 text-[11px] text-muted-foreground px-2 py-1 rounded bg-muted/40 border border-[var(--persona-border)]">
-                <Type className="size-3" />
-                <span className="hidden sm:inline">Click text to edit</span>
+            <div className="hidden sm:flex items-center gap-1.5">
+              <span className="flex items-center gap-1 text-[11px] text-muted-foreground/70 px-2 py-1 rounded-md bg-muted/30 border border-[var(--persona-border)]">
+                <Type className="size-3 shrink-0" aria-hidden="true" />
+                Click text to edit
               </span>
-              <span className="flex items-center gap-1 text-[11px] text-muted-foreground px-2 py-1 rounded bg-muted/40 border border-[var(--persona-border)]">
-                <ImagePlus className="size-3" />
-                <span className="hidden sm:inline">Hover image to replace</span>
+              <span className="flex items-center gap-1 text-[11px] text-muted-foreground/70 px-2 py-1 rounded-md bg-muted/30 border border-[var(--persona-border)]">
+                <ImagePlus className="size-3 shrink-0" aria-hidden="true" />
+                Hover image to swap
               </span>
             </div>
           )}
           {editHistory.length > 0 && (
-            <Button variant="ghost" size="sm" onClick={undo} className="gap-1.5 text-xs text-muted-foreground hover:text-foreground h-8">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={undo}
+              className="gap-1.5 text-xs text-muted-foreground hover:text-foreground h-8"
+              title="Undo last change"
+              aria-label="Undo last change"
+            >
               <Undo2 className="size-3.5" />
-              Undo
+              <span className="hidden sm:inline">Undo</span>
             </Button>
+          )}
+          {editMode && (
+            <span className="sm:hidden text-[11px] text-muted-foreground/70 px-2 py-1 rounded-md bg-muted/30 border border-[var(--persona-border)]">
+              Tap text to edit
+            </span>
           )}
         </div>
 
@@ -391,7 +403,8 @@ export function PortfolioEditor({ html, onHtmlChange, templateName }: PortfolioE
             size="sm"
             onClick={() => setIsFullscreen(true)}
             className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
-            title="Fullscreen preview"
+            title="Open fullscreen preview"
+            aria-label="Open fullscreen preview"
           >
             <Maximize2 className="size-3.5" />
           </Button>
@@ -413,23 +426,26 @@ export function PortfolioEditor({ html, onHtmlChange, templateName }: PortfolioE
             )}
           >
             {/* Browser chrome */}
-            <div className="flex items-center gap-2 px-4 py-2.5 bg-[var(--persona-surface-hover)] border-b border-[var(--persona-border)]">
-              <div className="flex gap-1.5">
-                <div className="size-2.5 rounded-full bg-red-400/60" />
-                <div className="size-2.5 rounded-full bg-amber-400/60" />
-                <div className="size-2.5 rounded-full bg-green-400/60" />
+            <div className="flex items-center gap-2 px-3 py-2 bg-[var(--persona-surface-hover)] border-b border-[var(--persona-border)]">
+              <div className="flex gap-1.5 shrink-0" aria-hidden="true">
+                <div className="size-2.5 rounded-full bg-red-400/70" />
+                <div className="size-2.5 rounded-full bg-amber-400/70" />
+                <div className="size-2.5 rounded-full bg-green-400/70" />
               </div>
-              <div className="flex-1 mx-3">
-                <div className="h-5 rounded-md bg-muted/20 flex items-center justify-center px-2">
-                  <span className="text-[10px] text-muted-foreground/50 font-mono truncate">
-                    {templateName ? `${templateName.toLowerCase().replace(/\s+/g, "-")}.portfolio.html` : "portfolio.html"}
+              <div className="flex-1 mx-2">
+                <div className="h-[22px] rounded-md bg-muted/30 border border-[var(--persona-border)] flex items-center px-2.5 gap-1.5">
+                  <svg className="size-2.5 text-muted-foreground/40 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                  </svg>
+                  <span className="text-[10px] text-muted-foreground/60 font-mono truncate">
+                    {templateName ? `${templateName.toLowerCase().replace(/\s+/g, "-")}-portfolio.html` : "portfolio.html"}
                   </span>
                 </div>
               </div>
               {editMode && (
                 <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--persona-accent)]/10 border border-[var(--persona-accent)]/20 shrink-0">
-                  <div className="size-1.5 rounded-full bg-[var(--persona-accent)] animate-pulse" />
-                  <span className="text-[9px] font-semibold text-[var(--persona-accent)] tracking-wide">EDITING</span>
+                  <div className="size-1.5 rounded-full bg-[var(--persona-accent)] animate-pulse" aria-hidden="true" />
+                  <span className="text-[9px] font-semibold text-[var(--persona-accent)] tracking-wide uppercase">Editing</span>
                 </div>
               )}
             </div>

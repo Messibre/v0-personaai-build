@@ -21,6 +21,7 @@ import {
   Wand2,
   Globe,
   ChevronDown,
+  X,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -300,12 +301,17 @@ export function StepPreview({ state, dispatch, onBack }: StepPreviewProps) {
   const loading = isGenerating || portfolio.loading
   const name = github.profile?.name || github.profile?.username || "Your"
 
+  // Scroll to top of page when preview mounts so the sticky header is visible
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" })
+  }, [])
+
   return (
-    <div className="flex flex-col min-h-[80vh] -mx-4 sm:-mx-6 lg:-mx-8 animate-fade-in-up">
+    <div className="flex flex-col min-h-screen border-t border-[var(--persona-border)]">
 
       {/* ── Sticky header ── */}
-      <div className="sticky top-0 z-40 bg-background/90 backdrop-blur-md border-b border-[var(--persona-border)] px-4 sm:px-6 lg:px-8">
-        <div className="max-w-screen-xl mx-auto flex items-center gap-3 h-14">
+      <div className="sticky top-0 z-40 bg-background/95 backdrop-blur-md border-b border-[var(--persona-border)] shadow-sm shadow-black/5 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-screen-2xl mx-auto flex items-center gap-3 h-14">
           {/* Back */}
           <Button
             variant="ghost"
@@ -418,7 +424,7 @@ export function StepPreview({ state, dispatch, onBack }: StepPreviewProps) {
       </div>
 
       {/* ── Body ── */}
-      <div className="flex-1 px-4 sm:px-6 lg:px-8 py-4 sm:py-6 max-w-screen-xl mx-auto w-full">
+      <div className="flex-1 px-4 sm:px-6 lg:px-8 py-4 sm:py-6 max-w-screen-2xl mx-auto w-full">
 
         {/* Loading */}
         {loading && (
@@ -602,17 +608,32 @@ export function StepPreview({ state, dispatch, onBack }: StepPreviewProps) {
 
       {/* ── Deploy name dialog ── */}
       {showDeployDialog && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+        <div
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm animate-fade-in"
+          onClick={(e) => { if (e.target === e.currentTarget) setShowDeployDialog(false) }}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Name your portfolio site"
+        >
           <div className="w-full sm:max-w-md bg-card border border-border rounded-t-2xl sm:rounded-2xl shadow-2xl animate-fade-in-scale">
             <div className="p-5 sm:p-6">
               <div className="flex items-center gap-3 mb-4">
-                <div className="size-10 rounded-xl bg-[var(--persona-accent)]/10 flex items-center justify-center">
+                <div className="size-10 rounded-xl bg-[var(--persona-accent)]/10 flex items-center justify-center shrink-0">
                   <Globe className="size-5 text-[var(--persona-accent)]" />
                 </div>
-                <div>
+                <div className="flex-1 min-w-0">
                   <h3 className="text-base font-semibold text-foreground leading-tight">Name your site</h3>
                   <p className="text-xs text-muted-foreground mt-0.5">Choose a URL for your portfolio</p>
                 </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowDeployDialog(false)}
+                  className="size-8 p-0 text-muted-foreground hover:text-foreground shrink-0 rounded-lg"
+                  aria-label="Close dialog"
+                >
+                  <X className="size-4" />
+                </Button>
               </div>
               <div className="mb-5">
                 <Input
