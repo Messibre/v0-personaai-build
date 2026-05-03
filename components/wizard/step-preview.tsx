@@ -77,6 +77,10 @@ export function StepPreview({ state, dispatch, onBack }: StepPreviewProps) {
 
   const aiContentReady = aiContent.projects !== null || aiContent.aboutMe !== null || aiContent.heroTagline !== null
 
+  // Always-current ref so the generate closure never reads stale aiContent.
+  const aiContentRef = useRef(aiContent)
+  useEffect(() => { aiContentRef.current = aiContent }, [aiContent])
+
   const templateLabel = TEMPLATE_LABELS[config.template] || config.template
 
   const generate = useCallback(async () => {
@@ -93,9 +97,9 @@ export function StepPreview({ state, dispatch, onBack }: StepPreviewProps) {
           body: JSON.stringify({
             targetRole: targetRole.role || "Software Developer",
             name: github.profile.name || github.profile.username,
-            aboutMe: aiContent.aboutMe || github.profile.bio || `${github.profile.name || github.profile.username} is a software developer.`,
-            heroTagline: aiContent.heroTagline || targetRole.role || "Building amazing software",
-            projects: aiContent.projects || github.repos.slice(0, 7).map((r) => ({
+            aboutMe: aiContentRef.current.aboutMe || github.profile.bio || `${github.profile.name || github.profile.username} is a software developer.`,
+            heroTagline: aiContentRef.current.heroTagline || targetRole.role || "Building amazing software",
+            projects: aiContentRef.current.projects || github.repos.slice(0, 7).map((r) => ({
               name: r.name, url: r.html_url, language: r.language,
               description: r.description || `A ${r.language || "software"} project.`,
               stars: r.stargazers_count, forks: r.forks_count,
@@ -133,8 +137,8 @@ export function StepPreview({ state, dispatch, onBack }: StepPreviewProps) {
           notionContent: notion.content,
           config,
           photoDataUrl: photo.dataUrl,
-          aiContent: aiContent.projects ? {
-            projects: aiContent.projects, aboutMe: aiContent.aboutMe, heroTagline: aiContent.heroTagline,
+          aiContent: aiContentRef.current.projects ? {
+            projects: aiContentRef.current.projects, aboutMe: aiContentRef.current.aboutMe, heroTagline: aiContentRef.current.heroTagline,
           } : null,
           targetRole: targetRole.role,
         }),
@@ -157,18 +161,31 @@ export function StepPreview({ state, dispatch, onBack }: StepPreviewProps) {
       dispatch({ type: "SET_PORTFOLIO_ERROR", error: message })
       setIsGenerating(false)
     }
-  }, [github, resume.text, notion.content, config, photo.dataUrl, dispatch, aiContent, targetRole])
+  }, [github, resume.text, notion.content, config, photo.dataUrl, dispatch, targetRole])
 
   const hasGeneratedRef = useRef(false)
+
+  // Safety valve: if aiContent is still loading after 12 s (e.g. background
+  // fire-and-forget from the "Skip" path), unblock generation with whatever
+  // data we have rather than leaving the user stuck on the loading screen.
+  const [aiContentTimedOut, setAiContentTimedOut] = useState(false)
+  useEffect(() => {
+    if (!aiContent.loading) return
+    if (aiContentReady) return // already have data — no need for a timer
+    const id = setTimeout(() => setAiContentTimedOut(true), 12000)
+    return () => clearTimeout(id)
+  }, [aiContent.loading, aiContentReady])
+
   useEffect(() => {
     if (hasGeneratedRef.current) return
     if (portfolio.html || portfolio.loading || portfolio.error || isGenerating) return
-    // Wait until AI content has finished loading before generating so we only
-    // ever call generate() once with the richest possible data.
-    if (aiContent.loading) return
+    // Only hold off if aiContent is still loading AND we have no data yet AND
+    // we haven't timed out yet. If the user already has AI content, or the
+    // background fetch has been running too long, proceed immediately.
+    if (aiContent.loading && !aiContentReady && !aiContentTimedOut) return
     hasGeneratedRef.current = true
     generate()
-  }, [generate, portfolio.html, portfolio.loading, portfolio.error, isGenerating, aiContent.loading])
+  }, [generate, portfolio.html, portfolio.loading, portfolio.error, isGenerating, aiContent.loading, aiContentReady, aiContentTimedOut])
 
   const handleHtmlChange = useCallback(
     (newHtml: string) => {
