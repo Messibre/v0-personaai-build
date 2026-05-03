@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Spinner } from "@/components/ui/spinner"
 import { Upload, FileText, ArrowRight, ArrowLeft, AlertCircle, X, CheckCircle } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { getFriendlyErrorMessage, getFriendlyServerStatusMessage } from "@/lib/user-friendly-error"
 
 interface StepResumeProps {
   state: WizardState
@@ -46,13 +47,13 @@ export function StepResume({ state, dispatch, onNext, onBack }: StepResumeProps)
         const data = await res.json()
 
         if (!res.ok) {
-          dispatch({ type: "SET_RESUME_ERROR", error: data.error || "Failed to parse resume" })
+          dispatch({ type: "SET_RESUME_ERROR", error: getFriendlyServerStatusMessage(res.status, "resume") || getFriendlyErrorMessage(data.error, "resume") })
           return
         }
 
         dispatch({ type: "SET_RESUME_TEXT", text: data.text })
-      } catch {
-        dispatch({ type: "SET_RESUME_ERROR", error: "Network error. Please try again." })
+      } catch (err) {
+        dispatch({ type: "SET_RESUME_ERROR", error: getFriendlyErrorMessage(err, "resume") })
       }
     },
     [dispatch]

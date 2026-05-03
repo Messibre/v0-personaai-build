@@ -5,6 +5,7 @@ import type { WizardState, WizardAction } from "@/lib/types"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
+import { getFriendlyErrorMessage } from "@/lib/user-friendly-error"
 import {
   ArrowRight,
   ArrowLeft,
@@ -140,7 +141,7 @@ export function StepTargetRole({ state, dispatch, onNext, onBack }: StepTargetRo
       const data = await res.json()
 
       if (!res.ok) {
-        throw new Error(data.error || "Failed to generate AI content")
+        throw new Error(getFriendlyErrorMessage(data.error || `Server error (${res.status})`, "aiContent"))
       }
 
       dispatch({
@@ -155,8 +156,7 @@ export function StepTargetRole({ state, dispatch, onNext, onBack }: StepTargetRo
       // Signal the useEffect above to advance once state has committed
       setPendingAdvance(true)
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to generate AI content"
-      dispatch({ type: "SET_AI_CONTENT_ERROR", error: message })
+      dispatch({ type: "SET_AI_CONTENT_ERROR", error: getFriendlyErrorMessage(err, "aiContent") })
     } finally {
       setIsGenerating(false)
       dispatch({ type: "SET_AI_CONTENT_LOADING", loading: false })
@@ -192,8 +192,8 @@ export function StepTargetRole({ state, dispatch, onNext, onBack }: StepTargetRo
             })
           }
         })
-        .catch(() => {
-          dispatch({ type: "CLEAR_AI_CONTENT" })
+        .catch((err) => {
+          dispatch({ type: "SET_AI_CONTENT_ERROR", error: getFriendlyErrorMessage(err, "aiContent") })
         })
     }
   }, [dispatch, onNext, github, resume, notion, config.additionalPrompt, targetRole])

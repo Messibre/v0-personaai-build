@@ -1,27 +1,50 @@
-import type { EnrichedGitHubRepo, GitHubProfile, GitHubRepo, AIProject, AIGeneratedContentWithResume } from "@/lib/types"
-import { enrichReposForAI } from "@/lib/github"
-import * as cheerio from "cheerio"
+import type {
+  EnrichedGitHubRepo,
+  GitHubProfile,
+  GitHubRepo,
+  AIProject,
+  AIGeneratedContentWithResume,
+} from "@/lib/types";
+import { enrichReposForAI } from "@/lib/github";
+import * as cheerio from "cheerio";
 
 const GEMINI_KEYS = [
   process.env.GEMINI_API_KEY_1,
   process.env.GEMINI_API_KEY_2,
-].filter(Boolean) as string[]
+].filter(Boolean) as string[];
 
 interface AIContentRequest {
-  targetRole: string
-  externalLinks: string[]
+  targetRole: string;
+  externalLinks: string[];
   github: {
-    profile: GitHubProfile | null
-    repos: GitHubRepo[]
-  }
-  resumeText: string | null
-  notionContent: string | null
-  additionalPrompt?: string
-  debug?: boolean
+    profile: GitHubProfile | null;
+    repos: GitHubRepo[];
+  };
+  resumeText: string | null;
+  notionContent: string | null;
+  additionalPrompt?: string;
+  debug?: boolean;
+}
+
+interface GeminiAttemptDebug {
+  keyIndex: number;
+  status?: number;
+  durationMs: number;
+  ok: boolean;
+  textLength: number;
+  error?: string;
+}
+
+function isGeminiRetryWorthwhile(attempts: GeminiAttemptDebug[]): boolean {
+  if (attempts.length === 0) return true;
+  return !attempts.some(
+    (attempt) =>
+      attempt.status === 429 || /timeout|aborted/i.test(attempt.error || ""),
+  );
 }
 
 function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms))
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 // Allowed domains for scraping (security: avoid SSRF)
@@ -39,52 +62,55 @@ const ALLOWED_DOMAINS = [
   "blog.",
   "portfolio.",
   "vercel.app",
-]
+];
 
 function isAllowedUrl(url: string): boolean {
   try {
-    const parsed = new URL(url)
-    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return false
+    const parsed = new URL(url);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:")
+      return false;
     return ALLOWED_DOMAINS.some(
-      (domain) => parsed.hostname.includes(domain) || parsed.hostname.endsWith(domain)
-    )
+      (domain) =>
+        parsed.hostname.includes(domain) || parsed.hostname.endsWith(domain),
+    );
   } catch {
-    return false
+    return false;
   }
 }
 
 // Scrape text content from a URL
 async function scrapeUrlOnce(url: string): Promise<string> {
   if (!isAllowedUrl(url)) {
-    return "" // Silently skip disallowed URLs
+    return ""; // Silently skip disallowed URLs
   }
 
   try {
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 3000)
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3000);
 
     const res = await fetch(url, {
       headers: {
-        "User-Agent": "PersonaAI-Bot/1.0 (Portfolio Generator; +https://personaai.vercel.app)",
+        "User-Agent":
+          "PersonaAI-Bot/1.0 (Portfolio Generator; +https://personaai.vercel.app)",
         Accept: "text/html,application/xhtml+xml",
       },
       signal: controller.signal,
-    })
+    });
 
-    clearTimeout(timeoutId)
+    clearTimeout(timeoutId);
 
-    if (!res.ok) return ""
+    if (!res.ok) return "";
 
-    const html = await res.text()
-    const $ = cheerio.load(html)
+    const html = await res.text();
+    const $ = cheerio.load(html);
 
     // Remove scripts, styles, nav, footer, etc.
-    $("script, style, nav, footer, header, aside, iframe, noscript").remove()
+    $("script, style, nav, footer, header, aside, iframe, noscript").remove();
 
     // Extract meaningful text
-    const title = $("title").text().trim()
-    const metaDesc = $('meta[name="description"]').attr("content") || ""
-    const ogDesc = $('meta[property="og:description"]').attr("content") || ""
+    const title = $("title").text().trim();
+    const metaDesc = $('meta[name="description"]').attr("content") || "";
+    const ogDesc = $('meta[property="og:description"]').attr("content") || "";
 
     // Get main content
     const mainContent =
@@ -92,33 +118,40 @@ async function scrapeUrlOnce(url: string): Promise<string> {
       $("article").text() ||
       $('[role="main"]').text() ||
       $(".content").text() ||
-      $("body").text()
+      $("body").text();
 
     // Clean and truncate
     const text = [title, metaDesc, ogDesc, mainContent]
       .join(" ")
       .replace(/\s+/g, " ")
       .trim()
-      .substring(0, 2000)
+      .substring(0, 2000);
 
-    return text
+    return text;
   } catch {
-    return ""
+    return "";
   }
 }
 
 async function scrapeUrl(url: string): Promise<string> {
   // Single attempt only — retries add too much latency for a best-effort signal
-  return scrapeUrlOnce(url)
+  return scrapeUrlOnce(url);
 }
 
 // Call Gemini API with retry across multiple keys
-async function callGemini(prompt: string, systemPrompt: string, expectJson = false): Promise<string | null> {
-  if (GEMINI_KEYS.length === 0) return null
+async function callGemini(
+  prompt: string,
+  systemPrompt: string,
+  expectJson = false,
+): Promise<{ text: string | null; attempts: GeminiAttemptDebug[] }> {
+  if (GEMINI_KEYS.length === 0) return { text: null, attempts: [] };
 
-  for (const key of GEMINI_KEYS) {
+  const attempts: GeminiAttemptDebug[] = [];
+
+  for (const [index, key] of GEMINI_KEYS.entries()) {
+    const startedAt = Date.now();
     try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`;
       const res = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -132,63 +165,90 @@ async function callGemini(prompt: string, systemPrompt: string, expectJson = fal
           },
         }),
         signal: AbortSignal.timeout(10000),
-      })
+      });
 
-      if (!res.ok) continue
-      const data = await res.json()
-      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim()
-      if (text && text.length > 10) return text
-    } catch {
-      continue
+      if (!res.ok) {
+        const errorText = await res.text().catch(() => "");
+        attempts.push({
+          keyIndex: index,
+          status: res.status,
+          durationMs: Date.now() - startedAt,
+          ok: false,
+          textLength: 0,
+          error: errorText.slice(0, 300),
+        });
+        continue;
+      }
+
+      const data = await res.json();
+      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+      attempts.push({
+        keyIndex: index,
+        status: res.status,
+        durationMs: Date.now() - startedAt,
+        ok: Boolean(text && text.length > 10),
+        textLength: text?.length || 0,
+      });
+      if (text && text.length > 10) return { text, attempts };
+    } catch (err) {
+      attempts.push({
+        keyIndex: index,
+        durationMs: Date.now() - startedAt,
+        ok: false,
+        textLength: 0,
+        error: err instanceof Error ? err.message : String(err),
+      });
+      continue;
     }
   }
-  return null
+  return { text: null, attempts };
 }
 
 function extractJsonObject(text: string): string | null {
-  const trimmed = text.trim()
-  const start = trimmed.indexOf("{")
-  if (start === -1) return null
+  const trimmed = text.trim();
+  const start = trimmed.indexOf("{");
+  if (start === -1) return null;
 
-  let depth = 0
-  let inString = false
-  let escaped = false
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
 
   for (let index = start; index < trimmed.length; index += 1) {
-    const char = trimmed[index]
+    const char = trimmed[index];
 
     if (inString) {
       if (escaped) {
-        escaped = false
+        escaped = false;
       } else if (char === "\\") {
-        escaped = true
+        escaped = true;
       } else if (char === '"') {
-        inString = false
+        inString = false;
       }
-      continue
+      continue;
     }
 
     if (char === '"') {
-      inString = true
-      continue
+      inString = true;
+      continue;
     }
 
     if (char === "{") {
-      depth += 1
+      depth += 1;
     } else if (char === "}") {
-      depth -= 1
+      depth -= 1;
       if (depth === 0) {
-        return trimmed.slice(start, index + 1)
+        return trimmed.slice(start, index + 1);
       }
     }
   }
 
-  return null
+  return null;
 }
 
 export async function POST(request: Request) {
   try {
-    const data: AIContentRequest = await request.json()
+    const requestStartedAt = Date.now();
+    const data: AIContentRequest = await request.json();
     const {
       targetRole,
       externalLinks = [],
@@ -196,17 +256,23 @@ export async function POST(request: Request) {
       resumeText = null,
       notionContent = null,
       additionalPrompt,
-    } = data
+    } = data;
 
     // targetRole is optional — if missing, AI generates based on repos/links alone
-    const resolvedRole = targetRole?.trim() || "Software Developer"
+    const resolvedRole = targetRole?.trim() || "Software Developer";
 
     // Step 1: Scrape external links in parallel (max 3 — keep total latency low)
-    const linksToScrape = externalLinks.slice(0, 3)
-    const scrapedTexts = await Promise.all(linksToScrape.map(scrapeUrl))
-    const scrapedContent = scrapedTexts.filter(Boolean).join("\n\n").substring(0, 4000)
+    const scrapeStartedAt = Date.now();
+    const linksToScrape = externalLinks.slice(0, 3);
+    const scrapedTexts = await Promise.all(linksToScrape.map(scrapeUrl));
+    const scrapedContent = scrapedTexts
+      .filter(Boolean)
+      .join("\n\n")
+      .substring(0, 4000);
+    const scrapeDurationMs = Date.now() - scrapeStartedAt;
 
     // Step 2: Prepare repo data for AI
+    const reposStartedAt = Date.now();
     const reposForAI: EnrichedGitHubRepo[] = github.profile?.username
       ? await enrichReposForAI(github.profile.username, github.repos || [])
       : (github.repos || [])
@@ -216,15 +282,16 @@ export async function POST(request: Request) {
             ...r,
             readmeText: "",
             detectedTech: "",
-          }))
+          }));
+    const reposDurationMs = Date.now() - reposStartedAt;
 
-    const name = github.profile?.name || github.profile?.username || "User"
-    const debugMode = Boolean((data as any)?.debug)
+    const name = github.profile?.name || github.profile?.username || "User";
+    const debugMode = Boolean((data as any)?.debug);
 
     // Step 3: Single Gemini call — personality-first approach
     // The scraped content is the PRIMARY signal for voice, tone, and personality.
     // Generic career bios are the failure mode we are explicitly avoiding.
-     const systemPrompt = `You are a career copywriter who turns a candidate’s raw background into a human, professional portfolio narrative.
+    const systemPrompt = `You are a career copywriter who turns a candidate’s raw background into a human, professional portfolio narrative.
 
   Write the following for a portfolio website:
 
@@ -252,7 +319,7 @@ export async function POST(request: Request) {
   - Simple language wins. Replace jargon with everyday words when possible.
   - If the candidate’s own writing (blog posts, LinkedIn, etc.) reveals a personal style, mirror it subtly.
 
-  Return valid JSON only. No markdown. No code fences. No explanation outside the JSON.`
+  Return valid JSON only. No markdown. No code fences. No explanation outside the JSON.`;
 
     const userPrompt = `You are building portfolio copy for ${name}, who is targeting the role: "${resolvedRole}".
 
@@ -274,17 +341,21 @@ ${scrapedContent || "None provided — rely on repos and resume instead."}
 
 --- SUPPORTING SIGNALS ---
 GitHub repos:
-${JSON.stringify(reposForAI.map((r) => ({
-  name: r.name,
-  description: r.description || "",
-  language: r.language || "",
-  topics: r.topics || [],
-  readmeText: (r.readmeText || "").substring(0, 500),
-  detectedTech: r.detectedTech || "",
-  stars: r.stargazers_count,
-  forks: r.forks_count,
-  url: r.html_url,
-})), null, 2)}
+${JSON.stringify(
+  reposForAI.map((r) => ({
+    name: r.name,
+    description: r.description || "",
+    language: r.language || "",
+    topics: r.topics || [],
+    readmeText: (r.readmeText || "").substring(0, 500),
+    detectedTech: r.detectedTech || "",
+    stars: r.stargazers_count,
+    forks: r.forks_count,
+    url: r.html_url,
+  })),
+  null,
+  2,
+)}
 
 Resume excerpt:
 ${resumeText?.substring(0, 3000) || "None"}
@@ -349,9 +420,22 @@ Return JSON in exactly this format:
   ],
   "aboutMe": "...",
   "heroTagline": "..."
-}`
+}`;
 
-    const aiResponse = await callGemini(userPrompt, systemPrompt, true)
+    const geminiStartedAt = Date.now();
+    const geminiResult = await callGemini(userPrompt, systemPrompt, true);
+    let aiResponse = geminiResult.text;
+    const geminiDurationMs = Date.now() - geminiStartedAt;
+
+    if (
+      !aiResponse &&
+      GEMINI_KEYS.length > 0 &&
+      isGeminiRetryWorthwhile(geminiResult.attempts)
+    ) {
+      const fallbackResult = await callGemini(userPrompt, systemPrompt, false);
+      aiResponse = fallbackResult.text;
+      geminiResult.attempts.push(...fallbackResult.attempts);
+    }
 
     if (!aiResponse) {
       // Fallback: return repos as-is with default content
@@ -359,72 +443,108 @@ Return JSON in exactly this format:
         name: r.name,
         url: r.html_url,
         language: r.language,
-        description: r.description || (r.readmeText ? r.readmeText.substring(0, 120) : `A ${r.detectedTech || r.language || "software"} project.`),
+        description:
+          r.description ||
+          (r.readmeText
+            ? r.readmeText.substring(0, 120)
+            : `A ${r.detectedTech || r.language || "software"} project.`),
         stars: r.stargazers_count,
         forks: r.forks_count,
-      }))
+      }));
 
-      const topLang = reposForAI[0]?.language || reposForAI[0]?.detectedTech || "software"
+      const topLang =
+        reposForAI[0]?.language || reposForAI[0]?.detectedTech || "software";
       const baseFallback = {
         projects: fallbackProjects,
-        aboutMe: github.profile?.bio || `I work on ${topLang} projects and I’m currently targeting ${resolvedRole} roles.`,
+        aboutMe:
+          github.profile?.bio ||
+          `I work on ${topLang} projects and I’m currently targeting ${resolvedRole} roles.`,
         heroTagline: `${resolvedRole} — ${topLang}`,
-      }
+      };
 
       if (debugMode) {
+        const geminiQuotaOrTimeout = geminiResult.attempts.some(
+          (attempt) =>
+            attempt.status === 429 ||
+            /timeout|aborted/i.test(attempt.error || ""),
+        );
         return Response.json({
           ...baseFallback,
           debug: {
             geminiConfigured: GEMINI_KEYS.length > 0,
-            reason: "aiResponse_missing_or_empty",
+            reason: geminiQuotaOrTimeout
+              ? "gemini_rate_limited_or_timed_out"
+              : "aiResponse_missing_or_empty",
+            timings: {
+              totalMs: Date.now() - requestStartedAt,
+              scrapeMs: scrapeDurationMs,
+              reposMs: reposDurationMs,
+              geminiMs: geminiDurationMs,
+            },
             scrapedContentLength: scrapedContent.length,
             reposCount: reposForAI.length,
-            reposWithReadme: reposForAI.filter(r => (r as any).readmeText && (r as any).readmeText.length > 0).length,
-            aiRaw: null
-          }
-        })
+            reposWithReadme: reposForAI.filter(
+              (r) => (r as any).readmeText && (r as any).readmeText.length > 0,
+            ).length,
+            aiRaw: null,
+            geminiAttempts: geminiResult.attempts,
+          },
+        });
       }
 
-      return Response.json(baseFallback)
+      return Response.json(baseFallback);
     }
 
     // Parse AI response — strip markdown fences if Gemini wrapped the JSON
-    let cleanedResponse = aiResponse.trim()
+    let cleanedResponse = aiResponse.trim();
     if (cleanedResponse.startsWith("```")) {
-      cleanedResponse = cleanedResponse.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim()
+      cleanedResponse = cleanedResponse
+        .replace(/^```(?:json)?\s*/i, "")
+        .replace(/\s*```$/, "")
+        .trim();
     }
 
-    const extractedJson = extractJsonObject(cleanedResponse)
+    const extractedJson = extractJsonObject(cleanedResponse);
     if (extractedJson) {
-      cleanedResponse = extractedJson
+      cleanedResponse = extractedJson;
     }
 
     try {
-      const parsed = JSON.parse(cleanedResponse) as AIGeneratedContentWithResume
+      const parsed = JSON.parse(
+        cleanedResponse,
+      ) as AIGeneratedContentWithResume;
 
       // Validate and sanitize
-      const projects: AIProject[] = (parsed.projects || []).slice(0, 7).map((p) => ({
-        name: p.name || "Project",
-        url: p.url || "#",
-        language: p.language || null,
-        description: p.description || "Open-source project. View on GitHub for details.",
-        stars: typeof p.stars === "number" ? p.stars : 0,
-        forks: typeof p.forks === "number" ? p.forks : 0,
-      }))
+      const projects: AIProject[] = (parsed.projects || [])
+        .slice(0, 7)
+        .map((p) => ({
+          name: p.name || "Project",
+          url: p.url || "#",
+          language: p.language || null,
+          description:
+            p.description || "Open-source project. View on GitHub for details.",
+          stars: typeof p.stars === "number" ? p.stars : 0,
+          forks: typeof p.forks === "number" ? p.forks : 0,
+        }));
 
       const base = {
         projects,
-        aboutMe: parsed.aboutMe || `${name} is a ${resolvedRole} with diverse technical experience.`,
+        aboutMe:
+          parsed.aboutMe ||
+          `${name} is a ${resolvedRole} with diverse technical experience.`,
         heroTagline: parsed.heroTagline || resolvedRole,
-      }
+      };
 
       // If resume text was provided but AI did not return a resume section, synthesize a light summary
-      let final = { ...base } as any
+      let final = { ...base } as any;
       if (resumeText && !parsed.resume) {
-        const synthSummary = synthesizeResumeSummary(resumeText)
-        final.resume = { summary: synthSummary.summary, highlights: synthSummary.highlights }
+        const synthSummary = synthesizeResumeSummary(resumeText);
+        final.resume = {
+          summary: synthSummary.summary,
+          highlights: synthSummary.highlights,
+        };
       } else if (parsed.resume) {
-        final.resume = parsed.resume
+        final.resume = parsed.resume;
       }
 
       if (debugMode) {
@@ -433,67 +553,107 @@ Return JSON in exactly this format:
           debug: {
             geminiConfigured: GEMINI_KEYS.length > 0,
             reason: "aiResponse_parsed",
+            timings: {
+              totalMs: Date.now() - requestStartedAt,
+              scrapeMs: scrapeDurationMs,
+              reposMs: reposDurationMs,
+              geminiMs: geminiDurationMs,
+            },
             scrapedContentLength: scrapedContent.length,
             reposCount: reposForAI.length,
-            reposWithReadme: reposForAI.filter(r => (r as any).readmeText && (r as any).readmeText.length > 0).length,
+            reposWithReadme: reposForAI.filter(
+              (r) => (r as any).readmeText && (r as any).readmeText.length > 0,
+            ).length,
             aiRaw: aiResponse?.substring(0, 2000) || null,
-            extractedJsonLength: extractedJson?.length || 0
-          }
-        })
+            extractedJsonLength: extractedJson?.length || 0,
+            geminiAttempts: geminiResult.attempts,
+          },
+        });
       }
 
-      return Response.json(final)
+      return Response.json(final);
     } catch {
       // JSON parse failed, return fallback
       const fallbackProjects: AIProject[] = reposForAI.slice(0, 7).map((r) => ({
         name: r.name,
         url: r.html_url,
         language: r.language,
-        description: r.description || (r.readmeText ? r.readmeText.substring(0, 120) : `A ${r.detectedTech || r.language || "software"} project.`),
+        description:
+          r.description ||
+          (r.readmeText
+            ? r.readmeText.substring(0, 120)
+            : `A ${r.detectedTech || r.language || "software"} project.`),
         stars: r.stargazers_count,
         forks: r.forks_count,
-      }))
+      }));
 
-      const topLang2 = reposForAI[0]?.language || reposForAI[0]?.detectedTech || "software"
+      const topLang2 =
+        reposForAI[0]?.language || reposForAI[0]?.detectedTech || "software";
       const base2 = {
         projects: fallbackProjects,
-        aboutMe: github.profile?.bio || `I build ${topLang2} projects and I’m currently seeking ${resolvedRole} roles.`,
+        aboutMe:
+          github.profile?.bio ||
+          `I build ${topLang2} projects and I’m currently seeking ${resolvedRole} roles.`,
         heroTagline: `${resolvedRole} — ${topLang2}`,
-      }
+      };
 
       // If parsing failed, but resume text exists, synthesize a small resume summary to include
       if (debugMode) {
-        const synth = resumeText ? synthesizeResumeSummary(resumeText) : null
+        const geminiQuotaOrTimeout = geminiResult.attempts.some(
+          (attempt) =>
+            attempt.status === 429 ||
+            /timeout|aborted/i.test(attempt.error || ""),
+        );
+        const synth = resumeText ? synthesizeResumeSummary(resumeText) : null;
         return Response.json({
           ...base2,
           resume: synth || undefined,
           debug: {
             geminiConfigured: GEMINI_KEYS.length > 0,
-            reason: "aiResponse_parse_error",
+            reason: geminiQuotaOrTimeout
+              ? "gemini_rate_limited_or_timed_out"
+              : "aiResponse_parse_error",
+            timings: {
+              totalMs: Date.now() - requestStartedAt,
+              scrapeMs: scrapeDurationMs,
+              reposMs: reposDurationMs,
+              geminiMs: geminiDurationMs,
+            },
             scrapedContentLength: scrapedContent.length,
             reposCount: reposForAI.length,
-            reposWithReadme: reposForAI.filter(r => (r as any).readmeText && (r as any).readmeText.length > 0).length,
+            reposWithReadme: reposForAI.filter(
+              (r) => (r as any).readmeText && (r as any).readmeText.length > 0,
+            ).length,
             aiRaw: aiResponse?.substring(0, 2000) || null,
-            extractedJsonLength: extractedJson?.length || 0
-          }
-        })
+            extractedJsonLength: extractedJson?.length || 0,
+            geminiAttempts: geminiResult.attempts,
+          },
+        });
       }
 
-      const synth2 = resumeText ? synthesizeResumeSummary(resumeText) : null
-      return Response.json({ ...base2, resume: synth2 || undefined })
+      const synth2 = resumeText ? synthesizeResumeSummary(resumeText) : null;
+      return Response.json({ ...base2, resume: synth2 || undefined });
     }
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Failed to generate AI content"
-    return Response.json({ error: message }, { status: 500 })
+    const message =
+      err instanceof Error ? err.message : "Failed to generate AI content";
+    return Response.json({ error: message }, { status: 500 });
   }
 }
 
 // Lightweight resume summarizer (used when AI doesn't return a resume section)
 function synthesizeResumeSummary(resumeText: string) {
-  const lines = resumeText.split(/\r?\n/).map(l => l.trim()).filter(Boolean)
+  const lines = resumeText
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean);
   // Try to pick bullets if present
-  const bullets = lines.filter(l => /^[\-•*]\s+/.test(l)).slice(0, 6).map(l => l.replace(/^[\-•*]\s+/, ""))
-  const highlights = bullets.length >= 3 ? bullets.slice(0, 3) : lines.slice(0, 6).slice(0, 3)
-  const summary = lines.slice(0, 6).join(' ').substring(0, 600)
-  return { summary, highlights }
+  const bullets = lines
+    .filter((l) => /^[\-•*]\s+/.test(l))
+    .slice(0, 6)
+    .map((l) => l.replace(/^[\-•*]\s+/, ""));
+  const highlights =
+    bullets.length >= 3 ? bullets.slice(0, 3) : lines.slice(0, 6).slice(0, 3);
+  const summary = lines.slice(0, 6).join(" ").substring(0, 600);
+  return { summary, highlights };
 }

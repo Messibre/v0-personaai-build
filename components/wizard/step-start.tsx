@@ -12,6 +12,7 @@ import {
   Github, Star, GitFork, Users, ArrowRight, AlertCircle, X,
   Link2, StickyNote, User, CheckCircle
 } from "lucide-react"
+import { getFriendlyErrorMessage, getFriendlyServerStatusMessage } from "@/lib/user-friendly-error"
 
 interface StepStartProps {
   state: WizardState
@@ -42,12 +43,12 @@ export function StepStart({ state, dispatch, onNext }: StepStartProps) {
       })
       const data = await res.json()
       if (!res.ok) {
-        dispatch({ type: "SET_GITHUB_ERROR", error: data.error || "Failed to fetch" })
+        dispatch({ type: "SET_GITHUB_ERROR", error: getFriendlyServerStatusMessage(res.status, "github") || getFriendlyErrorMessage(data.error, "github") })
         return
       }
       dispatch({ type: "SET_GITHUB_DATA", profile: data.profile, repos: data.repos })
-    } catch {
-      dispatch({ type: "SET_GITHUB_ERROR", error: "Network error. Please try again." })
+    } catch (err) {
+      dispatch({ type: "SET_GITHUB_ERROR", error: getFriendlyErrorMessage(err, "github") })
     }
   }, [github.username, dispatch])
 
@@ -65,10 +66,10 @@ export function StepStart({ state, dispatch, onNext }: StepStartProps) {
       if (data.content) {
         dispatch({ type: "SET_NOTION_CONTENT", content: data.content })
       } else {
-        dispatch({ type: "SET_NOTION_ERROR", error: data.error || "Could not extract content." })
+        dispatch({ type: "SET_NOTION_ERROR", error: getFriendlyServerStatusMessage(res.status, "notion") || getFriendlyErrorMessage(data.error, "notion") })
       }
-    } catch {
-      dispatch({ type: "SET_NOTION_ERROR", error: "Network error. Please try again." })
+    } catch (err) {
+      dispatch({ type: "SET_NOTION_ERROR", error: getFriendlyErrorMessage(err, "notion") })
     }
   }, [notion.url, dispatch])
 

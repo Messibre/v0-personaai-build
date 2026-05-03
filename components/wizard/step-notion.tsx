@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
 import { Spinner } from "@/components/ui/spinner"
 import { StickyNote, ArrowRight, ArrowLeft, AlertCircle, CheckCircle, X, Link2 } from "lucide-react"
+import { getFriendlyErrorMessage, getFriendlyServerStatusMessage } from "@/lib/user-friendly-error"
 
 interface StepNotionProps {
   state: WizardState
@@ -37,11 +38,11 @@ export function StepNotion({ state, dispatch, onNext, onBack }: StepNotionProps)
       } else {
         dispatch({
           type: "SET_NOTION_ERROR",
-          error: data.error || "Could not extract content from this page.",
+          error: getFriendlyServerStatusMessage(res.status, "notion") || getFriendlyErrorMessage(data.error, "notion"),
         })
       }
-    } catch {
-      dispatch({ type: "SET_NOTION_ERROR", error: "Network error. Please try again." })
+    } catch (err) {
+      dispatch({ type: "SET_NOTION_ERROR", error: getFriendlyErrorMessage(err, "notion") })
     }
   }, [notion.url, dispatch])
 
@@ -101,7 +102,7 @@ export function StepNotion({ state, dispatch, onNext, onBack }: StepNotionProps)
           <div>
             <p>{notion.error}</p>
             <p className="text-xs text-amber-500/70 mt-1">
-              {"Don't worry - you can skip this step. Your portfolio will be generated from GitHub and resume data."}
+              {"You can skip this step and continue. We’ll keep building your portfolio from the other sources."}
             </p>
           </div>
         </div>
