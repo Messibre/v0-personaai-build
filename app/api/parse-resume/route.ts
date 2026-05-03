@@ -28,33 +28,75 @@ export async function POST(request: Request) {
     }
 
     const arrayBuffer = await file.arrayBuffer()
+    // First, try `pdfjs-dist` (Vercel-recommended) if it's available in the runtime.
+    try {
+      // dynamic import so it only loads when present
+      const pdfjs = await import('pdfjs-dist/legacy/build/pdf.js')
+      const loadingTask = pdfjs.getDocument({ data: arrayBuffer })
+      const pdf = await loadingTask.promise
 
-    // Use pdfjs-dist to parse PDF without relying on Buffer() constructor.
-    // Dynamic import keeps the package out of the main bundle when not needed.
-    const pdfjs = await import('pdfjs-dist/legacy/build/pdf.js')
-    // Node/Server needs worker disabled; use getDocument with data as ArrayBuffer
-    const loadingTask = pdfjs.getDocument({ data: arrayBuffer })
-    const pdf = await loadingTask.promise
+      let fullText = ''
+      for (let i = 1; i <= pdf.numPages; i++) {
+        // eslint-disable-next-line no-await-in-loop
+        const page = await pdf.getPage(i)
+        // eslint-disable-next-line no-await-in-loop
+        const content = await page.getTextContent()
+        const pageText = content.items.map((it: any) => it.str).join(' ')
+        fullText += pageText + '\n'
+      }
 
-    let fullText = ''
-    for (let i = 1; i <= pdf.numPages; i++) {
-      // eslint-disable-next-line no-await-in-loop
-      const page = await pdf.getPage(i)
-      // eslint-disable-next-line no-await-in-loop
-      const content = await page.getTextContent()
-      const pageText = content.items.map((it: any) => it.str).join(' ')
-      fullText += pageText + '\n'
+      const trimmed = fullText.trim()
+      if (trimmed) {
+        return NextResponse.json({ text: trimmed })
+      }
+      // if pdfjs parsed nothing, fall through to fallback
+    } catch (e) {
+      // ignore and fallback to pdf-parse shim approach
     }
 
-    const trimmed = fullText.trim()
-    if (!trimmed) {
-      return NextResponse.json(
-        { error: 'Could not extract text from PDF. The file may be image-based.' },
-        { status: 422 }
-      )
+    // Fallback: many PDF parsing libraries historically call the deprecated Buffer() constructor.
+    // To avoid the deprecation warning, temporarily shim the global Buffer so function-style
+    // calls delegate to Buffer.from(), then restore it after using `pdf-parse`.
+    const originalBuffer = (globalThis as any).Buffer
+    let didShim = false
+    if (typeof originalBuffer === 'function') {
+      const shim: any = function (arg: any) {
+        return originalBuffer.from(arg)
+      }
+      try {
+        Object.getOwnPropertyNames(originalBuffer).forEach((k) => {
+          try { (shim as any)[k] = (originalBuffer as any)[k] } catch {}
+        })
+        ;(shim as any).prototype = (originalBuffer as any).prototype
+        ;(globalThis as any).Buffer = shim
+        didShim = true
+      } catch {
+        // ignore shim failures
+      }
     }
 
-    return NextResponse.json({ text: trimmed })
+    try {
+      // Dynamic import to avoid Next.js bundling issues
+      const pdfParse = (await import('pdf-parse/lib/pdf-parse.js')).default
+      const buffer = (originalBuffer && typeof originalBuffer.from === 'function')
+        ? originalBuffer.from(arrayBuffer)
+        : Buffer.from(arrayBuffer as any)
+
+      const parsed = await pdfParse(buffer)
+
+      if (!parsed.text || parsed.text.trim().length === 0) {
+        return NextResponse.json(
+          { error: 'Could not extract text from PDF. The file may be image-based.' },
+          { status: 422 }
+        )
+      }
+
+      return NextResponse.json({ text: parsed.text.trim() })
+    } finally {
+      if (didShim) {
+        try { (globalThis as any).Buffer = originalBuffer } catch {}
+      }
+    }
   } catch (err) {
     const message = err instanceof Error ? err.message : "Failed to parse resume"
     return NextResponse.json({ error: message }, { status: 500 })
