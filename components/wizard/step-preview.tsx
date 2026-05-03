@@ -77,6 +77,10 @@ export function StepPreview({ state, dispatch, onBack }: StepPreviewProps) {
 
   const aiContentReady = aiContent.projects !== null || aiContent.aboutMe !== null || aiContent.heroTagline !== null
 
+  // Always-current ref so the generate closure never reads stale aiContent.
+  const aiContentRef = useRef(aiContent)
+  useEffect(() => { aiContentRef.current = aiContent }, [aiContent])
+
   const templateLabel = TEMPLATE_LABELS[config.template] || config.template
 
   const generate = useCallback(async () => {
@@ -93,9 +97,9 @@ export function StepPreview({ state, dispatch, onBack }: StepPreviewProps) {
           body: JSON.stringify({
             targetRole: targetRole.role || "Software Developer",
             name: github.profile.name || github.profile.username,
-            aboutMe: aiContent.aboutMe || github.profile.bio || `${github.profile.name || github.profile.username} is a software developer.`,
-            heroTagline: aiContent.heroTagline || targetRole.role || "Building amazing software",
-            projects: aiContent.projects || github.repos.slice(0, 7).map((r) => ({
+            aboutMe: aiContentRef.current.aboutMe || github.profile.bio || `${github.profile.name || github.profile.username} is a software developer.`,
+            heroTagline: aiContentRef.current.heroTagline || targetRole.role || "Building amazing software",
+            projects: aiContentRef.current.projects || github.repos.slice(0, 7).map((r) => ({
               name: r.name, url: r.html_url, language: r.language,
               description: r.description || `A ${r.language || "software"} project.`,
               stars: r.stargazers_count, forks: r.forks_count,
@@ -133,8 +137,8 @@ export function StepPreview({ state, dispatch, onBack }: StepPreviewProps) {
           notionContent: notion.content,
           config,
           photoDataUrl: photo.dataUrl,
-          aiContent: aiContent.projects ? {
-            projects: aiContent.projects, aboutMe: aiContent.aboutMe, heroTagline: aiContent.heroTagline,
+          aiContent: aiContentRef.current.projects ? {
+            projects: aiContentRef.current.projects, aboutMe: aiContentRef.current.aboutMe, heroTagline: aiContentRef.current.heroTagline,
           } : null,
           targetRole: targetRole.role,
         }),
@@ -157,7 +161,7 @@ export function StepPreview({ state, dispatch, onBack }: StepPreviewProps) {
       dispatch({ type: "SET_PORTFOLIO_ERROR", error: message })
       setIsGenerating(false)
     }
-  }, [github, resume.text, notion.content, config, photo.dataUrl, dispatch, aiContent, targetRole])
+  }, [github, resume.text, notion.content, config, photo.dataUrl, dispatch, targetRole])
 
   const hasGeneratedRef = useRef(false)
 
