@@ -279,9 +279,10 @@ ${JSON.stringify(reposForAI.map((r) => ({
   description: r.description || "",
   language: r.language || "",
   topics: r.topics || [],
-  readmeText: (r.readmeText || "").substring(0, 250),
+  readmeText: (r.readmeText || "").substring(0, 500),
   detectedTech: r.detectedTech || "",
   stars: r.stargazers_count,
+  forks: r.forks_count,
   url: r.html_url,
 })), null, 2)}
 
