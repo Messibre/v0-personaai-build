@@ -31,15 +31,33 @@ const VIEWPORTS: { id: ViewportSize; label: string; icon: typeof Monitor; width:
   { id: "mobile", label: "Mobile", icon: Smartphone, width: "390px", frameWidth: 390 },
 ]
 
-// Script injected into the iframe to enable editing
+// Script injected into the iframe to enable editing and intercept external navigation
 function getEditorScript(): string {
   return `
 <script>
 (function() {
-  let editMode = false;
-  let imageInput = null;
-  let targetImg = null;
+  var editMode = false;
+  var targetImg = null;
 
+  // ─── Intercept ALL external link clicks so the iframe never navigates away ───
+  function interceptLinks() {
+    document.addEventListener('click', function(e) {
+      var anchor = e.target.closest('a');
+      if (!anchor) return;
+      var href = anchor.getAttribute('href') || '';
+      // Allow in-page hash anchors to work normally
+      if (href.startsWith('#')) return;
+      // Block everything else — open external links in a new tab via parent
+      e.preventDefault();
+      e.stopPropagation();
+      if (href && !editMode) {
+        window.parent.postMessage({ type: 'OPEN_LINK', href: href }, '*');
+      }
+    }, true);
+  }
+  interceptLinks();
+
+  // ─── Message bridge ───────────────────────────────────────────────────────
   window.addEventListener('message', function(e) {
     if (e.data.type === 'TOGGLE_EDIT') {
       editMode = e.data.enabled;
@@ -52,27 +70,114 @@ function getEditorScript(): string {
     }
   });
 
+  // ─── Edit mode ────────────────────────────────────────────────────────────
   function toggleEditMode(on) {
     document.body.classList.toggle('persona-edit-mode', on);
+    applyTextEditing(on);
+    applyImageEditing(on);
+  }
 
-    const textEls = document.querySelectorAll('h1,h2,h3,h4,h5,h6,p,span,a,li,.project-desc,.section-desc,.hero-bio,.stat-label,.stat-num,.hero-name,.hero-role,.project-name,.section-label,.section-title,.section-desc,.hero-anim,.tag,.skill-badge');
-    textEls.forEach(function(el) {
-      if (on) {
-        if (el.children.length > 3) return;
+  // Only make leaf-level text nodes editable — never elements that contain
+  // meaningful child structure (navs, cards, sections, etc.)
+  var TEXT_SELECTORS = [
+    'h1','h2','h3','h4','h5','h6',
+    'p:not(:has(> p)):not(:has(> div))',
+    'li',
+    'span:not(:has(*)):not([class*="icon"]):not([class*="dot"])',
+    '.project-name','.project-desc','.section-label','.section-title',
+    '.section-desc','.hero-bio','.hero-name','.hero-role',
+    '.stat-label','.stat-num','.skill-badge','.tag',
+    '.proj-name','.proj-desc','.big-name','.role-tag',
+    '.terminal-dot + span','.val','.comment','.blink'
+  ].join(',');
+
+  function isEditableEl(el) {
+    // Skip elements that are purely structural or have significant child elements
+    if (!el) return false;
+    var tag = el.tagName;
+    // Never make <a> tags editable — their click handling conflicts with text editing
+    if (tag === 'A') return false;
+    // Skip nav, header, footer, script, style, button, input
+    if (['NAV','HEADER','FOOTER','SCRIPT','STYLE','BUTTON','INPUT','TEXTAREA','SELECT'].includes(tag)) return false;
+    // Skip elements with many element children (structural containers)
+    var childElements = el.querySelectorAll('*').length;
+    if (childElements > 4) return false;
+    // Must have some text content
+    if (!el.textContent.trim()) return false;
+    return true;
+  }
+
+  var editableEls = [];
+
+  function applyTextEditing(on) {
+    if (on) {
+      editableEls = [];
+      var candidates = document.querySelectorAll(TEXT_SELECTORS);
+      candidates.forEach(function(el) {
+        if (!isEditableEl(el)) return;
+        editableEls.push(el);
         el.contentEditable = 'true';
+        el.dataset.personaOriginal = el.textContent;
         el.style.outline = 'none';
+        el.style.cursor = 'text';
+        el.addEventListener('keydown', handleKeydown);
         el.addEventListener('focus', handleFocus);
         el.addEventListener('blur', handleBlur);
         el.addEventListener('input', handleInput);
-      } else {
+      });
+    } else {
+      editableEls.forEach(function(el) {
         el.contentEditable = 'false';
+        el.style.outline = 'none';
+        el.style.cursor = '';
+        el.removeEventListener('keydown', handleKeydown);
         el.removeEventListener('focus', handleFocus);
         el.removeEventListener('blur', handleBlur);
         el.removeEventListener('input', handleInput);
-      }
-    });
+      });
+      editableEls = [];
+    }
+  }
 
-    const imgs = document.querySelectorAll('img');
+  function handleKeydown(e) {
+    // Esc = cancel edit and restore original text
+    if (e.key === 'Escape') {
+      var orig = e.target.dataset.personaOriginal;
+      if (orig !== undefined) e.target.textContent = orig;
+      e.target.blur();
+      e.preventDefault();
+      return;
+    }
+    // Enter without Shift = finish editing (no newline in single-line elements)
+    var isBlock = ['H1','H2','H3','H4','H5','H6','P','LI'].includes(e.target.tagName);
+    if (e.key === 'Enter' && !e.shiftKey && !isBlock) {
+      e.preventDefault();
+      e.target.blur();
+    }
+  }
+
+  function handleFocus(e) {
+    e.target.dataset.personaOriginal = e.target.textContent;
+    e.target.style.outline = '2px solid rgba(124,92,252,0.8)';
+    e.target.style.outlineOffset = '3px';
+    e.target.style.borderRadius = '3px';
+  }
+
+  function handleBlur(e) {
+    e.target.style.outline = 'none';
+    e.target.style.outlineOffset = '';
+    e.target.style.borderRadius = '';
+    notifyParent();
+  }
+
+  function handleInput() {
+    clearTimeout(window._editTimer);
+    window._editTimer = setTimeout(notifyParent, 600);
+  }
+
+  // ─── Image editing ────────────────────────────────────────────────────────
+  function applyImageEditing(on) {
+    var imgs = document.querySelectorAll('img');
     imgs.forEach(function(img) {
       if (on) {
         img.style.cursor = 'pointer';
@@ -86,24 +191,6 @@ function getEditorScript(): string {
     });
   }
 
-  function handleFocus(e) {
-    e.target.style.outline = '2px solid #7c5cfc';
-    e.target.style.outlineOffset = '2px';
-    e.target.style.borderRadius = '4px';
-  }
-
-  function handleBlur(e) {
-    e.target.style.outline = 'none';
-    e.target.style.outlineOffset = '';
-    e.target.style.borderRadius = '';
-    notifyParent();
-  }
-
-  function handleInput() {
-    clearTimeout(window._editTimer);
-    window._editTimer = setTimeout(notifyParent, 500);
-  }
-
   function handleImageClick(e) {
     e.preventDefault();
     e.stopPropagation();
@@ -112,52 +199,64 @@ function getEditorScript(): string {
   }
 
   function addImageOverlay(img) {
-    if (img.parentElement.querySelector('.img-edit-overlay')) return;
+    var parent = img.parentElement;
+    if (!parent) return;
+    if (parent.querySelector('.img-edit-overlay')) return;
     var overlay = document.createElement('div');
     overlay.className = 'img-edit-overlay';
-    overlay.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg><span>Replace</span>';
+    overlay.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg><span>Replace</span>';
     overlay.style.cssText = 'position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;background:rgba(0,0,0,0.55);opacity:0;transition:opacity .2s;cursor:pointer;pointer-events:none;z-index:50;border-radius:inherit;';
     overlay.querySelector('span').style.cssText = 'font-size:11px;color:white;font-weight:600;letter-spacing:0.5px;';
-    var parent = img.parentElement;
     if (getComputedStyle(parent).position === 'static') parent.style.position = 'relative';
     parent.appendChild(overlay);
     img.addEventListener('mouseenter', function() { overlay.style.opacity='1'; overlay.style.pointerEvents='auto'; });
     img.addEventListener('mouseleave', function() { overlay.style.opacity='0'; overlay.style.pointerEvents='none'; });
     overlay.addEventListener('mouseenter', function() { overlay.style.opacity='1'; overlay.style.pointerEvents='auto'; });
     overlay.addEventListener('mouseleave', function() { overlay.style.opacity='0'; overlay.style.pointerEvents='none'; });
-    overlay.addEventListener('click', function() { handleImageClick({ preventDefault:function(){}, stopPropagation:function(){}, target: img }); });
+    overlay.addEventListener('click', function(e) {
+      e.stopPropagation();
+      handleImageClick({ preventDefault:function(){}, stopPropagation:function(){}, target: img });
+    });
   }
 
   function removeImageOverlay(img) {
-    var overlay = img.parentElement && img.parentElement.querySelector('.img-edit-overlay');
-    if (overlay) overlay.remove();
+    var ov = img.parentElement && img.parentElement.querySelector('.img-edit-overlay');
+    if (ov) ov.remove();
   }
 
+  // ─── Serialize and send updated HTML to parent ────────────────────────────
   function notifyParent() {
     var clone = document.documentElement.cloneNode(true);
-    clone.querySelectorAll('[contenteditable]').forEach(function(el) { el.removeAttribute('contenteditable'); });
+    // Strip editor state
+    clone.querySelectorAll('[contenteditable]').forEach(function(el) { el.removeAttribute('contenteditable'); el.style.outline=''; el.style.cursor=''; el.removeAttribute('data-persona-original'); });
     clone.querySelectorAll('.img-edit-overlay').forEach(function(el) { el.remove(); });
     clone.querySelectorAll('.persona-edit-mode').forEach(function(el) { el.classList.remove('persona-edit-mode'); });
-    clone.querySelectorAll('script').forEach(function(el) { el.remove(); });
-    var originalScripts = document.querySelectorAll('script');
-    var body = clone.querySelector('body');
-    originalScripts.forEach(function(s) {
-      var ns = document.createElement('script');
-      if (s.src) ns.src = s.src;
-      else ns.textContent = s.textContent;
-      body.appendChild(ns);
-    });
+    // Preserve original scripts (strip injected editor script only)
+    var scripts = Array.from(clone.querySelectorAll('script'));
+    scripts.forEach(function(s) { if (!s.src && s.textContent.includes('TOGGLE_EDIT')) { s.remove(); } });
+    var styles = Array.from(clone.querySelectorAll('style'));
+    styles.forEach(function(s) { if (s.textContent.includes('persona-edit-mode')) { s.remove(); } });
     window.parent.postMessage({ type: 'HTML_UPDATED', html: '<!DOCTYPE html>\\n' + clone.outerHTML }, '*');
   }
 })();
 <\/script>
 <style>
-  .persona-edit-mode [contenteditable="true"]:hover {
-    outline: 1px dashed rgba(124,92,252,0.5) !important;
-    outline-offset: 2px !important;
-    border-radius: 4px !important;
+  body.persona-edit-mode [contenteditable="true"] {
+    transition: outline 0.15s ease;
   }
-  .persona-edit-mode img:hover { filter: brightness(0.7) !important; }
+  body.persona-edit-mode [contenteditable="true"]:hover {
+    outline: 1px dashed rgba(124,92,252,0.45) !important;
+    outline-offset: 3px !important;
+    border-radius: 3px !important;
+    cursor: text !important;
+  }
+  body.persona-edit-mode [contenteditable="true"]:focus {
+    outline: 2px solid rgba(124,92,252,0.85) !important;
+    outline-offset: 3px !important;
+    border-radius: 3px !important;
+  }
+  body.persona-edit-mode img { transition: filter 0.2s; }
+  body.persona-edit-mode img:hover { filter: brightness(0.65) !important; cursor: pointer !important; }
 </style>`
 }
 
@@ -210,6 +309,13 @@ export function PortfolioEditor({ html, onHtmlChange, templateName }: PortfolioE
     function handleMessage(e: MessageEvent) {
       if (e.data.type === "HTML_UPDATED" && e.data.html) onHtmlChange(e.data.html)
       if (e.data.type === "REQUEST_IMAGE_UPLOAD") fileInputRef.current?.click()
+      if (e.data.type === "OPEN_LINK" && e.data.href) {
+        // Open external links from the portfolio in a new tab safely
+        const href: string = e.data.href
+        if (href.startsWith("http://") || href.startsWith("https://") || href.startsWith("//")) {
+          window.open(href, "_blank", "noopener,noreferrer")
+        }
+      }
     }
     window.addEventListener("message", handleMessage)
     return () => window.removeEventListener("message", handleMessage)

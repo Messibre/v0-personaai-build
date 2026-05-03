@@ -183,6 +183,9 @@ export const PORTFOLIO_SECTIONS = [
   { id: "github-stats", label: "GitHub Stats" },
   { id: "testimonials", label: "Testimonials" },
   { id: "contact", label: "Contact" },
+  { id: "now", label: "What I'm Doing Now" },
+  { id: "education", label: "Education" },
+  { id: "writing", label: "Featured Writing" },
 ] as const
 
 export type SectionId = (typeof PORTFOLIO_SECTIONS)[number]["id"]
