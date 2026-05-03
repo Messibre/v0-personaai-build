@@ -23,7 +23,7 @@ async function getAiBio(profile: GitHubProfile, repos: GitHubRepo[], resumeText:
   if (GEMINI_KEYS.length === 0) return null
 
   const langs = [...new Set(repos.map((r) => r.language).filter(Boolean))].slice(0, 6)
-  const prompt = `Write a compelling 2-3 sentence professional bio for a developer portfolio. Be concise, confident, third-person.
+  const prompt = `Write a compelling 2-3 sentence professional bio for a developer portfolio. Be concise, confident, and write in first person.
 
 Name: ${profile.name || profile.username}
 Bio: ${profile.bio || "N/A"}

@@ -323,7 +323,7 @@ function buildSkills(langs: string[], topics: string[]): string {
 }
 
 function buildAbout(profile: GitHubProfile, aiBio: string | null, accent: string): string {
-  const bio = aiBio || profile.bio || "A passionate developer dedicated to crafting exceptional digital experiences."
+  const bio = aiBio || profile.bio || "I build useful software and care about making it simple to maintain."
   return `
   <section id="about" class="section" style="background:rgba(255,255,255,0.01)">
     <div class="container">

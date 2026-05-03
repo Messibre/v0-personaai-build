@@ -240,8 +240,9 @@ export async function POST(request: Request) {
 
   Write the following for a portfolio website:
 
-  1. About Me (3-4 sentences, third person):
+  1. About Me (3-4 sentences, first person):
     - Sound like a real person — warm, professional, and to the point.
+    - Speak as the candidate using "I" / "my" / "me".
     - Highlight specific skills, technologies, or projects that define the candidate.
     - Frame the story around the target role; explain why they’re a great fit, not just what they’ve done.
     - Use plain English. If a 14-year-old wouldn’t understand a term, rephrase it.
@@ -324,10 +325,11 @@ If the evidence is thin, make careful, grounded inferences instead of generic st
   - Includes at least one concrete detail from the README, repo description, detected tech, or scraped writing
   - If possible, mention scope, constraints, or impact (speed, reliability, simplicity, automation, maintainability, etc.)
 
-2. ABOUT ME (3-4 sentences, third person)
+2. ABOUT ME (3-4 sentences, first person)
   This is the most important field. Rules:
   - Mirror their actual writing style and tone from the scraped content
   - Make it feel grounded, intelligent, and human
+  - Write in first person with natural confidence
   - Include 2-3 specific details across projects, technologies, or opinions
   - Show what problems they solve, not just what tools they use
   - Mention their likely strengths: judgment, speed, clarity, systems thinking, or craft
@@ -377,7 +379,7 @@ Return JSON in exactly this format:
       const topLang = reposForAI[0]?.language || reposForAI[0]?.detectedTech || "software"
       const baseFallback = {
         projects: fallbackProjects,
-        aboutMe: github.profile?.bio || `${name} works on ${topLang} projects, currently targeting ${resolvedRole} roles.`,
+        aboutMe: github.profile?.bio || `I work on ${topLang} projects and I’m currently targeting ${resolvedRole} roles.`,
         heroTagline: `${resolvedRole} — ${topLang}`,
       }
 
@@ -458,7 +460,7 @@ Return JSON in exactly this format:
       const topLang2 = reposForAI[0]?.language || reposForAI[0]?.detectedTech || "software"
       const base2 = {
         projects: fallbackProjects,
-        aboutMe: github.profile?.bio || `${name} builds ${topLang2} projects, currently seeking ${resolvedRole} roles.`,
+        aboutMe: github.profile?.bio || `I build ${topLang2} projects and I’m currently seeking ${resolvedRole} roles.`,
         heroTagline: `${resolvedRole} — ${topLang2}`,
       }
 

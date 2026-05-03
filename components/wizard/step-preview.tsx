@@ -75,6 +75,8 @@ export function StepPreview({ state, dispatch, onBack }: StepPreviewProps) {
   const [lastAITemplate, setLastAITemplate] = useState<string>(config.template)
   const [lastAIColor, setLastAIColor] = useState<string>(config.colorScheme)
 
+  const aiContentReady = aiContent.projects !== null || aiContent.aboutMe !== null || aiContent.heroTagline !== null
+
   const templateLabel = TEMPLATE_LABELS[config.template] || config.template
 
   const generate = useCallback(async () => {
@@ -161,9 +163,28 @@ export function StepPreview({ state, dispatch, onBack }: StepPreviewProps) {
   useEffect(() => {
     if (hasGeneratedRef.current) return
     if (portfolio.html || portfolio.loading || portfolio.error || isGenerating) return
+    if (aiContent.loading && !aiContentReady) return
     hasGeneratedRef.current = true
     generate()
-  }, [generate, portfolio.html, portfolio.loading, portfolio.error, isGenerating])
+  }, [generate, portfolio.html, portfolio.loading, portfolio.error, isGenerating, aiContent.loading, aiContentReady])
+
+  useEffect(() => {
+    if (!portfolio.html) return
+    if (portfolio.loading || isGenerating) return
+    if (!aiContentReady || aiContent.loading) return
+
+    // If the portfolio was generated before AI content finished loading,
+    // regenerate once so the preview reflects the richer AI content.
+    const generatedFromFallback =
+      portfolio.html.includes("works on") ||
+      portfolio.html.includes("currently targeting") ||
+      portfolio.html.includes("A software project")
+
+    if (generatedFromFallback) {
+      hasGeneratedRef.current = true
+      generate()
+    }
+  }, [portfolio.html, portfolio.loading, isGenerating, aiContentReady, aiContent.loading, generate])
 
   const handleHtmlChange = useCallback(
     (newHtml: string) => {
