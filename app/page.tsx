@@ -232,8 +232,8 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Wizard Section */}
-      <section id="wizard" className="relative px-4 py-12 sm:py-16 lg:py-20 scroll-mt-8">
+      {/* Wizard Section — padding is handled inside WizardShell so preview can go full-width */}
+      <section id="wizard" className="relative scroll-mt-8 overflow-x-hidden">
         <div
           className="absolute inset-0 pointer-events-none opacity-[0.03] dark:opacity-[0.05]"
           style={{
