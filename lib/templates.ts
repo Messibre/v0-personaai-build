@@ -78,8 +78,9 @@ function baseStyles(accent: string): string {
 
     /* Dark/light theme variables */
     :root { --bg: #0a0a0f; --surface: rgba(255,255,255,0.03); --border: rgba(255,255,255,0.06); --text: #e8e8ef; --muted: #888; --accent: ${accent}; }
-    [data-theme="light"] { --bg: #f8f8fc; --surface: rgba(0,0,0,0.03); --border: rgba(0,0,0,0.08); --text: #111; --muted: #555; }
-    [data-theme="light"] body { background: #f8f8fc; color: #111; }
+    [data-theme="light"] { --bg: #f4f4f8; --surface: rgba(0,0,0,0.04); --border: rgba(0,0,0,0.1); --text: #111; --muted: #444; }
+    [data-theme="light"] body { background: #f4f4f8; color: #111; }
+    [data-theme="light"] * { color: inherit; }
     /* Nav */
     [data-theme="light"] .nav { background: rgba(248,248,252,0.92); border-bottom-color: rgba(0,0,0,0.08); }
     [data-theme="light"] .nav-brand { color: #111; }
@@ -96,7 +97,10 @@ function baseStyles(accent: string): string {
     [data-theme="light"] .section-title { color: #111; }
     [data-theme="light"] .section-desc { color: #555; }
     [data-theme="light"] .section-label { color: ${accent}; }
-    /* Project cards */
+    /* Cards and surfaces */
+    [data-theme="light"] .project-card,
+    [data-theme="light"] .bento-cell,
+    [data-theme="light"] .glass-card { background: #fff !important; border-color: rgba(0,0,0,0.08) !important; box-shadow: 0 2px 12px rgba(0,0,0,0.06) !important; }
     [data-theme="light"] .project-card { background: #fff; border-color: rgba(0,0,0,0.08); box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
     [data-theme="light"] .project-name { color: #111; }
     [data-theme="light"] .project-desc { color: #555; }
@@ -106,7 +110,8 @@ function baseStyles(accent: string): string {
     [data-theme="light"] .proj-chip { border-color: rgba(0,0,0,0.12); color: #555; }
     /* Skills */
     [data-theme="light"] .skill-category-title { color: #666; border-bottom-color: rgba(0,0,0,0.08); }
-    [data-theme="light"] .skill-badge { color: ${accent}; border-color: ${accent}30; background: ${accent}08; }
+    [data-theme="light"] .skill-badge { color: ${accent} !important; border-color: ${accent}40 !important; background: ${accent}0d !important; }
+    [data-theme="light"] .skill-badge[style*="rgba(255"] { color: ${accent} !important; }
     /* Contact / social */
     [data-theme="light"] .social-link { border-color: rgba(0,0,0,0.12); color: #555; }
     [data-theme="light"] .email-copy { border-color: rgba(0,0,0,0.12); color: #333; }
@@ -114,10 +119,17 @@ function baseStyles(accent: string): string {
     [data-theme="light"] #experience h3 { color: #111 !important; }
     [data-theme="light"] #experience li,[data-theme="light"] #experience p { color: #555 !important; }
     [data-theme="light"] #experience span[style*="color:#555"] { color: #777 !important; }
-    /* About section — override inline-style color:#ccc on fact chips and links */
-    [data-theme="light"] #about .about-fact { background: rgba(0,0,0,0.04) !important; border-color: rgba(0,0,0,0.1) !important; color: #444 !important; }
-    [data-theme="light"] #about .about-gh-link { border-color: rgba(0,0,0,0.12) !important; color: #444 !important; }
-    [data-theme="light"] #about p { color: #444 !important; }
+    /* Blanket section text — ensure all p/span/li are readable in light mode */
+    [data-theme="light"] .section p,
+    [data-theme="light"] .section-desc,
+    [data-theme="light"] .section li { color: #444 !important; }
+    [data-theme="light"] .section h1,
+    [data-theme="light"] .section h2,
+    [data-theme="light"] .section h3 { color: #111 !important; }
+    /* About section card background */
+    [data-theme="light"] #about { background: transparent !important; }
+    [data-theme="light"] #about .about-fact { background: rgba(0,0,0,0.05) !important; border-color: rgba(0,0,0,0.1) !important; color: #333 !important; }
+    [data-theme="light"] #about .about-gh-link { border-color: rgba(0,0,0,0.14) !important; color: #333 !important; background: rgba(0,0,0,0.03) !important; }
     /* Per-template hero overrides — all hardcoded color:#fff in hero h1/p */
     [data-theme="light"] .hero h1,[data-theme="light"] .hero-light h1,[data-theme="light"] .hero-left h2,
     [data-theme="light"] .hero-text h1,[data-theme="light"] .hero-glass h1 { color: #111 !important; }
@@ -347,7 +359,7 @@ function gsapScript(): string {
       });
     });
 
-    // ── Skill accordion ──────────────────────────────────────────────────────
+    // ── Skill accordion ───────────────────���──────────────────────────────────
     document.addEventListener('DOMContentLoaded', function() {
       document.querySelectorAll('.skill-category-title').forEach(function(title) {
         title.addEventListener('click', function() {
