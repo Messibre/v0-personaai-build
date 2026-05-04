@@ -1,3 +1,8 @@
+// Force Node.js runtime — pdf-parse uses Node Buffer/fs APIs that are
+// unavailable in the Edge runtime and require the full Node environment
+// that Vercel's serverless functions provide.
+export const runtime = "nodejs";
+
 import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
@@ -25,42 +30,56 @@ export async function POST(request: Request) {
     }
 
     const arrayBuffer = await file.arrayBuffer();
-    // Use a runtime-only dynamic import string so Turbopack doesn't try to
-    // resolve `pdfjs-dist` at build time. The generic build entrypoint avoids
-    // the Node canvas polyfill path that triggered warnings in the legacy build.
-    // eslint-disable-next-line no-eval
-    const pdfjsModule = await eval("import('pdfjs-dist/build/pdf.js')");
-    const pdfjs = pdfjsModule.default ?? pdfjsModule;
-    const loadingTask = pdfjs.getDocument({
-      data: new Uint8Array(arrayBuffer),
-    });
-    const pdf = await loadingTask.promise;
+    const buffer = Buffer.from(arrayBuffer);
 
-    let fullText = "";
-    for (let i = 1; i <= pdf.numPages; i++) {
-      // eslint-disable-next-line no-await-in-loop
-      const page = await pdf.getPage(i);
-      // eslint-disable-next-line no-await-in-loop
-      const content = await page.getTextContent();
-      const pageText = content.items.map((it: any) => it.str).join(" ");
-      fullText += pageText + "\n";
+    // pdf-parse is a pure Node.js library — no worker, no canvas, no filesystem
+    // path issues. Works reliably in Vercel serverless functions.
+    let text = "";
+    try {
+      // Dynamic import keeps the bundle lean and avoids Turbopack static analysis
+      const pdfParse = (await import("pdf-parse")).default;
+      const result = await pdfParse(buffer);
+      text = result.text?.trim() ?? "";
+    } catch (primaryErr) {
+      // Fallback: pdfjs-dist in legacy mode without a worker
+      console.log("[v0] pdf-parse failed, falling back to pdfjs-dist:", primaryErr);
+      try {
+        const pdfjsLib = await import("pdfjs-dist/legacy/build/pdf.js");
+        const pdfjs = (pdfjsLib as any).default ?? pdfjsLib;
+        // Disable the worker entirely so pdfjs runs synchronously in-process
+        pdfjs.GlobalWorkerOptions = pdfjs.GlobalWorkerOptions ?? {};
+        pdfjs.GlobalWorkerOptions.workerSrc = "";
+
+        const loadingTask = pdfjs.getDocument({ data: new Uint8Array(arrayBuffer) });
+        const pdf = await loadingTask.promise;
+
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i);
+          const content = await page.getTextContent();
+          text += content.items.map((it: any) => it.str).join(" ") + "\n";
+        }
+        text = text.trim();
+      } catch (fallbackErr) {
+        console.log("[v0] pdfjs-dist fallback also failed:", fallbackErr);
+        throw fallbackErr;
+      }
     }
 
-    const trimmed = fullText.trim();
-    if (!trimmed) {
+    if (!text) {
       return NextResponse.json(
         {
           error:
-            "Could not extract text from PDF. The file may be image-based.",
+            "Could not extract text from this PDF. It may be image-based or scanned. Try a text-based PDF.",
         },
         { status: 422 },
       );
     }
 
-    return NextResponse.json({ text: trimmed, parserUsed: "pdfjs-dist" });
+    return NextResponse.json({ text, parserUsed: "pdf-parse" });
   } catch (err) {
     const message =
       err instanceof Error ? err.message : "Failed to parse resume";
+    console.error("[v0] parse-resume error:", message);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
