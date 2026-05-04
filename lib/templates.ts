@@ -78,25 +78,31 @@ function baseStyles(accent: string): string {
 
     /* Dark/light theme variables */
     :root { --bg: #0a0a0f; --surface: rgba(255,255,255,0.03); --border: rgba(255,255,255,0.06); --text: #e8e8ef; --muted: #888; --accent: ${accent}; }
-    [data-theme="light"] { --bg: #f8f8fc; --surface: rgba(0,0,0,0.03); --border: rgba(0,0,0,0.08); --text: #111; --muted: #555; }
-    [data-theme="light"] body { background: #f8f8fc; color: #111; }
+    [data-theme="light"] { --bg: #f4f4f8; --surface: rgba(0,0,0,0.04); --border: rgba(0,0,0,0.1); --text: #111; --muted: #444; }
+    [data-theme="light"] body { background: #f4f4f8 !important; color: #111 !important; }
     /* Nav */
-    [data-theme="light"] .nav { background: rgba(248,248,252,0.92); border-bottom-color: rgba(0,0,0,0.08); }
-    [data-theme="light"] .nav-brand { color: #111; }
-    [data-theme="light"] .nav-links a { color: #444; }
-    [data-theme="light"] .nav-links a:hover,[data-theme="light"] .nav-links a.active { color: ${accent}; }
-    [data-theme="light"] .nav-toggle span { background: #111; }
-    [data-theme="light"] .mobile-menu { background: rgba(248,248,252,0.97); border-bottom-color: rgba(0,0,0,0.08); }
-    [data-theme="light"] .mobile-menu a { color: #333; }
-    /* Hero text */
-    [data-theme="light"] h1,[data-theme="light"] h2,[data-theme="light"] h3 { color: #111 !important; }
+    [data-theme="light"] .nav { background: rgba(248,248,252,0.92) !important; border-bottom-color: rgba(0,0,0,0.08) !important; }
+    [data-theme="light"] .nav-brand { color: #111 !important; }
+    [data-theme="light"] .nav-links a { color: #444 !important; }
+    [data-theme="light"] .nav-links a:hover,[data-theme="light"] .nav-links a.active { color: ${accent} !important; }
+    [data-theme="light"] .nav-toggle span { background: #111 !important; }
+    [data-theme="light"] .mobile-menu { background: rgba(248,248,252,0.97) !important; }
+    [data-theme="light"] .mobile-menu a { color: #333 !important; }
+    /* All text elements — beat inline styles */
+    [data-theme="light"] h1,[data-theme="light"] h2,[data-theme="light"] h3,
+    [data-theme="light"] h4,[data-theme="light"] h5,[data-theme="light"] h6 { color: #111 !important; }
+    [data-theme="light"] p { color: #444 !important; }
+    [data-theme="light"] li { color: #444 !important; }
+    [data-theme="light"] span { color: inherit; }
     [data-theme="light"] .hero-bio,[data-theme="light"] .hero-desc,[data-theme="light"] .hero-tagline { color: #444 !important; }
-    [data-theme="light"] p { color: #444; }
     /* Sections */
-    [data-theme="light"] .section-title { color: #111; }
-    [data-theme="light"] .section-desc { color: #555; }
-    [data-theme="light"] .section-label { color: ${accent}; }
-    /* Project cards */
+    [data-theme="light"] .section-title { color: #111 !important; }
+    [data-theme="light"] .section-desc { color: #555 !important; }
+    [data-theme="light"] .section-label { color: ${accent} !important; }
+    /* Cards and surfaces */
+    [data-theme="light"] .project-card,
+    [data-theme="light"] .bento-cell,
+    [data-theme="light"] .glass-card { background: #fff !important; border-color: rgba(0,0,0,0.08) !important; box-shadow: 0 2px 12px rgba(0,0,0,0.06) !important; }
     [data-theme="light"] .project-card { background: #fff; border-color: rgba(0,0,0,0.08); box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
     [data-theme="light"] .project-name { color: #111; }
     [data-theme="light"] .project-desc { color: #555; }
@@ -106,7 +112,8 @@ function baseStyles(accent: string): string {
     [data-theme="light"] .proj-chip { border-color: rgba(0,0,0,0.12); color: #555; }
     /* Skills */
     [data-theme="light"] .skill-category-title { color: #666; border-bottom-color: rgba(0,0,0,0.08); }
-    [data-theme="light"] .skill-badge { color: ${accent}; border-color: ${accent}30; background: ${accent}08; }
+    [data-theme="light"] .skill-badge { color: ${accent} !important; border-color: ${accent}40 !important; background: ${accent}0d !important; }
+    [data-theme="light"] .skill-badge[style*="rgba(255"] { color: ${accent} !important; }
     /* Contact / social */
     [data-theme="light"] .social-link { border-color: rgba(0,0,0,0.12); color: #555; }
     [data-theme="light"] .email-copy { border-color: rgba(0,0,0,0.12); color: #333; }
@@ -114,12 +121,47 @@ function baseStyles(accent: string): string {
     [data-theme="light"] #experience h3 { color: #111 !important; }
     [data-theme="light"] #experience li,[data-theme="light"] #experience p { color: #555 !important; }
     [data-theme="light"] #experience span[style*="color:#555"] { color: #777 !important; }
+    /* Blanket section text — ensure all p/span/li are readable in light mode */
+    [data-theme="light"] .section p,
+    [data-theme="light"] .section-desc,
+    [data-theme="light"] .section li { color: #444 !important; }
+    [data-theme="light"] .section h1,
+    [data-theme="light"] .section h2,
+    [data-theme="light"] .section h3 { color: #111 !important; }
+    /* About section card background */
+    [data-theme="light"] #about { background: transparent !important; }
+    [data-theme="light"] #about .about-fact { background: rgba(0,0,0,0.05) !important; border-color: rgba(0,0,0,0.1) !important; color: #333 !important; }
+    [data-theme="light"] #about .about-gh-link { border-color: rgba(0,0,0,0.14) !important; color: #333 !important; background: rgba(0,0,0,0.03) !important; }
+    /* Per-template hero overrides — all hardcoded color:#fff in hero h1/p */
+    [data-theme="light"] .hero h1,[data-theme="light"] .hero-light h1,[data-theme="light"] .hero-left h2,
+    [data-theme="light"] .hero-text h1,[data-theme="light"] .hero-glass h1 { color: #111 !important; }
+    [data-theme="light"] .hero p,[data-theme="light"] .hero-light p,[data-theme="light"] .hero-left p,
+    [data-theme="light"] .hero-text p,[data-theme="light"] .hero-glass p { color: #555 !important; }
+    [data-theme="light"] .hero-light { background: #f0f0f8 !important; border-left-color: rgba(0,0,0,0.06) !important; }
+    [data-theme="light"] .hero-dark { background: #e8e8f0 !important; }
+    [data-theme="light"] .hero-left { background: #eeeef6 !important; }
+    [data-theme="light"] .hero-right { background: #f4f4fc !important; border-left-color: rgba(0,0,0,0.06) !important; }
+    /* Glass template overrides */
+    [data-theme="light"] .hero-glass { background: rgba(255,255,255,0.7) !important; border-color: rgba(0,0,0,0.1) !important; backdrop-filter: blur(24px); }
+    [data-theme="light"] .glass-card { background: rgba(255,255,255,0.8) !important; border-color: rgba(0,0,0,0.08) !important; }
+    [data-theme="light"] .hero-glass .ctas .secondary { background: rgba(0,0,0,0.06) !important; border-color: rgba(0,0,0,0.12) !important; color: #333 !important; }
+    /* Terminal template overrides */
+    [data-theme="light"] .cmd-line { color: #777 !important; }
+    /* Inline style overrides — catch any remaining color:#fff / #888 / #aaa / #ccc on spans */
+    [data-theme="light"] span[style*="color:#ccc"],[data-theme="light"] span[style*="color: #ccc"] { color: #444 !important; }
+    [data-theme="light"] span[style*="color:#888"],[data-theme="light"] span[style*="color: #888"] { color: #555 !important; }
+    [data-theme="light"] span[style*="color:#aaa"],[data-theme="light"] span[style*="color: #aaa"] { color: #555 !important; }
+    [data-theme="light"] span[style*="color:#fff"],[data-theme="light"] span[style*="color: #fff"] { color: #111 !important; }
+    [data-theme="light"] h3[style*="color:#fff"],[data-theme="light"] h3[style*="color: #fff"] { color: #111 !important; }
+    [data-theme="light"] p[style*="color:#888"],[data-theme="light"] p[style*="color: #888"] { color: #555 !important; }
+    [data-theme="light"] a[style*="color:#ccc"],[data-theme="light"] a[style*="color: #ccc"] { color: #444 !important; border-color: rgba(0,0,0,0.12) !important; }
     /* GitHub stats */
     [data-theme="light"] #github-stats { background: transparent; }
     /* Footer */
     [data-theme="light"] .footer { background: #f0f0f6; border-top-color: rgba(0,0,0,0.08); }
     [data-theme="light"] .footer p { color: #888; }
     [data-theme="light"] .footer a { color: ${accent}; }
+    [data-theme="light"] .footer span[style*="color:#555"] { color: #666 !important; }
     /* Grid bg */
     [data-theme="light"] .grid-bg { opacity: 0; }
 
@@ -319,7 +361,7 @@ function gsapScript(): string {
       });
     });
 
-    // ── Skill accordion ──────────────────────────────────────────────────────
+    // ── Skill accordion ───────────────────���──────────────────────────────────
     document.addEventListener('DOMContentLoaded', function() {
       document.querySelectorAll('.skill-category-title').forEach(function(title) {
         title.addEventListener('click', function() {
@@ -583,18 +625,18 @@ function buildAbout(profile: GitHubProfile, aiBio: string | null, accent: string
   if (totalStars > 0) facts.push(`&#9733; ${totalStars} total stars`)
   if (profile.followers > 0) facts.push(`&#128101; ${profile.followers} followers`)
   return `
-  <section id="about" class="section" style="background:rgba(255,255,255,0.01)">
+  <section id="about" class="section">
     <div class="container">
       <p class="section-label reveal">About</p>
       <h2 class="section-title reveal">A little about me</h2>
-      <p class="section-desc reveal" style="max-width:720px;font-size:17px;line-height:1.75">${e(bio)}</p>
+      <p class="section-desc reveal" style="max-width:720px;font-size:17px;line-height:1.75;color:var(--muted,#888)">${e(bio)}</p>
       ${facts.length ? `
       <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:32px" class="reveal" role="list" aria-label="Quick facts">
-        ${facts.map(f => `<span role="listitem" style="display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border-radius:20px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);font-size:13px;color:#ccc">${f}</span>`).join("")}
+        ${facts.map(f => `<span role="listitem" class="about-fact" style="display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border-radius:20px;background:var(--surface,rgba(255,255,255,0.04));border:1px solid var(--border,rgba(255,255,255,0.08));font-size:13px;color:var(--text,#e8e8ef)">${f}</span>`).join("")}
       </div>` : ""}
       <div style="display:flex;gap:12px;flex-wrap:wrap" class="reveal">
         ${profile.blog ? `<a href="${profile.blog.startsWith("http") ? profile.blog : "https://" + profile.blog}" target="_blank" rel="noopener" style="padding:10px 22px;border:1.5px solid ${accent}40;color:${accent};border-radius:10px;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px">&#127758; Website</a>` : ""}
-        <a href="${profile.html_url}" target="_blank" rel="noopener" style="padding:10px 22px;border:1.5px solid rgba(255,255,255,0.1);color:#ccc;border-radius:10px;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px">&#128196; GitHub Profile</a>
+        <a href="${profile.html_url}" target="_blank" rel="noopener" class="about-gh-link" style="padding:10px 22px;border:1.5px solid var(--border,rgba(255,255,255,0.1));color:var(--text,#e8e8ef);border-radius:10px;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px">&#128196; GitHub Profile</a>
       </div>
     </div>
   </section>`
@@ -623,11 +665,11 @@ function buildContact(profile: GitHubProfile, accent: string, socialLinks?: Soci
   const emailHint = `${profile.username}@users.noreply.github.com`
 
   return `
-  <section id="contact" class="section" style="background:rgba(255,255,255,0.01)">
+  <section id="contact" class="section">
     <div class="container" style="text-align:center">
       <p class="section-label reveal">Contact</p>
       <h2 class="section-title reveal" style="margin-left:auto;margin-right:auto">Let&rsquo;s work together</h2>
-      <p class="section-desc reveal" style="margin-left:auto;margin-right:auto;text-align:center">Have a project in mind or just want to say hello? My inbox is open.</p>
+      <p class="section-desc reveal" style="margin-left:auto;margin-right:auto;text-align:center;color:var(--muted,#888)">Have a project in mind or just want to say hello? My inbox is open.</p>
       <div class="social-links reveal" aria-label="Social links">
         ${icons.join("\n        ")}
       </div>
@@ -1141,8 +1183,8 @@ function buildBrutalist(data: TemplateData): string {
       <h2 class="section-title reveal">Who Am I</h2>
       <p class="section-desc reveal" style="max-width:700px;font-family:'Inter',sans-serif">${e(aiBio || profile.bio || "A developer dedicated to crafting exceptional digital experiences.")}</p>
       <div style="display:flex;gap:24px;flex-wrap:wrap" class="reveal">
-        ${profile.location ? `<span style="border:2px solid rgba(255,255,255,0.08);padding:8px 16px;font-size:13px;color:#aaa">${e(profile.location)}</span>` : ""}
-        ${profile.company ? `<span style="border:2px solid rgba(255,255,255,0.08);padding:8px 16px;font-size:13px;color:#aaa">${e(profile.company)}</span>` : ""}
+        ${profile.location ? `<span style="border:2px solid var(--border,rgba(255,255,255,0.08));padding:8px 16px;font-size:13px;color:var(--muted,#aaa)">${e(profile.location)}</span>` : ""}
+        ${profile.company ? `<span style="border:2px solid var(--border,rgba(255,255,255,0.08));padding:8px 16px;font-size:13px;color:var(--muted,#aaa)">${e(profile.company)}</span>` : ""}
       </div>
     </div>
   </section>` : ""}
