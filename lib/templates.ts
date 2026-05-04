@@ -114,12 +114,40 @@ function baseStyles(accent: string): string {
     [data-theme="light"] #experience h3 { color: #111 !important; }
     [data-theme="light"] #experience li,[data-theme="light"] #experience p { color: #555 !important; }
     [data-theme="light"] #experience span[style*="color:#555"] { color: #777 !important; }
+    /* About section — override inline-style color:#ccc on fact chips and links */
+    [data-theme="light"] #about .about-fact { background: rgba(0,0,0,0.04) !important; border-color: rgba(0,0,0,0.1) !important; color: #444 !important; }
+    [data-theme="light"] #about .about-gh-link { border-color: rgba(0,0,0,0.12) !important; color: #444 !important; }
+    [data-theme="light"] #about p { color: #444 !important; }
+    /* Per-template hero overrides — all hardcoded color:#fff in hero h1/p */
+    [data-theme="light"] .hero h1,[data-theme="light"] .hero-light h1,[data-theme="light"] .hero-left h2,
+    [data-theme="light"] .hero-text h1,[data-theme="light"] .hero-glass h1 { color: #111 !important; }
+    [data-theme="light"] .hero p,[data-theme="light"] .hero-light p,[data-theme="light"] .hero-left p,
+    [data-theme="light"] .hero-text p,[data-theme="light"] .hero-glass p { color: #555 !important; }
+    [data-theme="light"] .hero-light { background: #f0f0f8 !important; border-left-color: rgba(0,0,0,0.06) !important; }
+    [data-theme="light"] .hero-dark { background: #e8e8f0 !important; }
+    [data-theme="light"] .hero-left { background: #eeeef6 !important; }
+    [data-theme="light"] .hero-right { background: #f4f4fc !important; border-left-color: rgba(0,0,0,0.06) !important; }
+    /* Glass template overrides */
+    [data-theme="light"] .hero-glass { background: rgba(255,255,255,0.7) !important; border-color: rgba(0,0,0,0.1) !important; backdrop-filter: blur(24px); }
+    [data-theme="light"] .glass-card { background: rgba(255,255,255,0.8) !important; border-color: rgba(0,0,0,0.08) !important; }
+    [data-theme="light"] .hero-glass .ctas .secondary { background: rgba(0,0,0,0.06) !important; border-color: rgba(0,0,0,0.12) !important; color: #333 !important; }
+    /* Terminal template overrides */
+    [data-theme="light"] .cmd-line { color: #777 !important; }
+    /* Inline style overrides — catch any remaining color:#fff / #888 / #aaa / #ccc on spans */
+    [data-theme="light"] span[style*="color:#ccc"],[data-theme="light"] span[style*="color: #ccc"] { color: #444 !important; }
+    [data-theme="light"] span[style*="color:#888"],[data-theme="light"] span[style*="color: #888"] { color: #555 !important; }
+    [data-theme="light"] span[style*="color:#aaa"],[data-theme="light"] span[style*="color: #aaa"] { color: #555 !important; }
+    [data-theme="light"] span[style*="color:#fff"],[data-theme="light"] span[style*="color: #fff"] { color: #111 !important; }
+    [data-theme="light"] h3[style*="color:#fff"],[data-theme="light"] h3[style*="color: #fff"] { color: #111 !important; }
+    [data-theme="light"] p[style*="color:#888"],[data-theme="light"] p[style*="color: #888"] { color: #555 !important; }
+    [data-theme="light"] a[style*="color:#ccc"],[data-theme="light"] a[style*="color: #ccc"] { color: #444 !important; border-color: rgba(0,0,0,0.12) !important; }
     /* GitHub stats */
     [data-theme="light"] #github-stats { background: transparent; }
     /* Footer */
     [data-theme="light"] .footer { background: #f0f0f6; border-top-color: rgba(0,0,0,0.08); }
     [data-theme="light"] .footer p { color: #888; }
     [data-theme="light"] .footer a { color: ${accent}; }
+    [data-theme="light"] .footer span[style*="color:#555"] { color: #666 !important; }
     /* Grid bg */
     [data-theme="light"] .grid-bg { opacity: 0; }
 
@@ -590,11 +618,11 @@ function buildAbout(profile: GitHubProfile, aiBio: string | null, accent: string
       <p class="section-desc reveal" style="max-width:720px;font-size:17px;line-height:1.75">${e(bio)}</p>
       ${facts.length ? `
       <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:32px" class="reveal" role="list" aria-label="Quick facts">
-        ${facts.map(f => `<span role="listitem" style="display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border-radius:20px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);font-size:13px;color:#ccc">${f}</span>`).join("")}
+        ${facts.map(f => `<span role="listitem" class="about-fact" style="display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border-radius:20px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);font-size:13px;color:var(--text,#ccc)">${f}</span>`).join("")}
       </div>` : ""}
       <div style="display:flex;gap:12px;flex-wrap:wrap" class="reveal">
         ${profile.blog ? `<a href="${profile.blog.startsWith("http") ? profile.blog : "https://" + profile.blog}" target="_blank" rel="noopener" style="padding:10px 22px;border:1.5px solid ${accent}40;color:${accent};border-radius:10px;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px">&#127758; Website</a>` : ""}
-        <a href="${profile.html_url}" target="_blank" rel="noopener" style="padding:10px 22px;border:1.5px solid rgba(255,255,255,0.1);color:#ccc;border-radius:10px;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px">&#128196; GitHub Profile</a>
+        <a href="${profile.html_url}" target="_blank" rel="noopener" class="about-gh-link" style="padding:10px 22px;border:1.5px solid rgba(255,255,255,0.1);color:var(--text,#ccc);border-radius:10px;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px">&#128196; GitHub Profile</a>
       </div>
     </div>
   </section>`
@@ -1141,8 +1169,8 @@ function buildBrutalist(data: TemplateData): string {
       <h2 class="section-title reveal">Who Am I</h2>
       <p class="section-desc reveal" style="max-width:700px;font-family:'Inter',sans-serif">${e(aiBio || profile.bio || "A developer dedicated to crafting exceptional digital experiences.")}</p>
       <div style="display:flex;gap:24px;flex-wrap:wrap" class="reveal">
-        ${profile.location ? `<span style="border:2px solid rgba(255,255,255,0.08);padding:8px 16px;font-size:13px;color:#aaa">${e(profile.location)}</span>` : ""}
-        ${profile.company ? `<span style="border:2px solid rgba(255,255,255,0.08);padding:8px 16px;font-size:13px;color:#aaa">${e(profile.company)}</span>` : ""}
+        ${profile.location ? `<span style="border:2px solid var(--border,rgba(255,255,255,0.08));padding:8px 16px;font-size:13px;color:var(--muted,#aaa)">${e(profile.location)}</span>` : ""}
+        ${profile.company ? `<span style="border:2px solid var(--border,rgba(255,255,255,0.08));padding:8px 16px;font-size:13px;color:var(--muted,#aaa)">${e(profile.company)}</span>` : ""}
       </div>
     </div>
   </section>` : ""}
