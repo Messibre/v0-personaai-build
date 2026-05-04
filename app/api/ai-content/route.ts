@@ -160,7 +160,7 @@ async function callGemini(
           contents: [{ parts: [{ text: prompt }] }],
           generationConfig: {
             temperature: 0.7,
-            maxOutputTokens: 3000,
+            maxOutputTokens: 2000,
             ...(expectJson && { responseMimeType: "application/json" }),
           },
         }),
@@ -358,10 +358,10 @@ ${JSON.stringify(
 )}
 
 Resume excerpt:
-${resumeText?.substring(0, 3000) || "None"}
+${resumeText?.substring(0, 1500) || "None"}
 
 Notion content:
-${notionContent?.substring(0, 2000) || "None"}
+${notionContent?.substring(0, 1000) || "None"}
 
 Additional instructions from the person:
 ${additionalPrompt || "None"}
@@ -438,29 +438,12 @@ Return JSON in exactly this format:
     }
 
     if (!aiResponse) {
-      // Fallback: return repos as-is with default content
-      const fallbackProjects: AIProject[] = reposForAI.slice(0, 7).map((r) => ({
-        name: r.name,
-        url: r.html_url,
-        language: r.language,
-        description:
-          r.description ||
-          (r.readmeText
-            ? r.readmeText.substring(0, 120)
-            : `A ${r.detectedTech || r.language || "software"} project.`),
-        stars: r.stargazers_count,
-        forks: r.forks_count,
-      }));
-
-      const topLang =
-        reposForAI[0]?.language || reposForAI[0]?.detectedTech || "software";
+      const fallbackProjects = buildFallbackProjects(reposForAI)
       const baseFallback = {
         projects: fallbackProjects,
-        aboutMe:
-          github.profile?.bio ||
-          `I work on ${topLang} projects and I’m currently targeting ${resolvedRole} roles.`,
-        heroTagline: `${resolvedRole} — ${topLang}`,
-      };
+        aboutMe: buildFallbackAboutMe(github.profile, github.repos || [], resolvedRole),
+        heroTagline: buildFallbackTagline(github.profile, github.repos || [], resolvedRole),
+      }
 
       if (debugMode) {
         const geminiQuotaOrTimeout = geminiResult.attempts.some(
@@ -573,29 +556,12 @@ Return JSON in exactly this format:
 
       return Response.json(final);
     } catch {
-      // JSON parse failed, return fallback
-      const fallbackProjects: AIProject[] = reposForAI.slice(0, 7).map((r) => ({
-        name: r.name,
-        url: r.html_url,
-        language: r.language,
-        description:
-          r.description ||
-          (r.readmeText
-            ? r.readmeText.substring(0, 120)
-            : `A ${r.detectedTech || r.language || "software"} project.`),
-        stars: r.stargazers_count,
-        forks: r.forks_count,
-      }));
-
-      const topLang2 =
-        reposForAI[0]?.language || reposForAI[0]?.detectedTech || "software";
+      // JSON parse failed, return real-feeling fallback
       const base2 = {
-        projects: fallbackProjects,
-        aboutMe:
-          github.profile?.bio ||
-          `I build ${topLang2} projects and I’m currently seeking ${resolvedRole} roles.`,
-        heroTagline: `${resolvedRole} — ${topLang2}`,
-      };
+        projects: buildFallbackProjects(reposForAI),
+        aboutMe: buildFallbackAboutMe(github.profile, github.repos || [], resolvedRole),
+        heroTagline: buildFallbackTagline(github.profile, github.repos || [], resolvedRole),
+      }
 
       // If parsing failed, but resume text exists, synthesize a small resume summary to include
       if (debugMode) {
@@ -639,6 +605,92 @@ Return JSON in exactly this format:
       err instanceof Error ? err.message : "Failed to generate AI content";
     return Response.json({ error: message }, { status: 500 });
   }
+}
+
+/** Build real-feeling project descriptions from enriched GitHub repo data. */
+function buildFallbackProjects(repos: EnrichedGitHubRepo[]): AIProject[] {
+  return repos.slice(0, 7).map((r) => {
+    const lang = r.language || null
+    const topics = (r.topics || []).slice(0, 3)
+    const desc = r.description?.trim()
+    const readme = r.readmeText?.trim()
+    const tech = r.detectedTech?.trim()
+
+    let text: string
+
+    if (desc && desc.length > 20) {
+      // Real GitHub description — enrich with tech/topics if the desc is short
+      text = desc.endsWith(".") ? desc : `${desc}.`
+      const extras = [tech || lang, ...topics].filter(Boolean)
+      if (desc.length < 60 && extras.length > 0) {
+        text += ` Built with ${extras.slice(0, 3).join(", ")}.`
+      }
+    } else if (readme && readme.length > 40) {
+      // Pull the first meaningful sentence from the README
+      const firstSentence = readme.replace(/[#*`]/g, "").split(/[.!?]/)[0]?.trim()
+      text = firstSentence && firstSentence.length > 15
+        ? `${firstSentence}.${lang ? ` Written in ${lang}.` : ""}`
+        : `${lang || "Software"} project.${topics.length ? ` Covers ${topics.slice(0, 2).join(" and ")}.` : ""}`
+    } else if (topics.length >= 2) {
+      text = `A ${lang || "software"} project covering ${topics.slice(0, 2).join(" and ")}${topics[2] ? ` and ${topics[2]}` : ""}.`
+      if (r.stargazers_count > 0) text += ` Has ${r.stargazers_count} stars on GitHub.`
+    } else if (tech || lang) {
+      text = `An open-source ${tech || lang} project${topics.length ? ` focused on ${topics[0]}` : ""}. See the full source on GitHub.`
+    } else {
+      text = "An open-source project. View the full source and documentation on GitHub."
+    }
+
+    return {
+      name: r.name,
+      url: r.html_url,
+      language: lang,
+      description: text,
+      stars: r.stargazers_count,
+      forks: r.forks_count,
+    }
+  })
+}
+
+/** Build a real-feeling about-me from profile fields when Gemini is unavailable. */
+function buildFallbackAboutMe(profile: GitHubProfile | null, repos: GitHubRepo[], targetRole: string): string {
+  if (!profile) return `A software developer targeting ${targetRole} roles.`
+
+  const name = profile.name || profile.username
+  const langs = [...new Set(repos.filter((r) => !r.fork && r.language).map((r) => r.language as string))].slice(0, 3)
+  const topRepo = repos.filter((r) => !r.fork).sort((a, b) => b.stargazers_count - a.stargazers_count)[0]
+  const repoCount = profile.public_repos || repos.length
+
+  if (profile.bio && profile.bio.length > 30) {
+    return `${profile.bio.endsWith(".") ? profile.bio : `${profile.bio}.`}${langs.length ? ` I primarily work in ${langs.join(", ")}.` : ""}${topRepo && topRepo.stargazers_count > 1 ? ` My most-starred project is ${topRepo.name} with ${topRepo.stargazers_count} stars.` : ""}`
+  }
+
+  const bios = [
+    `I'm ${name}, a software developer with ${repoCount} public projects on GitHub.${langs.length ? ` Most of my work is in ${langs.join(", ")}.` : ""}${topRepo ? ` My most recognised project is ${topRepo.name}.` : ""} I care about writing code that is clear, well-tested, and easy to maintain.`,
+    `Software developer focused on ${langs[0] || "building"} ${langs[1] ? `and ${langs[1]} ` : ""}projects, currently targeting ${targetRole} roles.${topRepo && topRepo.stargazers_count > 1 ? ` ${topRepo.name} is one of my most-starred open-source contributions.` : ""} I enjoy turning well-defined problems into reliable, readable code.`,
+    `I build software${langs.length ? ` in ${langs.join(", ")}` : ""}${repoCount ? ` and share most of it publicly across ${repoCount} GitHub repositories` : ""}. My work spans${topRepo ? ` projects like ${topRepo.name}` : " utilities and experiments"} to tooling that solves real workflow problems. I value clean interfaces and clear documentation.`,
+    `${name} here — developer, open-source contributor, and habitual over-committer.${langs.length ? ` I spend most of my time in ${langs.slice(0, 2).join(" and ")}.` : ""} I believe the best code is the code you never have to explain twice.`,
+    `I'm a developer who enjoys working across the stack${langs.length ? `, primarily with ${langs.join(", ")}` : ""}.${repoCount ? ` I have ${repoCount} projects on GitHub` : ""} and I am always looking for interesting problems to solve with well-crafted, maintainable software.`,
+  ]
+
+  const index = (profile.username?.charCodeAt(0) ?? 0) % bios.length
+  return bios[index]
+}
+
+/** Build a real-feeling hero tagline. */
+function buildFallbackTagline(profile: GitHubProfile | null, repos: GitHubRepo[], targetRole: string): string {
+  const langs = [...new Set(repos.filter((r) => !r.fork && r.language).map((r) => r.language as string))].slice(0, 2)
+  const name = profile?.name || profile?.username
+
+  const taglines = [
+    `${targetRole}${langs.length ? ` — ${langs[0]}` : ""}`,
+    `Building reliable software${langs.length ? ` with ${langs.join(" and ")}` : ""}`,
+    `${targetRole} who writes code that lasts`,
+    `Open-source developer${langs.length ? `, specialising in ${langs[0]}` : ""}`,
+    `${name ? `${name} — ` : ""}${targetRole} & open-source contributor`,
+  ]
+
+  const index = (profile?.username?.charCodeAt(1) ?? 0) % taglines.length
+  return taglines[index]
 }
 
 // Lightweight resume summarizer (used when AI doesn't return a resume section)
