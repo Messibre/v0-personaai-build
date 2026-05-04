@@ -80,7 +80,6 @@ function baseStyles(accent: string): string {
     :root { --bg: #0a0a0f; --surface: rgba(255,255,255,0.03); --border: rgba(255,255,255,0.06); --text: #e8e8ef; --muted: #888; --accent: ${accent}; }
     [data-theme="light"] { --bg: #f4f4f8; --surface: rgba(0,0,0,0.04); --border: rgba(0,0,0,0.1); --text: #111; --muted: #444; }
     [data-theme="light"] body { background: #f4f4f8; color: #111; }
-    [data-theme="light"] * { color: inherit; }
     /* Nav */
     [data-theme="light"] .nav { background: rgba(248,248,252,0.92); border-bottom-color: rgba(0,0,0,0.08); }
     [data-theme="light"] .nav-brand { color: #111; }
@@ -623,18 +622,18 @@ function buildAbout(profile: GitHubProfile, aiBio: string | null, accent: string
   if (totalStars > 0) facts.push(`&#9733; ${totalStars} total stars`)
   if (profile.followers > 0) facts.push(`&#128101; ${profile.followers} followers`)
   return `
-  <section id="about" class="section" style="background:rgba(255,255,255,0.01)">
+  <section id="about" class="section">
     <div class="container">
       <p class="section-label reveal">About</p>
       <h2 class="section-title reveal">A little about me</h2>
-      <p class="section-desc reveal" style="max-width:720px;font-size:17px;line-height:1.75">${e(bio)}</p>
+      <p class="section-desc reveal" style="max-width:720px;font-size:17px;line-height:1.75;color:var(--muted,#888)">${e(bio)}</p>
       ${facts.length ? `
       <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:32px" class="reveal" role="list" aria-label="Quick facts">
-        ${facts.map(f => `<span role="listitem" class="about-fact" style="display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border-radius:20px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);font-size:13px;color:var(--text,#ccc)">${f}</span>`).join("")}
+        ${facts.map(f => `<span role="listitem" class="about-fact" style="display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border-radius:20px;background:var(--surface,rgba(255,255,255,0.04));border:1px solid var(--border,rgba(255,255,255,0.08));font-size:13px;color:var(--text,#e8e8ef)">${f}</span>`).join("")}
       </div>` : ""}
       <div style="display:flex;gap:12px;flex-wrap:wrap" class="reveal">
         ${profile.blog ? `<a href="${profile.blog.startsWith("http") ? profile.blog : "https://" + profile.blog}" target="_blank" rel="noopener" style="padding:10px 22px;border:1.5px solid ${accent}40;color:${accent};border-radius:10px;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px">&#127758; Website</a>` : ""}
-        <a href="${profile.html_url}" target="_blank" rel="noopener" class="about-gh-link" style="padding:10px 22px;border:1.5px solid rgba(255,255,255,0.1);color:var(--text,#ccc);border-radius:10px;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px">&#128196; GitHub Profile</a>
+        <a href="${profile.html_url}" target="_blank" rel="noopener" class="about-gh-link" style="padding:10px 22px;border:1.5px solid var(--border,rgba(255,255,255,0.1));color:var(--text,#e8e8ef);border-radius:10px;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px">&#128196; GitHub Profile</a>
       </div>
     </div>
   </section>`
@@ -663,11 +662,11 @@ function buildContact(profile: GitHubProfile, accent: string, socialLinks?: Soci
   const emailHint = `${profile.username}@users.noreply.github.com`
 
   return `
-  <section id="contact" class="section" style="background:rgba(255,255,255,0.01)">
+  <section id="contact" class="section">
     <div class="container" style="text-align:center">
       <p class="section-label reveal">Contact</p>
       <h2 class="section-title reveal" style="margin-left:auto;margin-right:auto">Let&rsquo;s work together</h2>
-      <p class="section-desc reveal" style="margin-left:auto;margin-right:auto;text-align:center">Have a project in mind or just want to say hello? My inbox is open.</p>
+      <p class="section-desc reveal" style="margin-left:auto;margin-right:auto;text-align:center;color:var(--muted,#888)">Have a project in mind or just want to say hello? My inbox is open.</p>
       <div class="social-links reveal" aria-label="Social links">
         ${icons.join("\n        ")}
       </div>
